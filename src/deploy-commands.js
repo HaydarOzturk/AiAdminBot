@@ -36,11 +36,14 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
 (async () => {
   try {
-    console.log(`\n🔄 Deploying ${commands.length} slash commands...\n`);
+    // Get the bot's own application ID (no CLIENT_ID env var needed)
+    const appInfo = await rest.get(Routes.oauth2CurrentApplication());
+    const appId = appInfo.id;
+    console.log(`\n🔄 Deploying ${commands.length} slash commands for ${appInfo.name} (${appId})...\n`);
 
     // 1. Always register globally (covers future servers)
     await rest.put(
-      Routes.applicationCommands(process.env.CLIENT_ID),
+      Routes.applicationCommands(appId),
       { body: commands }
     );
     console.log(`🌐 Registered ${commands.length} global commands.`);
@@ -56,7 +59,7 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
     for (const guild of guilds) {
       try {
         await rest.put(
-          Routes.applicationGuildCommands(process.env.CLIENT_ID, guild.id),
+          Routes.applicationGuildCommands(appId, guild.id),
           { body: commands }
         );
         console.log(`   ✅ ${guild.name}`);

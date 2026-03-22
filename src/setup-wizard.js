@@ -67,8 +67,7 @@ async function run() {
   console.log('  You\'ll need a few things ready:');
   console.log('');
   console.log('    1. A Discord Bot token (from Discord Developer Portal)');
-  console.log('    2. Your Bot\'s Application/Client ID');
-  console.log('    3. (Optional) An OpenRouter API key for AI features');
+  console.log('    2. (Optional) An OpenRouter API key for AI features');
   console.log('');
 
   // Check if .env already exists
@@ -90,11 +89,6 @@ async function run() {
   const discordToken = await ask('  Discord Bot Token: ');
   if (!discordToken || discordToken.trim().length < 20) {
     warn('Token looks invalid. You can edit .env manually later.');
-  }
-
-  const clientId = await ask('  Bot Application/Client ID: ');
-  if (!clientId || clientId.trim().length < 10) {
-    warn('Client ID looks invalid. You can edit .env manually later.');
   }
 
   console.log('');
@@ -141,7 +135,6 @@ async function run() {
 
 # Discord Bot Credentials
 DISCORD_TOKEN=${discordToken.trim()}
-CLIENT_ID=${clientId.trim()}
 
 # Database
 DATABASE_PATH=./data/bot.db

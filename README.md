@@ -89,7 +89,6 @@ Edit `.env` with your bot token:
 
 ```env
 DISCORD_TOKEN=your_bot_token_here
-CLIENT_ID=your_bot_application_id_here
 LOCALE=en
 ```
 
@@ -111,7 +110,6 @@ For development with auto-reload: `npm run dev`
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `DISCORD_TOKEN` | Bot token from Discord Developer Portal | *required* |
-| `CLIENT_ID` | Bot application ID | *required* |
 | `DATABASE_PATH` | SQLite database file path | `./data/bot.db` |
 | `LOCALE` | Language: tr, en, de, es, fr, pt, ru, ar | `tr` |
 | `OPENROUTER_API_KEY` | OpenRouter API key for AI features | *optional* |
