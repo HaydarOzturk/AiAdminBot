@@ -34,6 +34,7 @@ module.exports = [
   // Utility
   require('./utility/help'),
   require('./utility/ping'),
+  require('./utility/sync'),
 
   // Verification
   require('./verification/verify'),
