@@ -11,9 +11,8 @@ module.exports = {
     // 1. Assign unverified role
     try {
       const unverifiedRoleName = config.verification?.unverifiedRoleName || t('roles.unverified');
-      const unverifiedRole = member.guild.roles.cache.find(
-        r => r.name === unverifiedRoleName
-      );
+      const unverifiedRole = member.guild.roles.cache.find(r => r.name === unverifiedRoleName)
+        || member.guild.roles.cache.find(r => r.name === 'Unverified');
 
       if (unverifiedRole) {
         await member.roles.add(unverifiedRole);

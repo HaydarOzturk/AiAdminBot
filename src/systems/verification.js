@@ -49,8 +49,11 @@ async function handleVerifyButton(interaction) {
   const unverifiedRoleName = config.verification?.unverifiedRoleName || t('roles.unverified');
   const verifiedRoleName = config.verification?.verifiedRoleName || t('roles.verified');
 
-  const unverifiedRole = guild.roles.cache.find(r => r.name === unverifiedRoleName);
-  const verifiedRole = guild.roles.cache.find(r => r.name === verifiedRoleName);
+  // Search by localized name first, then fall back to English defaults
+  const unverifiedRole = guild.roles.cache.find(r => r.name === unverifiedRoleName)
+    || guild.roles.cache.find(r => r.name === 'Unverified');
+  const verifiedRole = guild.roles.cache.find(r => r.name === verifiedRoleName)
+    || guild.roles.cache.find(r => r.name === 'New Member');
 
   try {
     // Remove unverified role

@@ -255,7 +255,11 @@ function permStringsToFlags(permStrings) {
  * @returns {object} Summary of what was created / skipped
  */
 async function runSetup(guild) {
-  const config = loadSetupConfig();
+  // Use the custom config if the user created one, otherwise use locale-aware defaults
+  const customConfigPath = path.join(__dirname, '..', '..', 'config', 'server-setup.json');
+  const config = fs.existsSync(customConfigPath)
+    ? JSON.parse(fs.readFileSync(customConfigPath, 'utf-8'))
+    : buildLocalizedDefaultConfig();
 
   const result = {
     rolesCreated: 0,
