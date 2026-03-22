@@ -1,0 +1,43 @@
+{
+  "gameRoles": {
+    "title": "🎮 Game Roles",
+    "description": "Select the games you play! You can pick multiple.",
+    "color": "#e74c3c",
+    "roles": [
+      { "name": "GTA V", "emoji": "🎮", "color": "#e74c3c" },
+      { "name": "CS2", "emoji": "🔫", "color": "#e67e22" },
+      { "name": "Minecraft", "emoji": "⛏️", "color": "#2ecc71" },
+      { "name": "Among Us", "emoji": "👽", "color": "#e74c3c" },
+      { "name": "Roblox", "emoji": "🧱", "color": "#3498db" },
+      { "name": "Call of Duty", "emoji": "🏆", "color": "#e67e22" },
+      { "name": "Fortnite", "emoji": "⚔️", "color": "#1abc9c" },
+      { "name": "Valorant", "emoji": "🎯", "color": "#f1c40f" }
+    ]
+  },
+  "platformRoles": {
+    "title": "📺 Platform Roles",
+    "description": "Which platforms are you active on?",
+    "color": "#9146ff",
+    "roles": [
+      { "name": "Twitch Sub", "emoji": "🟣", "color": "#9146ff" },
+      { "name": "YouTube Sub", "emoji": "🔴", "color": "#ff0000" },
+      { "name": "Kick Sub", "emoji": "🟢", "color": "#53fc18" }
+    ]
+  },
+  "colorRoles": {
+    "title": "🌈 Color Roles",
+    "description": "Pick your name color! You can only select one.",
+    "color": "#e91e63",
+    "singleSelect": true,
+    "roles": [
+      { "name": "Red", "emoji": "🔴", "color": "#e74c3c" },
+      { "name": "Blue", "emoji": "🔵", "color": "#3498db" },
+      { "name": "Green", "emoji": "🟢", "color": "#2ecc71" },
+      { "name": "Yellow", "emoji": "🟡", "color": "#f1c40f" },
+      { "name": "Purple", "emoji": "🟣", "color": "#9b59b6" },
+      { "name": "Pink", "emoji": "🩷", "color": "#e91e63" },
+      { "name": "Orange", "emoji": "🟠", "color": "#e67e22" },
+      { "name": "White", "emoji": "⚪", "color": "#ffffff" }
+    ]
+  }
+}

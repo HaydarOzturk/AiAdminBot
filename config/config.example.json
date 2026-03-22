@@ -1,0 +1,62 @@
+{
+  "bot": {
+    "prefix": "/",
+    "locale": "en",
+    "embedColor": "#5865f2"
+  },
+  "verification": {
+    "enabled": true,
+    "channelName": "verification",
+    "unverifiedRoleName": "Unverified",
+    "verifiedRoleName": "New Member",
+    "welcomeChannelName": "welcome",
+    "buttonLabel": "Verify",
+    "buttonEmoji": "✅"
+  },
+  "moderation": {
+    "maxWarnings": 5,
+    "autoMuteOnMaxWarnings": true,
+    "muteDuration": 3600000,
+    "logChannels": {
+      "message": "message-log",
+      "joinLeave": "join-leave-log",
+      "punishment": "punishment-log",
+      "role": "role-log",
+      "name": "name-log",
+      "channel": "channel-log",
+      "ban": "ban-log"
+    }
+  },
+  "leveling": {
+    "enabled": true,
+    "xpPerMessage": { "min": 15, "max": 25 },
+    "xpCooldown": 60000,
+    "levelUpChannelName": null,
+    "tiers": [
+      { "name": "Wood", "minLevel": 0, "color": "#8B4513" },
+      { "name": "Coal", "minLevel": 5, "color": "#555555" },
+      { "name": "Iron", "minLevel": 10, "color": "#808080" },
+      { "name": "Bronze", "minLevel": 15, "color": "#CD7F32" },
+      { "name": "Silver", "minLevel": 20, "color": "#C0C0C0" },
+      { "name": "Gold", "minLevel": 30, "color": "#FFD700" }
+    ]
+  },
+  "permissions": {
+    "levels": {
+      "owner": 4,
+      "admin": 3,
+      "moderator": 2,
+      "member": 1,
+      "unverified": 0
+    },
+    "commands": {
+      "ban": 4,
+      "kick": 3,
+      "timeout": 3,
+      "mute": 2,
+      "warn": 2,
+      "clear": 2,
+      "setup-server": 4
+    }
+  }
+}

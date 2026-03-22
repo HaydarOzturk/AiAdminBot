@@ -1,0 +1,246 @@
+{
+  "roles": [
+    {
+      "name": "Server Owner",
+      "color": "#e74c3c",
+      "hoist": true,
+      "permissions": ["Administrator"],
+      "position": "top"
+    },
+    {
+      "name": "Admin",
+      "color": "#e67e22",
+      "hoist": true,
+      "permissions": ["Administrator"],
+      "position": "high"
+    },
+    {
+      "name": "Moderator",
+      "color": "#2ecc71",
+      "hoist": true,
+      "permissions": [
+        "ManageMessages",
+        "KickMembers",
+        "MuteMembers",
+        "DeafenMembers",
+        "MoveMembers",
+        "ManageNicknames",
+        "ModerateMembers"
+      ],
+      "position": "high"
+    },
+    {
+      "name": "New Member",
+      "color": "#3498db",
+      "hoist": false,
+      "permissions": [],
+      "position": "low",
+      "note": "Verified member role"
+    },
+    {
+      "name": "Unverified",
+      "color": "#95a5a6",
+      "hoist": false,
+      "permissions": [],
+      "position": "bottom",
+      "note": "Unverified member role"
+    }
+  ],
+
+  "categories": [
+    {
+      "name": "📋 VERIFICATION",
+      "channels": [
+        {
+          "name": "rules",
+          "type": "text",
+          "topic": "Read the server rules!",
+          "permissions": {
+            "everyone": { "deny": ["SendMessages"], "allow": ["ViewChannel"] },
+            "Unverified": { "allow": ["ViewChannel"] },
+            "New Member": { "allow": ["ViewChannel"] }
+          }
+        },
+        {
+          "name": "verification",
+          "type": "text",
+          "topic": "Click the verify button to join the server!",
+          "autoSetup": "verification",
+          "permissions": {
+            "everyone": { "deny": ["SendMessages", "ViewChannel"] },
+            "Unverified": { "allow": ["ViewChannel", "ReadMessageHistory"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🎨 ROLES",
+      "channels": [
+        {
+          "name": "color-roles",
+          "type": "text",
+          "topic": "Pick your name color!",
+          "autoSetup": "roleMenu:colorRoles",
+          "permissions": {
+            "everyone": { "deny": ["SendMessages", "ViewChannel"] },
+            "Unverified": { "deny": ["ViewChannel"] },
+            "New Member": { "allow": ["ViewChannel", "ReadMessageHistory"] }
+          }
+        },
+        {
+          "name": "game-roles",
+          "type": "text",
+          "topic": "Select the games you play!",
+          "autoSetup": "roleMenu:gameRoles",
+          "permissions": {
+            "everyone": { "deny": ["SendMessages", "ViewChannel"] },
+            "Unverified": { "deny": ["ViewChannel"] },
+            "New Member": { "allow": ["ViewChannel", "ReadMessageHistory"] }
+          }
+        },
+        {
+          "name": "platform-roles",
+          "type": "text",
+          "topic": "Select your platforms!",
+          "autoSetup": "roleMenu:platformRoles",
+          "permissions": {
+            "everyone": { "deny": ["SendMessages", "ViewChannel"] },
+            "Unverified": { "deny": ["ViewChannel"] },
+            "New Member": { "allow": ["ViewChannel", "ReadMessageHistory"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "💬 CHAT",
+      "channels": [
+        {
+          "name": "general-chat",
+          "type": "text",
+          "topic": "General chat channel",
+          "permissions": {
+            "everyone": { "deny": ["ViewChannel"] },
+            "Unverified": { "deny": ["ViewChannel"] },
+            "New Member": { "allow": ["ViewChannel", "SendMessages"] }
+          }
+        },
+        {
+          "name": "media",
+          "type": "text",
+          "topic": "Share images, videos and links",
+          "permissions": {
+            "everyone": { "deny": ["ViewChannel"] },
+            "Unverified": { "deny": ["ViewChannel"] },
+            "New Member": { "allow": ["ViewChannel", "SendMessages", "AttachFiles", "EmbedLinks"] }
+          }
+        },
+        {
+          "name": "bot-commands",
+          "type": "text",
+          "topic": "Use bot commands here!",
+          "permissions": {
+            "everyone": { "deny": ["ViewChannel"] },
+            "Unverified": { "deny": ["ViewChannel"] },
+            "New Member": { "allow": ["ViewChannel", "SendMessages"] }
+          }
+        },
+        {
+          "name": "ai-chat",
+          "type": "text",
+          "topic": "Chat with AI! Type a message and AI will respond.",
+          "permissions": {
+            "everyone": { "deny": ["ViewChannel"] },
+            "Unverified": { "deny": ["ViewChannel"] },
+            "New Member": { "allow": ["ViewChannel", "SendMessages", "ReadMessageHistory"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "👋 WELCOME",
+      "channels": [
+        {
+          "name": "welcome",
+          "type": "text",
+          "topic": "Welcome new members!",
+          "permissions": {
+            "everyone": { "deny": ["SendMessages", "ViewChannel"] },
+            "New Member": { "allow": ["ViewChannel", "ReadMessageHistory", "AddReactions"] }
+          }
+        },
+        {
+          "name": "goodbye",
+          "type": "text",
+          "topic": "Farewell messages",
+          "permissions": {
+            "everyone": { "deny": ["SendMessages", "ViewChannel"] },
+            "New Member": { "allow": ["ViewChannel", "ReadMessageHistory"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔊 VOICE CHANNELS",
+      "channels": [
+        {
+          "name": "General Voice",
+          "type": "voice",
+          "permissions": {
+            "everyone": { "deny": ["ViewChannel"] },
+            "Unverified": { "deny": ["ViewChannel"] },
+            "New Member": { "allow": ["ViewChannel", "Connect", "Speak"] }
+          }
+        },
+        {
+          "name": "Game Room 1",
+          "type": "voice",
+          "permissions": {
+            "everyone": { "deny": ["ViewChannel"] },
+            "Unverified": { "deny": ["ViewChannel"] },
+            "New Member": { "allow": ["ViewChannel", "Connect", "Speak"] }
+          }
+        },
+        {
+          "name": "Game Room 2",
+          "type": "voice",
+          "permissions": {
+            "everyone": { "deny": ["ViewChannel"] },
+            "Unverified": { "deny": ["ViewChannel"] },
+            "New Member": { "allow": ["ViewChannel", "Connect", "Speak"] }
+          }
+        },
+        {
+          "name": "Music",
+          "type": "voice",
+          "permissions": {
+            "everyone": { "deny": ["ViewChannel"] },
+            "Unverified": { "deny": ["ViewChannel"] },
+            "New Member": { "allow": ["ViewChannel", "Connect", "Speak"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📝 LOGS",
+      "staffOnly": true,
+      "channels": [
+        { "name": "message-log", "type": "text", "topic": "Deleted and edited messages" },
+        { "name": "join-leave-log", "type": "text", "topic": "Member join/leave logs" },
+        { "name": "punishment-log", "type": "text", "topic": "Warning, mute, kick, ban logs" },
+        { "name": "role-log", "type": "text", "topic": "Role change logs" },
+        { "name": "name-log", "type": "text", "topic": "Nickname change logs" },
+        { "name": "channel-log", "type": "text", "topic": "Channel change logs" },
+        { "name": "ban-log", "type": "text", "topic": "Ban logs" }
+      ]
+    },
+    {
+      "name": "🔒 STAFF ONLY",
+      "staffOnly": true,
+      "channels": [
+        { "name": "staff-chat", "type": "text", "topic": "Staff chat channel" },
+        { "name": "staff-commands", "type": "text", "topic": "Staff bot commands" },
+        { "name": "Staff Voice", "type": "voice" }
+      ]
+    }
+  ]
+}

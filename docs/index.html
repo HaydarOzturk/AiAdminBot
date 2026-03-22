@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AiAiAdminBot - Free, open-source, AI-powered Discord administration bot. Smart moderation, auto server setup, verification, leveling, role menus, and 8 language support. Built with discord.js v14 and OpenRouter AI.">
+    <meta name="keywords" content="discord bot, discord admin bot, ai discord bot, discord moderation bot, discord server setup, discord verification bot, discord leveling bot, free discord bot, open source discord bot, aiadminbot, ai admin bot, discord bot multilingual, openrouter discord bot">
+    <meta name="theme-color" content="#1a1a2e">
+    <title>AiAiAdminBot - AI-Powered Discord Administration Bot</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(26, 26, 46, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(88, 101, 242, 0.2);
+            z-index: 1000;
+            padding: 1rem 2rem;
+        }
+
+        nav .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        nav .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #5865f2;
+            text-decoration: none;
+        }
+
+        nav a.btn-github {
+            background: #5865f2;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+
+        nav a.btn-github:hover {
+            background: #4752c4;
+        }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        /* Spacing */
+        section {
+            padding: 6rem 0;
+        }
+
+        /* Hero Section */
+        .hero {
+            margin-top: 4rem;
+            text-align: center;
+            padding: 8rem 0;
+            background: linear-gradient(135deg, rgba(88, 101, 242, 0.1) 0%, rgba(88, 101, 242, 0.05) 100%);
+            border-radius: 20px;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hero h1 {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #5865f2 0%, #7289da 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+        }
+
+        .hero .subtitle {
+            font-size: 1.5rem;
+            color: #b0b3ff;
+            margin-bottom: 1.5rem;
+            font-weight: 500;
+        }
+
+        .hero .description {
+            font-size: 1.1rem;
+            color: #a0a0c0;
+            margin-bottom: 3rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 1rem 2.5rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: #5865f2;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #4752c4;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(88, 101, 242, 0.4);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: #5865f2;
+            border: 2px solid #5865f2;
+        }
+
+        .btn-secondary:hover {
+            background: #5865f2;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        /* Features Section */
+        .features {
+            background: rgba(22, 33, 62, 0.5);
+        }
+
+        .section-title {
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 4rem;
+            color: #ffffff;
+            font-weight: 700;
+        }
+
+        .section-title span {
+            color: #5865f2;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+        }
+
+        .feature-card {
+            background: #16213e;
+            border: 1px solid rgba(88, 101, 242, 0.2);
+            padding: 2rem;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            animation: fadeInUp 0.6s ease-out both;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .feature-card:nth-child(1) { animation-delay: 0.1s; }
+        .feature-card:nth-child(2) { animation-delay: 0.2s; }
+        .feature-card:nth-child(3) { animation-delay: 0.3s; }
+        .feature-card:nth-child(4) { animation-delay: 0.4s; }
+        .feature-card:nth-child(5) { animation-delay: 0.5s; }
+        .feature-card:nth-child(6) { animation-delay: 0.6s; }
+        .feature-card:nth-child(7) { animation-delay: 0.7s; }
+        .feature-card:nth-child(8) { animation-delay: 0.8s; }
+
+        .feature-card:hover {
+            border-color: #5865f2;
+            background: rgba(88, 101, 242, 0.1);
+            transform: translateY(-8px);
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            display: inline-block;
+        }
+
+        .feature-card h3 {
+            font-size: 1.3rem;
+            margin-bottom: 0.8rem;
+            color: #ffffff;
+        }
+
+        .feature-card p {
+            color: #a0a0c0;
+            font-size: 0.95rem;
+        }
+
+        /* Quick Start Section */
+        .quickstart {
+            background: linear-gradient(135deg, rgba(88, 101, 242, 0.1) 0%, rgba(88, 101, 242, 0.05) 100%);
+        }
+
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            animation: fadeInUp 0.6s ease-out both;
+        }
+
+        .step:nth-child(1) { animation-delay: 0.1s; }
+        .step:nth-child(2) { animation-delay: 0.2s; }
+        .step:nth-child(3) { animation-delay: 0.3s; }
+
+        .step-number {
+            background: #5865f2;
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+        }
+
+        .step h3 {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: #ffffff;
+        }
+
+        .step p {
+            color: #a0a0c0;
+        }
+
+        /* Installation Section */
+        .installation {
+            background: rgba(22, 33, 62, 0.5);
+        }
+
+        .installation-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .install-card {
+            background: #16213e;
+            border: 1px solid rgba(88, 101, 242, 0.2);
+            padding: 2.5rem;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            animation: fadeInUp 0.6s ease-out both;
+        }
+
+        .install-card:nth-child(1) { animation-delay: 0.1s; }
+        .install-card:nth-child(2) { animation-delay: 0.2s; }
+
+        .install-card:hover {
+            border-color: #5865f2;
+            transform: translateY(-8px);
+        }
+
+        .install-card h3 {
+            font-size: 1.3rem;
+            margin-bottom: 1.5rem;
+            color: #5865f2;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .install-card ol {
+            list-style: none;
+            counter-reset: step-counter;
+        }
+
+        .install-card li {
+            counter-increment: step-counter;
+            margin-bottom: 1.5rem;
+            color: #a0a0c0;
+            line-height: 1.8;
+        }
+
+        .install-card li::before {
+            content: counter(step-counter);
+            background: #5865f2;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .install-card code {
+            background: rgba(88, 101, 242, 0.2);
+            color: #a0d4ff;
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        /* Footer */
+        footer {
+            background: rgba(22, 33, 62, 0.8);
+            border-top: 1px solid rgba(88, 101, 242, 0.2);
+            padding: 3rem 0;
+            text-align: center;
+            color: #a0a0c0;
+        }
+
+        footer .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        footer p {
+            margin: 0.5rem 0;
+        }
+
+        .footer-links {
+            margin: 1.5rem 0;
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            color: #5865f2;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .footer-links a:hover {
+            color: #7289da;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            nav {
+                padding: 1rem;
+            }
+
+            nav .container {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .hero {
+                margin-top: 6rem;
+                padding: 4rem 0;
+            }
+
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .hero .subtitle {
+                font-size: 1.2rem;
+            }
+
+            .cta-buttons {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                max-width: 300px;
+            }
+
+            section {
+                padding: 3rem 0;
+            }
+
+            .section-title {
+                font-size: 2rem;
+                margin-bottom: 2rem;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+
+            .installation-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .steps {
+                grid-template-columns: 1fr;
+            }
+
+            footer p {
+                font-size: 0.9rem;
+            }
+
+            .footer-links {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+
+        /* Scroll animations */
+        [data-animate] {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        [data-animate].visible {
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="container">
+            <a href="#" class="logo">🤖 AiAdminBot</a>
+            <a href="https://github.com/yourusername/discord-admin-bot" class="btn-github">View on GitHub</a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h1>AiAdminBot</h1>
+            <p class="subtitle">AI-Powered Discord Administration Bot</p>
+            <p class="description">
+                Automate your Discord server with powerful moderation, smart verification, role menus, and AI-driven setup.
+                AiAdminBot makes server management effortless.
+            </p>
+            <div class="cta-buttons">
+                <a href="https://github.com/yourusername/discord-admin-bot/releases" class="btn btn-primary">⬇️ Download .exe</a>
+                <a href="https://github.com/yourusername/discord-admin-bot" class="btn btn-secondary">⭐ View on GitHub</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features">
+        <div class="container">
+            <h2 class="section-title">Powerful <span>Features</span></h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🚀</div>
+                    <h3>AI Server Setup</h3>
+                    <p>One-click server setup with AI-powered automation. Get your server ready in seconds.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🛡️</div>
+                    <h3>Smart Moderation</h3>
+                    <p>AI-powered content moderation that learns from your server's rules and culture.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">✅</div>
+                    <h3>Verification System</h3>
+                    <p>Button-based member verification to keep your server safe and secure.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎨</div>
+                    <h3>Role Menus</h3>
+                    <p>Self-assignable roles with intuitive dropdown menus and reaction-based selection.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Leveling System</h3>
+                    <p>XP and tier progression system to reward active members and engagement.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📋</div>
+                    <h3>Full Logging</h3>
+                    <p>Complete logging for messages, joins/leaves, role changes, bans, and more.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🌍</div>
+                    <h3>8 Languages</h3>
+                    <p>Support for Turkish, English, German, Spanish, French, Portuguese, Russian, and Arabic.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔓</div>
+                    <h3>Open Source</h3>
+                    <p>MIT licensed and community-driven. Fork, modify, and contribute on GitHub.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quick Start Section -->
+    <section class="quickstart">
+        <div class="container">
+            <h2 class="section-title">Get Started in 3 <span>Steps</span></h2>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <h3>Download</h3>
+                    <p>Get the .exe from Releases or clone the source code from GitHub.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <h3>Setup</h3>
+                    <p>Run the setup wizard and enter your Discord bot token.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <h3>Configure</h3>
+                    <p>Use /ai-setup in Discord to automatically configure your server.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Installation Section -->
+    <section class="installation">
+        <div class="container">
+            <h2 class="section-title">Installation <span>Methods</span></h2>
+            <div class="installation-cards">
+                <div class="install-card">
+                    <h3>💾 Standalone (.exe)</h3>
+                    <ol>
+                        <li>Download the latest release from <code>GitHub Releases</code></li>
+                        <li>Run <code>AiAdminBot.exe</code></li>
+                        <li>Follow the interactive setup wizard</li>
+                        <li>Enter your Discord bot token when prompted</li>
+                        <li>The bot connects automatically to your server</li>
+                    </ol>
+                </div>
+                <div class="install-card">
+                    <h3>📦 From Source</h3>
+                    <ol>
+                        <li>Clone the repository: <code>git clone [repo-url]</code></li>
+                        <li>Install dependencies: <code>npm install</code></li>
+                        <li>Run setup: <code>npm run setup</code></li>
+                        <li>Deploy commands: <code>npm run deploy</code></li>
+                        <li>Start the bot: <code>npm start</code></li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p>Made with ❤️ by Haydar</p>
+            <div class="footer-links">
+                <a href="https://github.com/yourusername/discord-admin-bot">GitHub</a>
+                <span>•</span>
+                <a href="https://github.com/yourusername/discord-admin-bot/blob/main/LICENSE">MIT License</a>
+            </div>
+            <p>&copy; 2026 AiAdminBot. All rights reserved.</p>
+        </div>
+    </footer>
+</body>
+</html>

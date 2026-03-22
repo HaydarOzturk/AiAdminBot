@@ -1,0 +1,60 @@
+{
+  "name": "aiadminbot",
+  "version": "1.0.0",
+  "description": "AI-powered Discord server administration bot with verification, moderation, roles, logging, leveling, and server setup automation.",
+  "main": "src/index.js",
+  "bin": "src/exe-entry.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "setup": "node src/setup-wizard.js",
+    "deploy": "node src/deploy-commands.js",
+    "dev": "node --watch src/index.js",
+    "lint": "eslint src/",
+    "test": "node --test tests/",
+    "build": "pkg . --out-path dist",
+    "build:win": "pkg . --targets node18-win-x64 --out-path dist",
+    "build:mac": "pkg . --targets node18-macos-x64 --out-path dist",
+    "build:linux": "pkg . --targets node18-linux-x64 --out-path dist",
+    "build:all": "pkg . --targets node18-win-x64,node18-macos-x64,node18-linux-x64 --out-path dist"
+  },
+  "pkg": {
+    "scripts": [
+      "src/commands/**/*.js",
+      "src/events/**/*.js",
+      "src/systems/**/*.js",
+      "src/handlers/**/*.js",
+      "src/utils/**/*.js"
+    ],
+    "assets": [
+      "locales/**/*.json",
+      "config/*.example.json",
+      ".env.example",
+      "node_modules/sql.js/dist/sql-wasm.wasm"
+    ],
+    "targets": [
+      "node18-win-x64"
+    ],
+    "outputPath": "dist"
+  },
+  "keywords": [
+    "discord",
+    "bot",
+    "admin",
+    "moderation",
+    "ai",
+    "openrouter"
+  ],
+  "author": "Haydar",
+  "license": "MIT",
+  "dependencies": {
+    "discord.js": "^14.16.0",
+    "dotenv": "^16.4.0",
+    "sql.js": "^1.11.0"
+  },
+  "devDependencies": {
+    "@yao-pkg/pkg": "^6.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

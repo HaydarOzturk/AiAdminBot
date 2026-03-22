@@ -1,0 +1,38 @@
+# Environment (contains secrets)
+.env
+
+# User config files (created from .example files)
+config/config.json
+config/server-setup.json
+config/role-menus.json
+config/ai-generated-setup.json
+
+# Database
+data/
+*.db
+*.db-journal
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Logs
+logs/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# npm
+npm-debug.log*
