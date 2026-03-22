@@ -27,9 +27,14 @@ function getPermissionLevel(member) {
   if (roleNames.some(r => r.includes('admin'))) return 3;
   if (roleNames.some(r => r.includes('moderator') || r.includes('mod'))) return 2;
 
-  // Check if verified
-  const verifiedRoleName = config.verification?.verifiedRoleName?.toLowerCase() || 'zuschauer';
-  if (roleNames.some(r => r.toLowerCase() === verifiedRoleName)) return 1;
+  // Check if verified (check config name, locale name, and English fallback)
+  const { t } = require('./locale');
+  const verifiedNames = [
+    config.verification?.verifiedRoleName,
+    t('roles.verified'),
+    'New Member',
+  ].filter(Boolean).map(n => n.toLowerCase());
+  if (roleNames.some(r => verifiedNames.includes(r))) return 1;
 
   return 0;
 }

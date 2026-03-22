@@ -3,6 +3,19 @@ const { createEmbed } = require('../utils/embedBuilder');
 const { t, channelName } = require('../utils/locale');
 const { config } = require('../utils/permissions');
 
+/**
+ * Find a role by checking multiple possible names (config, locale, English fallback).
+ * Case-insensitive to handle servers where role names were tweaked slightly.
+ */
+function findRole(guild, configName, localeKey, englishFallback) {
+  const names = [configName, t(localeKey), englishFallback].filter(Boolean);
+  for (const name of names) {
+    const role = guild.roles.cache.find(r => r.name.toLowerCase() === name.toLowerCase());
+    if (role) return role;
+  }
+  return null;
+}
+
 module.exports = {
   name: Events.GuildMemberAdd,
   async execute(member) {
@@ -10,15 +23,18 @@ module.exports = {
 
     // 1. Assign unverified role
     try {
-      const unverifiedRoleName = config.verification?.unverifiedRoleName || t('roles.unverified');
-      const unverifiedRole = member.guild.roles.cache.find(r => r.name === unverifiedRoleName)
-        || member.guild.roles.cache.find(r => r.name === 'Unverified');
+      const unverifiedRole = findRole(
+        member.guild,
+        config.verification?.unverifiedRoleName,
+        'roles.unverified',
+        'Unverified'
+      );
 
       if (unverifiedRole) {
         await member.roles.add(unverifiedRole);
-        console.log(`  ✅ Assigned "${unverifiedRoleName}" to ${member.user.tag}`);
+        console.log(`  ✅ Assigned "${unverifiedRole.name}" to ${member.user.tag}`);
       } else {
-        console.warn(`  ⚠️ Role "${unverifiedRoleName}" not found. Create it or run /setup-server.`);
+        console.warn(`  ⚠️ Role "${t('roles.unverified')}" not found. Create it or run /setup.`);
       }
     } catch (error) {
       console.error(`  ❌ Failed to assign unverified role:`, error.message);
@@ -61,6 +77,12 @@ module.exports = {
 
       if (logChannel) {
         const accountAge = Math.floor((Date.now() - member.user.createdTimestamp) / 86400000);
+        const unverifiedRole = findRole(
+          member.guild,
+          config.verification?.unverifiedRoleName,
+          'roles.unverified',
+          'Unverified'
+        );
 
         const embed = createEmbed({
           title: t('logging.memberJoined'),
@@ -69,7 +91,7 @@ module.exports = {
             { name: t('moderation.user'), value: `${member.user.tag}\n<@${member.id}>` },
             { name: t('logging.accountAge'), value: t('general.days', { count: accountAge }) },
             { name: t('logging.memberNumber'), value: `#${member.guild.memberCount}` },
-            { name: t('logging.assignedRole'), value: config.verification?.unverifiedRoleName || t('roles.unverified') },
+            { name: t('logging.assignedRole'), value: unverifiedRole?.name || t('roles.unverified') },
           ],
           thumbnail: member.user.displayAvatarURL({ dynamic: true, size: 64 }),
           timestamp: true,

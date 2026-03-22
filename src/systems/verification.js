@@ -5,6 +5,19 @@ const { config } = require('../utils/permissions');
 const db = require('../utils/database');
 
 /**
+ * Find a role by checking multiple possible names (config, locale, English fallback).
+ * Case-insensitive to handle servers where role names were tweaked slightly.
+ */
+function findRole(guild, configName, localeKey, englishFallback) {
+  const names = [configName, t(localeKey), englishFallback].filter(Boolean);
+  for (const name of names) {
+    const role = guild.roles.cache.find(r => r.name.toLowerCase() === name.toLowerCase());
+    if (role) return role;
+  }
+  return null;
+}
+
+/**
  * Send the verification embed with button to a channel
  * @param {import('discord.js').TextChannel} channel
  */
@@ -46,14 +59,12 @@ async function handleVerifyButton(interaction) {
     });
   }
 
-  const unverifiedRoleName = config.verification?.unverifiedRoleName || t('roles.unverified');
-  const verifiedRoleName = config.verification?.verifiedRoleName || t('roles.verified');
+  // Search by config name, then locale name, then English fallback (case-insensitive)
+  const unverifiedRole = findRole(guild, config.verification?.unverifiedRoleName, 'roles.unverified', 'Unverified');
+  const verifiedRole = findRole(guild, config.verification?.verifiedRoleName, 'roles.verified', 'New Member');
 
-  // Search by localized name first, then fall back to English defaults
-  const unverifiedRole = guild.roles.cache.find(r => r.name === unverifiedRoleName)
-    || guild.roles.cache.find(r => r.name === 'Unverified');
-  const verifiedRole = guild.roles.cache.find(r => r.name === verifiedRoleName)
-    || guild.roles.cache.find(r => r.name === 'New Member');
+  const unverifiedRoleName = unverifiedRole?.name || t('roles.unverified');
+  const verifiedRoleName = verifiedRole?.name || t('roles.verified');
 
   try {
     // Remove unverified role
