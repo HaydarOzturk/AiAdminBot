@@ -21,7 +21,7 @@ const { loadLocale } = require('./utils/locale');
 console.log(`🛡️  AiAdminBot v${require('../package.json').version} starting...`);
 
 // Validate required env vars
-const requiredEnv = ['DISCORD_TOKEN', 'CLIENT_ID'];
+const requiredEnv = ['DISCORD_TOKEN'];
 for (const envVar of requiredEnv) {
   if (!process.env[envVar]) {
     console.error(`❌ Missing required environment variable: ${envVar}`);
