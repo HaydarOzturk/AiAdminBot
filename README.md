@@ -22,7 +22,7 @@ Download the latest release from the [Releases page](../../releases/latest), run
 ### From Source
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/discord-admin-bot.git
+git clone https://github.com/HaydarOzturk/AiAdminBot.git
 cd discord-admin-bot
 npm install
 npm run setup     # Interactive setup wizard
@@ -318,5 +318,5 @@ MIT License — free to use, modify, and distribute. See [LICENSE](LICENSE).
 
 ---
 
-Built by [Haydar](https://github.com/YOUR_USERNAME) with AI assistance from Claude.
+Built by [HaydarOzturk](https://github.com/HaydarOzturk) with AI assistance from Claude.
 Powered by [discord.js](https://discord.js.org/) and [OpenRouter](https://openrouter.ai/).

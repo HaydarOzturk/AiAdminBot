@@ -5,7 +5,7 @@ Thanks for your interest in contributing! Here's how you can help.
 ## Getting Started
 
 1. Fork the repository
-2. Clone your fork: `git clone https://github.com/YOUR_USERNAME/discord-admin-bot.git`
+2. Clone your fork: `git clone https://github.com/HaydarOzturk/AiAdminBot.git`
 3. Install dependencies: `npm install`
 4. Copy `.env.example` to `.env` and fill in your bot credentials
 5. Run `npm run deploy` to register slash commands

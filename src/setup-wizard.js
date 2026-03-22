@@ -211,7 +211,7 @@ AI_MOD_CONFIDENCE_THRESHOLD=0.8
 
   console.log('');
   info('Edit .env anytime to change settings.');
-  info('Docs: https://github.com/YOUR_USERNAME/discord-admin-bot');
+  info('Docs: https://github.com/HaydarOzturk/AiAdminBot');
   console.log('');
 
   rl.close();
