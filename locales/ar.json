@@ -158,7 +158,9 @@
     "noHistoryFound": "لم يتم العثور على سجل إشراف لـ {user}.",
     "noWarningsFound": "لم يتم العثور على تحذيرات لـ {user}.",
     "timeoutFailed": "❌ فشل المهلة: {error}",
-    "rulesViolationWarning": "⚠️ **تحذير:** رسالتك تنتهك قواعد الخادم.\n📝 السبب: {reason}"
+    "rulesViolationWarning": "⚠️ **تحذير:** رسالتك تنتهك قواعد الخادم.\n📝 السبب: {reason}",
+    "aiAutoTimeout": "⚠️ **إسكات تلقائي:** رسالتك انتهكت إرشادات المجتمع.\n📝 الفئة: {category}\n⏱️ تم إسكاتك لمدة {minutes} دقائق.",
+    "rulesViolationTimeout": "⚠️ **مخالفة القواعد:** رسالتك انتهكت قواعد الخادم.\n📝 السبب: {reason}\n⏱️ تم إسكاتك لمدة {minutes} دقائق."
   },
   "setup": {
     "title": "🏗️ اكتمل إعداد الخادم!",

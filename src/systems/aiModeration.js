@@ -7,6 +7,11 @@ const { fetchRules } = require('./rulesReader');
 const db = require('../utils/database');
 
 const CONFIDENCE_THRESHOLD = parseFloat(process.env.AI_MOD_CONFIDENCE_THRESHOLD) || 0.8;
+const AI_TIMEOUT_MINUTES = parseInt(process.env.AI_TIMEOUT_MINUTES) || 3;
+
+// Debug owner ID — this user is always subject to moderation for testing purposes
+// Set in .env: DEBUG_OWNER_ID=210753202000363521
+const DEBUG_OWNER_ID = process.env.DEBUG_OWNER_ID || null;
 
 // Cache recent checks to avoid re-checking edits (messageId -> result)
 const recentChecks = new Map();
@@ -220,10 +225,11 @@ async function checkMessage(message) {
   if (!message.guild) return;
   if (!message.content || message.content.trim().length === 0) return;
 
-  // Don't moderate staff
+  // Don't moderate staff (unless it's the debug owner testing)
+  const isDebugOwner = DEBUG_OWNER_ID && message.author.id === DEBUG_OWNER_ID;
   const { getPermissionLevel } = require('../utils/permissions');
   const member = await message.guild.members.fetch(message.author.id).catch(() => null);
-  if (member && getPermissionLevel(member) >= 2) return; // Moderator+ exempt
+  if (member && getPermissionLevel(member) >= 2 && !isDebugOwner) return; // Moderator+ exempt
 
   // Check cache
   if (recentChecks.has(message.id)) return;
@@ -285,36 +291,67 @@ async function checkMessage(message) {
       await logChannel.send({ embeds: [embed] });
     }
 
-    // For high-confidence toxic/threat content, also add a warning to DB
+    // For high-confidence toxic/threat content: warn + timeout
     if (result.confidence >= 0.9 && (result.category === 'toxicity' || result.category === 'threat')) {
       db.run(
         'INSERT INTO warnings (user_id, guild_id, moderator_id, reason) VALUES (?, ?, ?, ?)',
         [message.author.id, guild.id, botUser.id, t('moderation.aiAutoWarningReason', { reason: result.reason })]
       );
 
-      // Reply to the user with a warning
+      // Timeout the user for configured duration
+      const timeoutMs = AI_TIMEOUT_MINUTES * 60 * 1000;
+      try {
+        const targetMember = await guild.members.fetch(message.author.id).catch(() => null);
+        if (targetMember && targetMember.moderatable) {
+          await targetMember.timeout(timeoutMs, `[AI ${result.category}] ${result.reason}`);
+          console.log(`⏱️ Timed out ${message.author.tag} for ${AI_TIMEOUT_MINUTES} min — ${result.reason}`);
+        }
+      } catch (err) {
+        console.error(`Failed to timeout ${message.author.tag}:`, err.message);
+      }
+
+      // Reply with warning + timeout notice
       try {
         await message.reply({
-          content: t('moderation.aiAutoWarning', { category: categoryLabel(result.category) }),
+          content: t('moderation.aiAutoTimeout', { category: categoryLabel(result.category), minutes: AI_TIMEOUT_MINUTES }),
         });
       } catch {
         // Message might have been deleted
       }
     }
 
-    // For rule violations, just warn — don't auto-punish
+    // For rule violations: warn + timeout
     if (result.category === 'rules' && result.confidence >= 0.8) {
+      const timeoutMs = AI_TIMEOUT_MINUTES * 60 * 1000;
+      try {
+        const targetMember = await guild.members.fetch(message.author.id).catch(() => null);
+        if (targetMember && targetMember.moderatable) {
+          await targetMember.timeout(timeoutMs, `[AI rules] ${result.reason}`);
+          console.log(`⏱️ Timed out ${message.author.tag} for ${AI_TIMEOUT_MINUTES} min — rule violation`);
+        }
+      } catch (err) {
+        console.error(`Failed to timeout ${message.author.tag}:`, err.message);
+      }
+
       try {
         await message.reply({
-          content: t('moderation.rulesViolationWarning', { reason: result.reason }),
+          content: t('moderation.rulesViolationTimeout', { reason: result.reason, minutes: AI_TIMEOUT_MINUTES }),
         });
       } catch {
         // Message might have been deleted
       }
     }
 
-    // For spam, delete the message
+    // For spam: delete + timeout
     if (result.category === 'spam' && result.confidence >= 0.9) {
+      const timeoutMs = AI_TIMEOUT_MINUTES * 60 * 1000;
+      try {
+        const targetMember = await guild.members.fetch(message.author.id).catch(() => null);
+        if (targetMember && targetMember.moderatable) {
+          await targetMember.timeout(timeoutMs, `[AI spam] ${result.reason}`);
+        }
+      } catch { /* might not have permission */ }
+
       try {
         await message.delete();
       } catch {

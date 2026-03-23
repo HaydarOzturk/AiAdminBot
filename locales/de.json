@@ -158,7 +158,9 @@
     "noHistoryFound": "Keine Moderationshistorie für {user} gefunden.",
     "noWarningsFound": "Keine Verwarnungen für {user} gefunden.",
     "timeoutFailed": "❌ Timeout fehlgeschlagen: {error}",
-    "rulesViolationWarning": "⚠️ **Warnung:** Deine Nachricht verstößt gegen die Serverregeln.\n📝 Grund: {reason}"
+    "rulesViolationWarning": "⚠️ **Warnung:** Deine Nachricht verstößt gegen die Serverregeln.\n📝 Grund: {reason}",
+    "aiAutoTimeout": "⚠️ **Auto-Stummschaltung:** Deine Nachricht verstößt gegen die Community-Richtlinien.\n📝 Kategorie: {category}\n⏱️ Du wurdest für {minutes} Minuten stummgeschaltet.",
+    "rulesViolationTimeout": "⚠️ **Regelverstoß:** Deine Nachricht verstößt gegen die Serverregeln.\n📝 Grund: {reason}\n⏱️ Du wurdest für {minutes} Minuten stummgeschaltet."
   },
   "setup": {
     "title": "🏗️ Server-Setup abgeschlossen!",

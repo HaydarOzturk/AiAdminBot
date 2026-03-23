@@ -158,7 +158,9 @@
     "noHistoryFound": "Nenhum histórico de moderação encontrado para {user}.",
     "noWarningsFound": "Nenhum aviso encontrado para {user}.",
     "timeoutFailed": "❌ Timeout falhou: {error}",
-    "rulesViolationWarning": "⚠️ **Aviso:** Sua mensagem viola as regras do servidor.\n📝 Motivo: {reason}"
+    "rulesViolationWarning": "⚠️ **Aviso:** Sua mensagem viola as regras do servidor.\n📝 Motivo: {reason}",
+    "aiAutoTimeout": "⚠️ **Silenciamento Automático:** Sua mensagem violou as diretrizes da comunidade.\n📝 Categoria: {category}\n⏱️ Você foi silenciado por {minutes} minutos.",
+    "rulesViolationTimeout": "⚠️ **Violação de Regra:** Sua mensagem violou as regras do servidor.\n📝 Motivo: {reason}\n⏱️ Você foi silenciado por {minutes} minutos."
   },
   "setup": {
     "title": "🏗️ Configuração do Servidor Concluída!",

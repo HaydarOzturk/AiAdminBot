@@ -158,7 +158,9 @@
     "noHistoryFound": "{user} için moderasyon geçmişi bulunamadı.",
     "noWarningsFound": "{user} için uyarı bulunamadı.",
     "timeoutFailed": "❌ Zaman aşımı başarısız: {error}",
-    "rulesViolationWarning": "⚠️ **Uyarı:** Mesajın sunucu kurallarına aykırı bulundu.\n📝 Sebep: {reason}"
+    "rulesViolationWarning": "⚠️ **Uyarı:** Mesajın sunucu kurallarına aykırı bulundu.\n📝 Sebep: {reason}",
+    "aiAutoTimeout": "⚠️ **Otomatik Susturma:** Mesajın topluluk kurallarına aykırı bulundu.\n📝 Kategori: {category}\n⏱️ {minutes} dakika susturuldun.",
+    "rulesViolationTimeout": "⚠️ **Kural İhlali:** Mesajın sunucu kurallarına aykırı bulundu.\n📝 Sebep: {reason}\n⏱️ {minutes} dakika susturuldun."
   },
   "setup": {
     "title": "🏗️ Sunucu Kurulumu Tamamlandı!",

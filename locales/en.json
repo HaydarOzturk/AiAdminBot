@@ -158,7 +158,9 @@
     "noHistoryFound": "No moderation history found for {user}.",
     "noWarningsFound": "No warnings found for {user}.",
     "timeoutFailed": "❌ Timeout failed: {error}",
-    "rulesViolationWarning": "⚠️ **Warning:** Your message was found to violate server rules.\n📝 Reason: {reason}"
+    "rulesViolationWarning": "⚠️ **Warning:** Your message was found to violate server rules.\n📝 Reason: {reason}",
+    "aiAutoTimeout": "⚠️ **Auto Timeout:** Your message violated community guidelines.\n📝 Category: {category}\n⏱️ You have been timed out for {minutes} minutes.",
+    "rulesViolationTimeout": "⚠️ **Rule Violation:** Your message violated server rules.\n📝 Reason: {reason}\n⏱️ You have been timed out for {minutes} minutes."
   },
   "setup": {
     "title": "🏗️ Server Setup Complete!",

@@ -158,7 +158,9 @@
     "noHistoryFound": "Aucun historique de modération trouvé pour {user}.",
     "noWarningsFound": "Aucun avertissement trouvé pour {user}.",
     "timeoutFailed": "❌ Mise en délai échouée : {error}",
-    "rulesViolationWarning": "⚠️ **Avertissement :** Votre message enfreint les règles du serveur.\n📝 Raison : {reason}"
+    "rulesViolationWarning": "⚠️ **Avertissement :** Votre message enfreint les règles du serveur.\n📝 Raison : {reason}",
+    "aiAutoTimeout": "⚠️ **Mise en sourdine automatique :** Votre message enfreint les règles de la communauté.\n📝 Catégorie : {category}\n⏱️ Vous avez été mis en sourdine pendant {minutes} minutes.",
+    "rulesViolationTimeout": "⚠️ **Violation de règle :** Votre message enfreint les règles du serveur.\n📝 Raison : {reason}\n⏱️ Vous avez été mis en sourdine pendant {minutes} minutes."
   },
   "setup": {
     "title": "🏗️ Configuration du Serveur Terminée !",
