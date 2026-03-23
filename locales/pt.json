@@ -512,5 +512,26 @@
     "importFailed": "❌ Importação falhou: {error}",
     "importTimedOut": "Importação expirada.",
     "parseFailed": "❌ Falha ao ler modelo: {error}"
+  },
+  "serverReset": {
+    "channelsOnly": "Apenas Canais",
+    "rolesOnly": "Apenas Papéis",
+    "everything": "Tudo (Canais + Papéis)",
+    "confirmTitle": "⚠️ Reinício do Servidor",
+    "confirmDescription": "Esta ação não pode ser desfeita! Todos os itens selecionados serão excluídos, mas os membros permanecerão no servidor.",
+    "mode": "Modo",
+    "membersKept": "Membros Mantidos",
+    "channelsToDelete": "Canais a Excluir",
+    "rolesToDelete": "Papéis a Excluir",
+    "confirmButton": "Sim, Reiniciar",
+    "cancelButton": "Cancelar",
+    "cancelled": "Reinício do servidor cancelado.",
+    "inProgress": "⏳ Reiniciando servidor... Isso pode levar um momento.",
+    "completeTitle": "✅ Reinício do Servidor Concluído",
+    "channelsDeleted": "Canais Excluídos",
+    "rolesDeleted": "Papéis Excluídos",
+    "errors": "Erros",
+    "completeFooter": "Use /setup ou /ai-setup para criar uma nova estrutura",
+    "timedOut": "Reinício do servidor expirou."
   }
 }

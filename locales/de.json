@@ -512,5 +512,26 @@
     "importFailed": "❌ Import fehlgeschlagen: {error}",
     "importTimedOut": "Import-Zeitüberschreitung.",
     "parseFailed": "❌ Vorlage konnte nicht gelesen werden: {error}"
+  },
+  "serverReset": {
+    "channelsOnly": "Nur Kanäle",
+    "rolesOnly": "Nur Rollen",
+    "everything": "Alles (Kanäle + Rollen)",
+    "confirmTitle": "⚠️ Server-Reset",
+    "confirmDescription": "Diese Aktion kann nicht rückgängig gemacht werden! Alle ausgewählten Elemente werden gelöscht, aber Mitglieder bleiben im Server.",
+    "mode": "Modus",
+    "membersKept": "Behaltene Mitglieder",
+    "channelsToDelete": "Zu löschende Kanäle",
+    "rolesToDelete": "Zu löschende Rollen",
+    "confirmButton": "Ja, Zurücksetzen",
+    "cancelButton": "Abbrechen",
+    "cancelled": "Server-Reset abgebrochen.",
+    "inProgress": "⏳ Server wird zurückgesetzt... Dies kann einen Moment dauern.",
+    "completeTitle": "✅ Server-Reset abgeschlossen",
+    "channelsDeleted": "Gelöschte Kanäle",
+    "rolesDeleted": "Gelöschte Rollen",
+    "errors": "Fehler",
+    "completeFooter": "Verwenden Sie /setup oder /ai-setup für eine neue Struktur",
+    "timedOut": "Server-Reset-Zeitüberschreitung."
   }
 }

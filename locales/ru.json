@@ -512,5 +512,26 @@
     "importFailed": "❌ Ошибка импорта: {error}",
     "importTimedOut": "Время импорта истекло.",
     "parseFailed": "❌ Не удалось прочитать шаблон: {error}"
+  },
+  "serverReset": {
+    "channelsOnly": "Только Каналы",
+    "rolesOnly": "Только Роли",
+    "everything": "Всё (Каналы + Роли)",
+    "confirmTitle": "⚠️ Сброс Сервера",
+    "confirmDescription": "Это действие необратимо! Все выбранные элементы будут удалены, но участники останутся на сервере.",
+    "mode": "Режим",
+    "membersKept": "Участники Сохранены",
+    "channelsToDelete": "Каналов к Удалению",
+    "rolesToDelete": "Ролей к Удалению",
+    "confirmButton": "Да, Сбросить",
+    "cancelButton": "Отмена",
+    "cancelled": "Сброс сервера отменён.",
+    "inProgress": "⏳ Сброс сервера... Это может занять некоторое время.",
+    "completeTitle": "✅ Сброс Сервера Завершён",
+    "channelsDeleted": "Удалено Каналов",
+    "rolesDeleted": "Удалено Ролей",
+    "errors": "Ошибки",
+    "completeFooter": "Используйте /setup или /ai-setup для создания новой структуры",
+    "timedOut": "Время сброса сервера истекло."
   }
 }

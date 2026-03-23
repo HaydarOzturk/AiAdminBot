@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AiAdminBot — Setup Guide</title>
+<style>
+  :root {
+    --bg: #1a1a2e;
+    --surface: #16213e;
+    --surface2: #0f3460;
+    --accent: #5865f2;
+    --accent2: #57f287;
+    --text: #dcddde;
+    --text-dim: #8e9297;
+    --danger: #ed4245;
+    --warning: #fee75c;
+    --border: #2d2d44;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  .container { max-width: 860px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+  header {
+    text-align: center;
+    padding: 3rem 0 2rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2rem;
+  }
+
+  header h1 {
+    font-size: 2.2rem;
+    color: #fff;
+    margin-bottom: 0.5rem;
+  }
+
+  header p { color: var(--text-dim); font-size: 1.1rem; }
+
+  h2 {
+    color: #fff;
+    font-size: 1.5rem;
+    margin: 2.5rem 0 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  h2 .step-num {
+    background: var(--accent);
+    color: #fff;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+  }
+
+  h3 { color: var(--accent); margin: 1.5rem 0 0.75rem; font-size: 1.1rem; }
+
+  p { margin: 0.75rem 0; }
+
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin: 1rem 0;
+  }
+
+  .card.warning {
+    border-color: var(--warning);
+    background: rgba(254, 231, 92, 0.08);
+  }
+
+  .card.danger {
+    border-color: var(--danger);
+    background: rgba(237, 66, 69, 0.08);
+  }
+
+  .card.success {
+    border-color: var(--accent2);
+    background: rgba(87, 242, 135, 0.08);
+  }
+
+  code {
+    background: var(--surface2);
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.9em;
+    color: var(--accent2);
+  }
+
+  pre {
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    overflow-x: auto;
+    margin: 1rem 0;
+    position: relative;
+  }
+
+  pre code {
+    background: none;
+    padding: 0;
+    color: var(--text);
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+
+  .copy-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.75rem;
+  }
+  .copy-btn:hover { color: #fff; background: var(--accent); }
+
+  .toggle {
+    cursor: pointer;
+    user-select: none;
+    color: var(--accent);
+    font-weight: 600;
+    padding: 0.5rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .toggle::before {
+    content: '▶';
+    display: inline-block;
+    transition: transform 0.2s;
+    font-size: 0.8em;
+  }
+
+  .toggle.open::before { transform: rotate(90deg); }
+
+  .toggle-content {
+    display: none;
+    padding-left: 1.5rem;
+    border-left: 2px solid var(--border);
+    margin: 0.5rem 0 1rem;
+  }
+
+  .toggle-content.show { display: block; }
+
+  ol, ul { margin: 0.75rem 0 0.75rem 1.5rem; }
+  li { margin: 0.5rem 0; }
+
+  .lang-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 0.5rem;
+    margin: 1rem 0;
+  }
+
+  .lang-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+  }
+
+  .command-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+  }
+
+  .command-table th,
+  .command-table td {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .command-table th {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  footer {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 0.9rem;
+  }
+
+  @media (max-width: 600px) {
+    .container { padding: 1rem; }
+    header h1 { font-size: 1.6rem; }
+    pre { padding: 0.75rem; font-size: 0.8rem; }
+    .lang-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<header>
+  <h1>🛡️ AiAdminBot</h1>
+  <p>AI-Powered Discord Server Administration — Setup Guide</p>
+</header>
+
+<!-- Section 1 -->
+<h2><span class="step-num">1</span> Prerequisites</h2>
+
+<div class="card">
+  <p>Before you start, make sure you have:</p>
+  <ul>
+    <li><strong>Node.js 18+</strong> — <a href="https://nodejs.org" target="_blank">Download here</a> (not needed for .exe)</li>
+    <li>A <strong>Discord account</strong> with a server you own (or admin access)</li>
+    <li>(Optional) An <strong>OpenRouter</strong> or <strong>Google Gemini</strong> API key for AI features</li>
+  </ul>
+</div>
+
+<!-- Section 2 -->
+<h2><span class="step-num">2</span> Creating a Discord Bot</h2>
+
+<ol>
+  <li>Go to the <a href="https://discord.com/developers/applications" target="_blank">Discord Developer Portal</a></li>
+  <li>Click <strong>"New Application"</strong> in the top right</li>
+  <li>Give your bot a name (e.g. "AiAdminBot") and click <strong>Create</strong></li>
+  <li>Go to the <strong>Bot</strong> tab in the left sidebar</li>
+  <li>Click <strong>"Reset Token"</strong> and copy the token</li>
+</ol>
+
+<div class="card warning">
+  <strong>⚠️ Important:</strong> Never share your bot token! Anyone with the token can control your bot.
+</div>
+
+<h3>Enable Privileged Intents</h3>
+<p>Still on the Bot tab, scroll down to <strong>Privileged Gateway Intents</strong> and enable:</p>
+<ul>
+  <li>✅ <strong>Presence Intent</strong></li>
+  <li>✅ <strong>Server Members Intent</strong></li>
+  <li>✅ <strong>Message Content Intent</strong></li>
+</ul>
+<p>Click <strong>Save Changes</strong>.</p>
+
+<!-- Section 3 -->
+<h2><span class="step-num">3</span> Getting AI API Keys (Optional)</h2>
+
+<p>AI features (chat assistant and smart moderation) are free but require an API key.</p>
+
+<div class="toggle" onclick="toggleSection(this)">OpenRouter (recommended for free models)</div>
+<div class="toggle-content">
+  <ol>
+    <li>Go to <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a></li>
+    <li>Sign up or log in</li>
+    <li>Click <strong>"Create Key"</strong></li>
+    <li>Copy the key (starts with <code>sk-or-</code>)</li>
+  </ol>
+  <p>OpenRouter provides free models — no credit card needed.</p>
+</div>
+
+<div class="toggle" onclick="toggleSection(this)">Google Gemini (alternative free option)</div>
+<div class="toggle-content">
+  <ol>
+    <li>Go to <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a></li>
+    <li>Sign in with your Google account</li>
+    <li>Click <strong>"Create API Key"</strong></li>
+    <li>Copy the key</li>
+  </ol>
+  <p>Gemini has a generous free tier. You can configure both providers for automatic failover.</p>
+</div>
+
+<!-- Section 4 -->
+<h2><span class="step-num">4</span> Installation</h2>
+
+<h3>Option A: Standalone Executable (.exe)</h3>
+<ol>
+  <li>Download the latest release from <a href="https://github.com/HaydarOzturk/AiAdminBot/releases/latest" target="_blank">GitHub Releases</a></li>
+  <li>Run <code>AiAdminBot.exe</code></li>
+  <li>The setup wizard will guide you through configuration</li>
+  <li>Run the .exe again to start the bot</li>
+</ol>
+
+<h3>Option B: From Source</h3>
+<pre><code>git clone https://github.com/HaydarOzturk/AiAdminBot.git
+cd discord-admin-bot
+npm install
+npm run setup     # Interactive setup wizard
+npm run deploy    # Register slash commands
+npm start         # Start the bot</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+
+<!-- Section 5 -->
+<h2><span class="step-num">5</span> Inviting the Bot</h2>
+
+<p>After setup, the wizard shows your invite link. You can also build it manually:</p>
+
+<pre><code>https://discord.com/oauth2/authorize?client_id=YOUR_CLIENT_ID&scope=bot+applications.commands&permissions=8</code><button class="copy-btn" onclick="copyCode(this)">Copy</button></pre>
+
+<p>Replace <code>YOUR_CLIENT_ID</code> with your bot's Application ID (found in the Developer Portal → General Information).</p>
+
+<div class="card">
+  <strong>Tip:</strong> The permission <code>8</code> means Administrator. AiAdminBot needs admin to manage channels, roles, and moderation.
+</div>
+
+<!-- Section 6 -->
+<h2><span class="step-num">6</span> First Commands to Try</h2>
+
+<table class="command-table">
+  <tr><th>Command</th><th>What it does</th></tr>
+  <tr><td><code>/ai-setup</code></td><td>Auto-creates your server structure (roles, channels, permissions)</td></tr>
+  <tr><td><code>/server-reset</code></td><td>Wipe channels/roles to start fresh (keeps members)</td></tr>
+  <tr><td><code>/help</code></td><td>See all available commands</td></tr>
+  <tr><td><code>/rank</code></td><td>Check your XP and level</td></tr>
+  <tr><td><code>/sync check</code></td><td>See how many members are missing roles</td></tr>
+  <tr><td><code>/template-export</code></td><td>Export your server structure as JSON</td></tr>
+</table>
+
+<!-- Section 7 -->
+<h2><span class="step-num">7</span> Supported Languages</h2>
+
+<p>Set your language with <code>LOCALE=xx</code> in <code>.env</code> or choose during setup.</p>
+
+<div class="lang-grid">
+  <div class="lang-item">🇹🇷 <code>tr</code> — Türkçe</div>
+  <div class="lang-item">🇬🇧 <code>en</code> — English</div>
+  <div class="lang-item">🇩🇪 <code>de</code> — Deutsch</div>
+  <div class="lang-item">🇪🇸 <code>es</code> — Español</div>
+  <div class="lang-item">🇫🇷 <code>fr</code> — Français</div>
+  <div class="lang-item">🇧🇷 <code>pt</code> — Português</div>
+  <div class="lang-item">🇷🇺 <code>ru</code> — Русский</div>
+  <div class="lang-item">🇸🇦 <code>ar</code> — العربية</div>
+</div>
+
+<!-- Section 8 -->
+<h2><span class="step-num">8</span> Troubleshooting</h2>
+
+<div class="toggle" onclick="toggleSection(this)">Bot doesn't come online</div>
+<div class="toggle-content">
+  <ul>
+    <li>Check that your <code>DISCORD_TOKEN</code> in <code>.env</code> is correct</li>
+    <li>Make sure all 3 Privileged Intents are enabled in the Developer Portal</li>
+    <li>Check the <code>logs/</code> folder for error details</li>
+  </ul>
+</div>
+
+<div class="toggle" onclick="toggleSection(this)">Slash commands don't appear</div>
+<div class="toggle-content">
+  <ul>
+    <li>Run <code>npm run deploy</code> (or <code>/sync commands</code> in Discord)</li>
+    <li>Wait a few minutes — Discord caches commands globally</li>
+    <li>Try restarting Discord (Ctrl+R)</li>
+  </ul>
+</div>
+
+<div class="toggle" onclick="toggleSection(this)">AI features don't work</div>
+<div class="toggle-content">
+  <ul>
+    <li>Verify your API key is correct in <code>.env</code></li>
+    <li>Make sure <code>AI_CHAT_ENABLED=true</code> and/or <code>AI_MODERATION_ENABLED=true</code></li>
+    <li>OpenRouter free models may have rate limits — try again later</li>
+    <li>Check the logs for error messages</li>
+  </ul>
+</div>
+
+<div class="toggle" onclick="toggleSection(this)">Messages older than 14 days can't be deleted</div>
+<div class="toggle-content">
+  <p>This is a Discord API limitation. The <code>/clear</code> command can only bulk-delete messages newer than 14 days. Older messages must be deleted individually.</p>
+</div>
+
+<div class="toggle" onclick="toggleSection(this)">Bot can't timeout/kick/ban a user</div>
+<div class="toggle-content">
+  <ul>
+    <li>The bot's role must be <strong>higher</strong> than the target user's highest role</li>
+    <li>Run <code>/fix-permissions</code> to auto-fix the bot's role position</li>
+    <li>Server owners cannot be timed out by anyone</li>
+  </ul>
+</div>
+
+<footer>
+  <p>AiAdminBot v1.2 — MIT License</p>
+  <p>Built by <a href="https://github.com/HaydarOzturk" target="_blank">HaydarOzturk</a> | <a href="https://github.com/HaydarOzturk/AiAdminBot" target="_blank">GitHub</a></p>
+</footer>
+
+</div>
+
+<script>
+function toggleSection(el) {
+  el.classList.toggle('open');
+  const content = el.nextElementSibling;
+  content.classList.toggle('show');
+}
+
+function copyCode(btn) {
+  const code = btn.parentElement.querySelector('code').textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 2000);
+  });
+}
+</script>
+
+</body>
+</html>

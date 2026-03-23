@@ -512,5 +512,26 @@
     "importFailed": "❌ فشل الاستيراد: {error}",
     "importTimedOut": "انتهت مهلة الاستيراد.",
     "parseFailed": "❌ فشل في قراءة القالب: {error}"
+  },
+  "serverReset": {
+    "channelsOnly": "القنوات فقط",
+    "rolesOnly": "الأدوار فقط",
+    "everything": "كل شيء (القنوات + الأدوار)",
+    "confirmTitle": "⚠️ إعادة تعيين الخادم",
+    "confirmDescription": "هذا الإجراء لا يمكن التراجع عنه! سيتم حذف جميع العناصر المحددة لكن الأعضاء سيبقون في الخادم.",
+    "mode": "الوضع",
+    "membersKept": "الأعضاء المحتفظ بهم",
+    "channelsToDelete": "القنوات المراد حذفها",
+    "rolesToDelete": "الأدوار المراد حذفها",
+    "confirmButton": "نعم، إعادة تعيين",
+    "cancelButton": "إلغاء",
+    "cancelled": "تم إلغاء إعادة تعيين الخادم.",
+    "inProgress": "⏳ جاري إعادة تعيين الخادم... قد يستغرق هذا لحظة.",
+    "completeTitle": "✅ اكتملت إعادة تعيين الخادم",
+    "channelsDeleted": "القنوات المحذوفة",
+    "rolesDeleted": "الأدوار المحذوفة",
+    "errors": "أخطاء",
+    "completeFooter": "استخدم /setup أو /ai-setup لإنشاء هيكل جديد",
+    "timedOut": "انتهت مهلة إعادة تعيين الخادم."
   }
 }

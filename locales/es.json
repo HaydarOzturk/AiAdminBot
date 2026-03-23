@@ -512,5 +512,26 @@
     "importFailed": "❌ Importación fallida: {error}",
     "importTimedOut": "Importación expirada.",
     "parseFailed": "❌ Error al leer plantilla: {error}"
+  },
+  "serverReset": {
+    "channelsOnly": "Solo Canales",
+    "rolesOnly": "Solo Roles",
+    "everything": "Todo (Canales + Roles)",
+    "confirmTitle": "⚠️ Reinicio del Servidor",
+    "confirmDescription": "¡Esta acción no se puede deshacer! Todos los elementos seleccionados serán eliminados pero los miembros permanecerán en el servidor.",
+    "mode": "Modo",
+    "membersKept": "Miembros Conservados",
+    "channelsToDelete": "Canales a Eliminar",
+    "rolesToDelete": "Roles a Eliminar",
+    "confirmButton": "Sí, Reiniciar",
+    "cancelButton": "Cancelar",
+    "cancelled": "Reinicio del servidor cancelado.",
+    "inProgress": "⏳ Reiniciando servidor... Esto puede tardar un momento.",
+    "completeTitle": "✅ Reinicio del Servidor Completado",
+    "channelsDeleted": "Canales Eliminados",
+    "rolesDeleted": "Roles Eliminados",
+    "errors": "Errores",
+    "completeFooter": "Use /setup o /ai-setup para crear una nueva estructura",
+    "timedOut": "Reinicio del servidor expirado."
   }
 }

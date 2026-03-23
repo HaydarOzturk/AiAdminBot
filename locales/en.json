@@ -511,5 +511,26 @@
     "importFailed": "❌ Import failed: {error}",
     "importTimedOut": "Import timed out.",
     "parseFailed": "❌ Failed to read template: {error}"
+  },
+  "serverReset": {
+    "channelsOnly": "Channels Only",
+    "rolesOnly": "Roles Only",
+    "everything": "Everything (Channels + Roles)",
+    "confirmTitle": "⚠️ Server Reset",
+    "confirmDescription": "This action cannot be undone! All selected items will be deleted but members will stay in the server.",
+    "mode": "Mode",
+    "membersKept": "Members Kept",
+    "channelsToDelete": "Channels to Delete",
+    "rolesToDelete": "Roles to Delete",
+    "confirmButton": "Yes, Reset",
+    "cancelButton": "Cancel",
+    "cancelled": "Server reset cancelled.",
+    "inProgress": "⏳ Resetting server... This may take a moment.",
+    "completeTitle": "✅ Server Reset Complete",
+    "channelsDeleted": "Channels Deleted",
+    "rolesDeleted": "Roles Deleted",
+    "errors": "Errors",
+    "completeFooter": "Use /setup or /ai-setup to create a new structure",
+    "timedOut": "Server reset timed out."
   }
 }

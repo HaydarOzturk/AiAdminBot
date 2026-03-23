@@ -511,5 +511,26 @@
     "importFailed": "❌ İçe aktarma başarısız: {error}",
     "importTimedOut": "İçe aktarma zaman aşımına uğradı.",
     "parseFailed": "❌ Şablon okunamadı: {error}"
+  },
+  "serverReset": {
+    "channelsOnly": "Sadece Kanallar",
+    "rolesOnly": "Sadece Roller",
+    "everything": "Her Şey (Kanallar + Roller)",
+    "confirmTitle": "⚠️ Sunucu Sıfırlama",
+    "confirmDescription": "Bu işlem geri alınamaz! Tüm seçilen öğeler silinecek ancak üyeler sunucuda kalacaktır.",
+    "mode": "Mod",
+    "membersKept": "Korunan Üyeler",
+    "channelsToDelete": "Silinecek Kanallar",
+    "rolesToDelete": "Silinecek Roller",
+    "confirmButton": "Evet, Sıfırla",
+    "cancelButton": "İptal",
+    "cancelled": "Sunucu sıfırlama iptal edildi.",
+    "inProgress": "⏳ Sunucu sıfırlanıyor... Bu biraz sürebilir.",
+    "completeTitle": "✅ Sunucu Sıfırlama Tamamlandı",
+    "channelsDeleted": "Silinen Kanallar",
+    "rolesDeleted": "Silinen Roller",
+    "errors": "Hatalar",
+    "completeFooter": "Yeni bir yapı oluşturmak için /setup veya /ai-setup kullanın",
+    "timedOut": "Sunucu sıfırlama zaman aşımına uğradı."
   }
 }

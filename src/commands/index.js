@@ -36,6 +36,7 @@ module.exports = [
   require('./setup/setup'),
   require('./setup/template-export'),
   require('./setup/template-import'),
+  require('./setup/server-reset'),
 
   // Utility
   require('./utility/help'),

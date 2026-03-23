@@ -36,25 +36,29 @@ Or use the launcher scripts: `start.bat` (Windows) / `start.sh` (Linux/Mac).
 
 ## Features
 
-### 9 Modules, 21 Slash Commands
+### 11 Modules, 30 Slash Commands
 
 **1. Verification System** — New members must click a button to get verified. Unverified users see only the verification channel; verified users get full access.
 
 **2. Role Management** — Interactive button-based role menus for games, platforms, and colors. Single-select support for color roles. Admins can also assign/remove roles manually via slash commands.
 
-**3. Moderation** — Full moderation toolkit: warn (with DM notifications), mute (timeout-based), kick, ban, bulk message clear, and timeout. Warnings auto-mute at a configurable threshold. Every action is logged with a unique case ID.
+**3. Moderation** — Full moderation toolkit: warn (with DM notifications), mute (timeout-based), kick, ban, bulk message clear, timeout, and custom word blocklist. AI moderation auto-deletes flagged messages and timeouts offenders. `/mod-stats` for server-wide dashboards, `/case` to look up any action by ID, and `/mod-history` with pagination, filters, and export.
 
 **4. Logging** — Automatic logging across 7 dedicated channels: message edits/deletes, join/leave, role changes, nickname changes, channel changes, punishments, and bans. Logs auto-clear every 72 hours. All bot activity is also saved to daily log files in the `logs/` directory for debugging.
 
-**5. Server Setup Automation** — One command (`/setup`) creates your entire server structure: roles, categories, channels with correct permissions, verification messages, and role menus. Fully idempotent — running it again only creates what's missing.
+**5. Server Setup Automation** — One command (`/setup`) creates your entire server structure: roles, categories, channels with correct permissions, verification messages, and role menus. Fully idempotent — running it again only creates what's missing. Use `/server-reset` to wipe all channels and roles while keeping members, perfect for starting fresh before a new setup.
 
-**6. Leveling & XP** — Members earn XP by chatting (with cooldowns to prevent spam). 6 rank tiers from Wood to Gold with auto-assigned roles. Includes `/rank` and `/leaderboard` commands.
+**6. Leveling & XP** — Members earn XP by chatting (with cooldowns to prevent spam) and 1 XP per hour in voice channels. 6 rank tiers from Wood to Gold with auto-assigned roles. Includes `/rank` and `/leaderboard` commands.
 
 **7. AI Setup Interview** — Two modes: **Default Setup** instantly creates the recommended server structure with localized channel names in any of 8 languages, or **Custom Setup** where an AI assistant interviews the server owner and generates a tailored config.
 
-**8. AI Smart Moderation** — Automatically scans messages for toxicity, spam, NSFW content, and threats. Staff members are exempt. High-confidence detections trigger auto-warnings or deletions. Powered by free AI models via OpenRouter.
+**8. AI Smart Moderation** — Automatically scans messages for toxicity, spam, NSFW content, threats, and server rule violations. Rules-aware — reads your rules channel and enforces them. Staff members are exempt. High-confidence detections trigger auto-warnings, message deletion, and timeouts. Supports AI provider failover between Gemini and OpenRouter.
 
-**9. AI Chat Assistant** — A dedicated channel where members can chat with an AI that knows about the server, its features, and all bot commands. Per-user conversation history, rate limiting, and context-aware responses.
+**9. AI Chat Assistant** — A dedicated channel where members can chat with an AI that knows about the server, its features, rules, and all bot commands. Per-user conversation history, rate limiting, and context-aware responses.
+
+**10. Server Templates** — Export your server structure as a portable JSON file with `/template-export`, and import it to recreate the same structure on another server with `/template-import`. Idempotent — only creates what's missing.
+
+**11. Suggestions & Sync** — Users can send feedback to moderators via `/suggest`. `/sync` enforces roles (dry-run preview or apply), with optional auto-sync on startup.
 
 ---
 
@@ -152,9 +156,12 @@ All have `.example` versions you can copy and customize.
 | `/kick <user> [reason]` | Kick a user from the server | Admin |
 | `/ban <user> [reason] [days]` | Ban a user, optionally delete messages | Owner |
 | `/timeout <user> <duration> [reason]` | Give a timeout | Admin |
-| `/clear <amount> [user]` | Bulk delete messages (up to 100) | Moderator |
+| `/clear <amount> [user]` | Bulk delete messages (exempts pinned/interactive) | Moderator |
 | `/warnings <user>` | View a user's warnings | Moderator |
-| `/mod-history <user>` | View full moderation history | Moderator |
+| `/mod-history <user> [type] [export]` | View paginated moderation history with filters | Moderator |
+| `/mod-stats [period]` | Server-wide moderation dashboard | Moderator |
+| `/case <id>` | Look up a specific moderation case | Moderator |
+| `/blocklist add/remove/list` | Manage per-server blocked words | Admin |
 
 ### Leveling
 | Command | Description | Permission |
@@ -169,13 +176,19 @@ All have `.example` versions you can copy and customize.
 | `/ai-setup [mode] [language]` | Default or AI-guided server setup (8 languages) | Owner |
 | `/ai-setup-apply` | Apply the AI-generated server plan | Owner |
 | `/ai-setup-cancel` | Cancel an active AI setup session | Owner |
+| `/server-reset <mode>` | Delete all channels/roles to start fresh (keeps members) | Owner |
+| `/template-export` | Export server structure as JSON template | Owner |
+| `/template-import <file>` | Import server structure from JSON template | Owner |
+| `/fix-permissions` | Auto-fix bot role position for moderation | Owner |
+| `/sync check/apply/commands` | Role enforcement and command sync | Owner |
 
 ### AI & Utility
 | Command | Description | Permission |
 |---------|-------------|------------|
 | `/ai-chat status` | Check AI chat assistant status | Everyone |
 | `/ai-chat reset` | Reset your AI conversation history | Everyone |
-| `/help` | Show all commands | Everyone |
+| `/suggest <message>` | Send a suggestion/feedback to moderators | Everyone |
+| `/help` | Show all commands (with invite button) | Everyone |
 | `/ping` | Check bot latency | Everyone |
 
 ---

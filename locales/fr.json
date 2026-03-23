@@ -512,5 +512,26 @@
     "importFailed": "❌ Échec de l'importation: {error}",
     "importTimedOut": "Importation expirée.",
     "parseFailed": "❌ Impossible de lire le modèle: {error}"
+  },
+  "serverReset": {
+    "channelsOnly": "Canaux Uniquement",
+    "rolesOnly": "Rôles Uniquement",
+    "everything": "Tout (Canaux + Rôles)",
+    "confirmTitle": "⚠️ Réinitialisation du Serveur",
+    "confirmDescription": "Cette action est irréversible ! Tous les éléments sélectionnés seront supprimés mais les membres resteront dans le serveur.",
+    "mode": "Mode",
+    "membersKept": "Membres Conservés",
+    "channelsToDelete": "Canaux à Supprimer",
+    "rolesToDelete": "Rôles à Supprimer",
+    "confirmButton": "Oui, Réinitialiser",
+    "cancelButton": "Annuler",
+    "cancelled": "Réinitialisation du serveur annulée.",
+    "inProgress": "⏳ Réinitialisation du serveur... Cela peut prendre un moment.",
+    "completeTitle": "✅ Réinitialisation Terminée",
+    "channelsDeleted": "Canaux Supprimés",
+    "rolesDeleted": "Rôles Supprimés",
+    "errors": "Erreurs",
+    "completeFooter": "Utilisez /setup ou /ai-setup pour créer une nouvelle structure",
+    "timedOut": "Réinitialisation expirée."
   }
 }

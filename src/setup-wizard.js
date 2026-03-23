@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * AiAdminBot Interactive Setup Wizard
+ * AiAdminBot Interactive Setup Wizard v1.2
  * Guides users through configuring their bot with a friendly step-by-step process.
  * Works both for source installs and .exe builds.
  *
@@ -11,6 +11,7 @@
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
+const https = require('https');
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -25,35 +26,140 @@ function clear() {
   process.stdout.write('\x1Bc');
 }
 
+// ── ANSI Color Helpers (no dependencies) ──────────────────────────────────
+
+const c = {
+  reset: '\x1b[0m',
+  bold: '\x1b[1m',
+  dim: '\x1b[2m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  blue: '\x1b[34m',
+  magenta: '\x1b[35m',
+  cyan: '\x1b[36m',
+  red: '\x1b[31m',
+  white: '\x1b[37m',
+  bgBlue: '\x1b[44m',
+  bgGreen: '\x1b[42m',
+};
+
 function banner() {
   console.log('');
-  console.log('  ╔══════════════════════════════════════════╗');
-  console.log('  ║     🛡️  AiAdminBot — Setup Wizard          ║');
-  console.log('  ║     AI-Powered Discord Administration    ║');
-  console.log('  ╚══════════════════════════════════════════╝');
+  console.log(`  ${c.bgBlue}${c.white}${c.bold}                                              ${c.reset}`);
+  console.log(`  ${c.bgBlue}${c.white}${c.bold}     🛡️  AiAdminBot — Setup Wizard  v1.2       ${c.reset}`);
+  console.log(`  ${c.bgBlue}${c.white}${c.bold}     AI-Powered Discord Administration         ${c.reset}`);
+  console.log(`  ${c.bgBlue}${c.white}${c.bold}                                              ${c.reset}`);
   console.log('');
 }
 
 function success(msg) {
-  console.log(`  ✅ ${msg}`);
+  console.log(`  ${c.green}✅ ${msg}${c.reset}`);
 }
 
 function info(msg) {
-  console.log(`  ℹ️  ${msg}`);
+  console.log(`  ${c.cyan}ℹ️  ${msg}${c.reset}`);
 }
 
 function warn(msg) {
-  console.log(`  ⚠️  ${msg}`);
+  console.log(`  ${c.yellow}⚠️  ${msg}${c.reset}`);
+}
+
+function error(msg) {
+  console.log(`  ${c.red}❌ ${msg}${c.reset}`);
+}
+
+function stepHeader(num, total, title) {
+  const bar = '█'.repeat(num) + '░'.repeat(total - num);
+  console.log('');
+  console.log(`  ${c.dim}[${bar}] Step ${num}/${total}${c.reset}`);
+  console.log(`  ${c.bold}── ${title} ${'─'.repeat(Math.max(0, 47 - title.length))}${c.reset}`);
+  console.log('');
+}
+
+// ── Token validation ──────────────────────────────────────────────────────
+
+function httpGet(url) {
+  return new Promise((resolve, reject) => {
+    https.get(url, {
+      headers: { 'User-Agent': 'AiAdminBot-Setup' },
+    }, res => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => resolve({ status: res.statusCode, data }));
+    }).on('error', reject);
+  });
+}
+
+async function validateToken(token) {
+  try {
+    const res = await httpGet(`https://discord.com/api/v10/users/@me`);
+    // We can't actually call this without auth header using https.get easily,
+    // so let's do a proper request
+    return new Promise((resolve, reject) => {
+      const options = {
+        hostname: 'discord.com',
+        path: '/api/v10/users/@me',
+        method: 'GET',
+        headers: {
+          'Authorization': `Bot ${token}`,
+          'User-Agent': 'AiAdminBot-Setup',
+        },
+      };
+
+      const req = https.request(options, res => {
+        let data = '';
+        res.on('data', chunk => data += chunk);
+        res.on('end', () => {
+          if (res.statusCode === 200) {
+            try {
+              const user = JSON.parse(data);
+              resolve({ valid: true, username: user.username, id: user.id });
+            } catch {
+              resolve({ valid: false });
+            }
+          } else {
+            resolve({ valid: false });
+          }
+        });
+      });
+
+      req.on('error', () => resolve({ valid: false }));
+      req.setTimeout(10000, () => {
+        req.destroy();
+        resolve({ valid: false });
+      });
+      req.end();
+    });
+  } catch {
+    return { valid: false };
+  }
+}
+
+// ── Locale preview ────────────────────────────────────────────────────────
+
+function getLocalePreview(locale) {
+  const previews = {
+    tr: ['doğrulama', 'hoş-geldin', 'kurallar', 'genel-sohbet', 'ai-sohbet', 'ceza-log'],
+    en: ['verification', 'welcome', 'rules', 'general-chat', 'ai-chat', 'punishment-log'],
+    de: ['verifizierung', 'willkommen', 'regeln', 'allgemein-chat', 'ki-chat', 'strafen-log'],
+    es: ['verificación', 'bienvenida', 'reglas', 'chat-general', 'ia-chat', 'registro-castigos'],
+    fr: ['vérification', 'bienvenue', 'règles', 'discussion-générale', 'ia-chat', 'journal-sanctions'],
+    pt: ['verificação', 'boas-vindas', 'regras', 'bate-papo-geral', 'ia-chat', 'registro-punições'],
+    ru: ['верификация', 'добро-пожаловать', 'правила', 'общий-чат', 'ии-чат', 'журнал-наказаний'],
+    ar: ['التحقق', 'مرحبا', 'القواعد', 'الدردشة-العامة', 'دردشة-ذكاء', 'سجل-العقوبات'],
+  };
+  return previews[locale] || previews.en;
 }
 
 // Determine paths (works for both source and pkg exe)
 function getBasePath() {
-  // When running as a pkg exe, process.pkg is defined
   if (process.pkg) {
     return path.dirname(process.execPath);
   }
   return path.join(__dirname, '..');
 }
+
+// ── Main wizard ───────────────────────────────────────────────────────────
 
 async function run() {
   clear();
@@ -61,18 +167,19 @@ async function run() {
 
   const basePath = getBasePath();
   const envPath = path.join(basePath, '.env');
-  const envExamplePath = path.join(basePath, '.env.example');
 
-  console.log('  Welcome! This wizard will help you set up AiAdminBot.');
-  console.log('  You\'ll need a few things ready:');
+  const TOTAL_STEPS = 4;
+
+  console.log(`  ${c.white}Welcome! This wizard will help you set up AiAdminBot.${c.reset}`);
+  console.log(`  ${c.dim}You'll need a few things ready:${c.reset}`);
   console.log('');
-  console.log('    1. A Discord Bot token (from Discord Developer Portal)');
-  console.log('    2. (Optional) An OpenRouter API key for AI features');
+  console.log(`    ${c.cyan}1.${c.reset} A Discord Bot token ${c.dim}(from Discord Developer Portal)${c.reset}`);
+  console.log(`    ${c.cyan}2.${c.reset} (Optional) An API key for AI features`);
   console.log('');
 
   // Check if .env already exists
   if (fs.existsSync(envPath)) {
-    const overwrite = await ask('  A .env file already exists. Overwrite? (y/N): ');
+    const overwrite = await ask(`  ${c.yellow}A .env file already exists. Overwrite? (y/N):${c.reset} `);
     if (overwrite.toLowerCase() !== 'y') {
       info('Keeping existing .env file. Setup cancelled.');
       rl.close();
@@ -80,28 +187,65 @@ async function run() {
     }
   }
 
-  console.log('');
-  console.log('  ── Step 1: Discord Bot Credentials ──────────────────');
-  console.log('');
+  // ── STEP 1: Bot Token ──────────────────────────────────────────────
+  stepHeader(1, TOTAL_STEPS, 'Discord Bot Credentials');
+
   info('Create a bot at: https://discord.com/developers/applications');
+  info('Go to Bot tab → Click "Reset Token" → Copy the token');
   console.log('');
 
-  const discordToken = await ask('  Discord Bot Token: ');
-  if (!discordToken || discordToken.trim().length < 20) {
-    warn('Token looks invalid. You can edit .env manually later.');
+  let discordToken = '';
+  let botUsername = '';
+  let botClientId = '';
+
+  while (true) {
+    discordToken = await ask(`  ${c.white}Discord Bot Token:${c.reset} `);
+    const trimmed = discordToken.trim();
+
+    if (!trimmed || trimmed.length < 20) {
+      warn('Token looks too short. Please try again or press Ctrl+C to exit.');
+      continue;
+    }
+
+    // Validate token against Discord API
+    console.log(`  ${c.dim}  Validating token...${c.reset}`);
+    const result = await validateToken(trimmed);
+
+    if (result.valid) {
+      botUsername = result.username;
+      botClientId = result.id;
+      success(`Connected as ${c.bold}${result.username}${c.reset}${c.green} (ID: ${result.id})`);
+      break;
+    } else {
+      warn('Could not validate token with Discord API.');
+      const proceed = await ask(`  ${c.yellow}Use this token anyway? (y/N):${c.reset} `);
+      if (proceed.toLowerCase() === 'y') {
+        // Try to extract client ID from token
+        try {
+          const parts = trimmed.split('.');
+          if (parts.length >= 1) {
+            const decoded = Buffer.from(parts[0], 'base64').toString('utf-8');
+            if (/^\d{17,20}$/.test(decoded)) {
+              botClientId = decoded;
+            }
+          }
+        } catch { /* ignore */ }
+        break;
+      }
+    }
   }
 
-  console.log('');
-  console.log('  ── Step 2: Language ─────────────────────────────────');
-  console.log('');
+  // ── STEP 2: Language ───────────────────────────────────────────────
+  stepHeader(2, TOTAL_STEPS, 'Language');
+
   console.log('  Supported languages:');
-  console.log('    tr = 🇹🇷 Türkçe    en = 🇬🇧 English');
-  console.log('    de = 🇩🇪 Deutsch    es = 🇪🇸 Español');
-  console.log('    fr = 🇫🇷 Français   pt = 🇧🇷 Português');
-  console.log('    ru = 🇷🇺 Русский    ar = 🇸🇦 العربية');
+  console.log(`    ${c.cyan}tr${c.reset} = 🇹🇷 Türkçe    ${c.cyan}en${c.reset} = 🇬🇧 English`);
+  console.log(`    ${c.cyan}de${c.reset} = 🇩🇪 Deutsch    ${c.cyan}es${c.reset} = 🇪🇸 Español`);
+  console.log(`    ${c.cyan}fr${c.reset} = 🇫🇷 Français   ${c.cyan}pt${c.reset} = 🇧🇷 Português`);
+  console.log(`    ${c.cyan}ru${c.reset} = 🇷🇺 Русский    ${c.cyan}ar${c.reset} = 🇸🇦 العربية`);
   console.log('');
 
-  let locale = await ask('  Language code (default: tr): ');
+  let locale = await ask(`  ${c.white}Language code (default: tr):${c.reset} `);
   locale = locale.trim().toLowerCase() || 'tr';
   const validLocales = ['tr', 'en', 'de', 'es', 'fr', 'pt', 'ru', 'ar'];
   if (!validLocales.includes(locale)) {
@@ -109,32 +253,88 @@ async function run() {
     locale = 'tr';
   }
 
+  // Show channel name preview
+  const preview = getLocalePreview(locale);
   console.log('');
-  console.log('  ── Step 3: AI Features (Optional) ──────────────────');
-  console.log('');
-  info('AI features are free via OpenRouter. Get a key at: https://openrouter.ai/keys');
+  console.log(`  ${c.dim}Channel preview for "${locale}":${c.reset}`);
+  console.log(`    ${c.cyan}#${preview[0]}  #${preview[1]}  #${preview[2]}${c.reset}`);
+  console.log(`    ${c.cyan}#${preview[3]}  #${preview[4]}  #${preview[5]}${c.reset}`);
+  success(`Language set to "${locale}"`);
+
+  // ── STEP 3: AI Features ────────────────────────────────────────────
+  stepHeader(3, TOTAL_STEPS, 'AI Features (Optional)');
+
+  console.log('  AI features can be powered by:');
+  console.log(`    ${c.cyan}1.${c.reset} OpenRouter ${c.dim}(free tier available)${c.reset} — https://openrouter.ai/keys`);
+  console.log(`    ${c.cyan}2.${c.reset} Google Gemini ${c.dim}(free tier available)${c.reset} — https://aistudio.google.com/apikey`);
+  console.log(`    ${c.cyan}3.${c.reset} Both ${c.dim}(with automatic failover)${c.reset}`);
   console.log('');
 
-  const openrouterKey = await ask('  OpenRouter API Key (press Enter to skip): ');
+  let openrouterKey = '';
+  let geminiKey = '';
   let aiChatEnabled = false;
   let aiModEnabled = false;
 
-  if (openrouterKey && openrouterKey.trim().length > 10) {
-    const enableChat = await ask('  Enable AI Chat Assistant? (Y/n): ');
+  const aiChoice = await ask(`  ${c.white}Which AI provider? (1/2/3/skip):${c.reset} `);
+
+  if (aiChoice === '1' || aiChoice === '3') {
+    openrouterKey = await ask(`  ${c.white}OpenRouter API Key:${c.reset} `);
+    if (!openrouterKey || openrouterKey.trim().length < 10) {
+      warn('Key looks invalid. You can edit .env later.');
+      openrouterKey = '';
+    }
+  }
+
+  if (aiChoice === '2' || aiChoice === '3') {
+    geminiKey = await ask(`  ${c.white}Google Gemini API Key:${c.reset} `);
+    if (!geminiKey || geminiKey.trim().length < 10) {
+      warn('Key looks invalid. You can edit .env later.');
+      geminiKey = '';
+    }
+  }
+
+  if (openrouterKey.trim() || geminiKey.trim()) {
+    const enableChat = await ask(`  ${c.white}Enable AI Chat Assistant? (Y/n):${c.reset} `);
     aiChatEnabled = enableChat.toLowerCase() !== 'n';
 
-    const enableMod = await ask('  Enable AI Smart Moderation? (Y/n): ');
+    const enableMod = await ask(`  ${c.white}Enable AI Smart Moderation? (Y/n):${c.reset} `);
     aiModEnabled = enableMod.toLowerCase() !== 'n';
-  } else {
+
+    if (openrouterKey.trim() && geminiKey.trim()) {
+      info('Both providers configured — failover is automatic!');
+    }
+  } else if (aiChoice !== 'skip' && aiChoice !== '') {
     info('Skipping AI features. You can enable them later in .env');
   }
 
+  // ── STEP 4: Review & Save ──────────────────────────────────────────
+  stepHeader(4, TOTAL_STEPS, 'Review & Save');
+
+  console.log('  Your configuration:');
+  console.log('');
+  console.log(`    ${c.cyan}Bot:${c.reset}       ${botUsername || '(token set)'}`);
+  console.log(`    ${c.cyan}Language:${c.reset}   ${locale}`);
+  console.log(`    ${c.cyan}AI Chat:${c.reset}    ${aiChatEnabled ? `${c.green}Enabled${c.reset}` : `${c.dim}Disabled${c.reset}`}`);
+  console.log(`    ${c.cyan}AI Mod:${c.reset}     ${aiModEnabled ? `${c.green}Enabled${c.reset}` : `${c.dim}Disabled${c.reset}`}`);
+  if (openrouterKey.trim()) console.log(`    ${c.cyan}OpenRouter:${c.reset} ${c.green}Configured${c.reset}`);
+  if (geminiKey.trim()) console.log(`    ${c.cyan}Gemini:${c.reset}     ${c.green}Configured${c.reset}`);
+  if (openrouterKey.trim() && geminiKey.trim()) console.log(`    ${c.cyan}Failover:${c.reset}   ${c.green}Enabled${c.reset}`);
+  console.log('');
+
+  const confirm = await ask(`  ${c.white}Save this configuration? (Y/n):${c.reset} `);
+  if (confirm.toLowerCase() === 'n') {
+    info('Setup cancelled. Run the wizard again to start over.');
+    rl.close();
+    return;
+  }
+
   // Build .env content
-  const envContent = `# AiAdminBot Configuration
-# Generated by Setup Wizard
+  let envContent = `# AiAdminBot Configuration
+# Generated by Setup Wizard v1.2
 
 # Discord Bot Credentials
 DISCORD_TOKEN=${discordToken.trim()}
+${botClientId ? `CLIENT_ID=${botClientId}` : '# CLIENT_ID=your_bot_client_id'}
 
 # Database
 DATABASE_PATH=./data/bot.db
@@ -144,15 +344,41 @@ LOCALE=${locale}
 
 # Logging
 LOG_LEVEL=info
+`;
 
-# AI Features (OpenRouter - Free Models)
+  // AI provider config
+  if (geminiKey.trim() && openrouterKey.trim()) {
+    // Both — Gemini primary, OpenRouter fallback
+    envContent += `
+# AI Provider — Dual provider with failover
+AI_PROVIDER=gemini
+GEMINI_API_KEY=${geminiKey.trim()}
+OPENROUTER_API_KEY=${openrouterKey.trim()}
+AI_MODEL=gemini-2.0-flash
+`;
+  } else if (geminiKey.trim()) {
+    envContent += `
+# AI Provider — Google Gemini
+AI_PROVIDER=gemini
+GEMINI_API_KEY=${geminiKey.trim()}
+AI_MODEL=gemini-2.0-flash
+`;
+  } else {
+    envContent += `
+# AI Provider — OpenRouter (Free Models)
 OPENROUTER_API_KEY=${openrouterKey.trim() || 'your_openrouter_key_here'}
 AI_MODEL=openrouter/free
+`;
+  }
+
+  envContent += `
+# AI Features
 AI_CHAT_ENABLED=${aiChatEnabled}
 AI_CHAT_CHANNEL=ai-chat
 AI_CHAT_RATE_LIMIT=5
 AI_MODERATION_ENABLED=${aiModEnabled}
 AI_MOD_CONFIDENCE_THRESHOLD=0.8
+AI_TIMEOUT_MINUTES=3
 `;
 
   // Write .env
@@ -184,50 +410,46 @@ AI_MOD_CONFIDENCE_THRESHOLD=0.8
     success('Created data/ directory');
   }
 
+  // ── Completion ─────────────────────────────────────────────────────
+
   console.log('');
-  console.log('  ── Setup Complete! ──────────────────────────────────');
+  console.log(`  ${c.bgGreen}${c.white}${c.bold}                                              ${c.reset}`);
+  console.log(`  ${c.bgGreen}${c.white}${c.bold}           Setup Complete! 🎉                  ${c.reset}`);
+  console.log(`  ${c.bgGreen}${c.white}${c.bold}                                              ${c.reset}`);
   console.log('');
 
-  // Try to generate invite link from bot token
-  try {
-    const tokenParts = discordToken.trim().split('.');
-    if (tokenParts.length >= 1) {
-      const clientId = Buffer.from(tokenParts[0], 'base64').toString('utf-8');
-      if (/^\d{17,20}$/.test(clientId)) {
-        console.log('  🔗 Invite your bot to a server:');
-        console.log(`     https://discord.com/oauth2/authorize?client_id=${clientId}&scope=bot+applications.commands&permissions=8`);
-        console.log('');
-      }
-    }
-  } catch {
-    // Couldn't parse token, skip invite link
+  // Invite link
+  if (botClientId) {
+    console.log(`  ${c.bold}🔗 Invite your bot to a server:${c.reset}`);
+    console.log(`  ${c.cyan}https://discord.com/oauth2/authorize?client_id=${botClientId}&scope=bot+applications.commands&permissions=8${c.reset}`);
+    console.log('');
   }
 
-  console.log('  Next steps:');
+  console.log(`  ${c.bold}Next steps:${c.reset}`);
   console.log('');
 
   if (process.pkg) {
-    // Running as exe
-    console.log('    1. Close this window');
-    console.log('    2. Run AiAdminBot.exe again to start the bot');
-    console.log('    3. Use /ai-setup in Discord to set up your server');
+    console.log(`    ${c.cyan}1.${c.reset} Close this window`);
+    console.log(`    ${c.cyan}2.${c.reset} Run AiAdminBot.exe again to start the bot`);
+    console.log(`    ${c.cyan}3.${c.reset} Use ${c.bold}/ai-setup${c.reset} in Discord to set up your server`);
+    console.log(`    ${c.cyan}4.${c.reset} Use ${c.bold}/server-reset${c.reset} first if you want to clear existing channels`);
   } else {
-    // Running from source
-    console.log('    1. Deploy commands:  npm run deploy');
-    console.log('    2. Start the bot:    npm start');
-    console.log('    3. Use /ai-setup in Discord to set up your server');
+    console.log(`    ${c.cyan}1.${c.reset} Deploy commands:  ${c.bold}npm run deploy${c.reset}`);
+    console.log(`    ${c.cyan}2.${c.reset} Start the bot:    ${c.bold}npm start${c.reset}`);
+    console.log(`    ${c.cyan}3.${c.reset} Use ${c.bold}/ai-setup${c.reset} in Discord to set up your server`);
+    console.log(`    ${c.cyan}4.${c.reset} Use ${c.bold}/server-reset${c.reset} first if you want to clear existing channels`);
   }
 
   console.log('');
   info('Edit .env anytime to change settings.');
-  info('Docs: https://github.com/HaydarOzturk/AiAdminBot');
+  info(`Docs: ${c.cyan}https://github.com/HaydarOzturk/AiAdminBot${c.reset}`);
   console.log('');
 
   rl.close();
 }
 
 run().catch(err => {
-  console.error('Setup failed:', err.message);
+  console.error(`\n  ${c.red}Setup failed: ${err.message}${c.reset}\n`);
   rl.close();
   process.exit(1);
 });
