@@ -160,7 +160,25 @@
     "timeoutFailed": "❌ فشل المهلة: {error}",
     "rulesViolationWarning": "⚠️ **تحذير:** رسالتك تنتهك قواعد الخادم.\n📝 السبب: {reason}",
     "aiAutoTimeout": "⚠️ **إسكات تلقائي:** رسالتك انتهكت إرشادات المجتمع.\n📝 الفئة: {category}\n⏱️ تم إسكاتك لمدة {minutes} دقائق.",
-    "rulesViolationTimeout": "⚠️ **مخالفة القواعد:** رسالتك انتهكت قواعد الخادم.\n📝 السبب: {reason}\n⏱️ تم إسكاتك لمدة {minutes} دقائق."
+    "rulesViolationTimeout": "⚠️ **مخالفة القواعد:** رسالتك انتهكت قواعد الخادم.\n📝 السبب: {reason}\n⏱️ تم إسكاتك لمدة {minutes} دقائق.",
+    "page": "صفحة",
+    "totalActions": "إجمالي الإجراءات",
+    "actions": "إجراءات",
+    "allTime": "كل الوقت",
+    "lastDays": "آخر {days} أيام",
+    "modStatsTitle": "📊 إحصائيات الإشراف",
+    "manualActions": "إجراءات يدوية",
+    "aiActions": "إجراءات الذكاء الاصطناعي",
+    "actionBreakdown": "تفصيل الإجراءات",
+    "topModerators": "أفضل المشرفين",
+    "mostWarned": "الأكثر تحذيراً",
+    "caseNotFound": "القضية #{id} غير موجودة.",
+    "caseTitle": "قضية",
+    "caseType": "نوع الإجراء",
+    "moderator": "المشرف",
+    "duration": "المدة",
+    "date": "التاريخ",
+    "activeWarnings": "التحذيرات النشطة"
   },
   "setup": {
     "title": "🏗️ اكتمل إعداد الخادم!",
@@ -316,7 +334,8 @@
     "verificationValue": "`/verify-setup` — يرسل رسالة التحقق إلى قناة",
     "infoValue": "`/help` — عرض هذه الرسالة\n`/ping` — التحقق من تأخير البوت",
     "suggestFeature": "💡 الاقتراحات",
-    "suggestValue": "`/suggest` — إرسال اقتراح أو ملاحظة إلى المشرفين"
+    "suggestValue": "`/suggest` — إرسال اقتراح أو ملاحظة إلى المشرفين",
+    "inviteButton": "دعوة البوت"
   },
   "roleMenus": {
     "gameTitle": "🎮 أدوار الألعاب",
@@ -452,5 +471,46 @@
   },
   "voiceXp": {
     "source": "مكتسب عبر قناة صوتية XP"
+  },
+  "sync": {
+    "commandsSynced": "✅ تم مزامنة {count} أوامر بنجاح.",
+    "commandsFailed": "❌ فشل مزامنة الأوامر: {error}",
+    "noRolesFound": "لم يتم العثور على دور غير موثق أو عضو جديد. قم بتشغيل /setup أولاً.",
+    "checkTitle": "🔍 فحص الأدوار (معاينة)",
+    "applyTitle": "🔄 مزامنة الأدوار مكتملة",
+    "totalMembers": "إجمالي الأعضاء",
+    "alreadyHasRole": "لديه دور بالفعل",
+    "botsSkipped": "تم تخطي البوتات",
+    "errors": "أخطاء",
+    "checkFooter": "{count} عضو يحتاج إصلاح",
+    "applyFooter": "تم إصلاح {count} عضو"
+  },
+  "template": {
+    "exportSuccess": "✅ تم إنشاء القالب: {categories} فئات، {channels} قنوات، {roles} أدوار",
+    "exportFailed": "❌ فشل تصدير القالب: {error}",
+    "mustBeJson": "يجب أن يكون الملف بتنسيق .json.",
+    "fileTooLarge": "الملف كبير جداً (الحد الأقصى 500 كيلوبايت).",
+    "invalidTemplate": "قالب غير صالح: {errors}",
+    "previewTitle": "📋 معاينة القالب",
+    "previewDescription": "القالب: **{name}**",
+    "newRoles": "أدوار جديدة",
+    "existingRoles": "أدوار موجودة",
+    "newCategories": "فئات جديدة",
+    "newChannels": "قنوات جديدة",
+    "existingChannels": "قنوات موجودة",
+    "locale": "اللغة",
+    "previewFooter": "استخدم الأزرار أدناه للتأكيد أو الإلغاء",
+    "confirmImport": "استيراد",
+    "cancelImport": "إلغاء",
+    "importCancelled": "تم إلغاء الاستيراد.",
+    "importing": "⏳ جاري استيراد القالب...",
+    "importCompleteTitle": "✅ اكتمل الاستيراد",
+    "rolesCreated": "الأدوار المنشأة",
+    "categoriesCreated": "الفئات المنشأة",
+    "channelsCreated": "القنوات المنشأة",
+    "importErrors": "أخطاء",
+    "importFailed": "❌ فشل الاستيراد: {error}",
+    "importTimedOut": "انتهت مهلة الاستيراد.",
+    "parseFailed": "❌ فشل في قراءة القالب: {error}"
   }
 }

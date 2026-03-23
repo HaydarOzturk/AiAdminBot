@@ -56,5 +56,28 @@ module.exports = {
     const voiceXp = require('../systems/voiceXp');
     voiceXp.initVoiceTracking(client);
     voiceXp.startVoiceXpTimer(client);
+
+    // Auto-sync roles on startup if enabled
+    const { loadConfig } = require('../utils/paths');
+    try {
+      const botConfig = loadConfig('config.json');
+      if (botConfig.sync?.runOnStartup) {
+        const { syncMembers } = require('../commands/utility/sync');
+        for (const guild of client.guilds.cache.values()) {
+          try {
+            const result = await syncMembers(guild, false);
+            if (result.error) continue;
+            const fixed = result.assignedUnverified + result.assignedVerified;
+            if (fixed > 0) {
+              console.log(`🔄 Auto-sync: Fixed ${fixed} member(s) in ${guild.name}`);
+            }
+          } catch (err) {
+            console.warn(`⚠️ Auto-sync failed for ${guild.name}: ${err.message}`);
+          }
+        }
+      }
+    } catch {
+      // Config not available, skip auto-sync
+    }
   },
 };

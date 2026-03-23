@@ -1,6 +1,7 @@
-const { SlashCommandBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { createEmbed } = require('../../utils/embedBuilder');
 const { t } = require('../../utils/locale');
+const { getInviteLink } = require('../../utils/inviteLink');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -62,6 +63,24 @@ module.exports = {
       footer: t('help.footer'),
     });
 
-    await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+    // Build reply components — add invite button if we have a client ID
+    const components = [];
+    const inviteUrl = getInviteLink(interaction.client);
+    if (inviteUrl) {
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setLabel(t('help.inviteButton'))
+          .setStyle(ButtonStyle.Link)
+          .setURL(inviteUrl)
+          .setEmoji('🔗')
+      );
+      components.push(row);
+    }
+
+    await interaction.reply({
+      embeds: [embed],
+      components,
+      flags: MessageFlags.Ephemeral,
+    });
   },
 };

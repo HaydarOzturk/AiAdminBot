@@ -160,7 +160,37 @@
     "timeoutFailed": "❌ Zaman aşımı başarısız: {error}",
     "rulesViolationWarning": "⚠️ **Uyarı:** Mesajın sunucu kurallarına aykırı bulundu.\n📝 Sebep: {reason}",
     "aiAutoTimeout": "⚠️ **Otomatik Susturma:** Mesajın topluluk kurallarına aykırı bulundu.\n📝 Kategori: {category}\n⏱️ {minutes} dakika susturuldun.",
-    "rulesViolationTimeout": "⚠️ **Kural İhlali:** Mesajın sunucu kurallarına aykırı bulundu.\n📝 Sebep: {reason}\n⏱️ {minutes} dakika susturuldun."
+    "rulesViolationTimeout": "⚠️ **Kural İhlali:** Mesajın sunucu kurallarına aykırı bulundu.\n📝 Sebep: {reason}\n⏱️ {minutes} dakika susturuldun.",
+    "page": "Sayfa",
+    "totalActions": "toplam işlem",
+    "actions": "işlem",
+    "allTime": "Tüm zamanlar",
+    "lastDays": "Son {days} gün",
+    "modStatsTitle": "📊 Moderasyon İstatistikleri",
+    "manualActions": "Manuel İşlemler",
+    "aiActions": "AI İşlemleri",
+    "actionBreakdown": "İşlem Dağılımı",
+    "topModerators": "En Aktif Moderatörler",
+    "mostWarned": "En Çok Uyarılanlar",
+    "caseNotFound": "#{id} numaralı vaka bulunamadı.",
+    "caseTitle": "Vaka",
+    "caseType": "İşlem Türü",
+    "moderator": "Moderatör",
+    "date": "Tarih",
+    "activeWarnings": "Aktif Uyarılar"
+  },
+  "sync": {
+    "commandsSynced": "✅ {count} komut başarıyla senkronize edildi.",
+    "commandsFailed": "❌ Komut senkronizasyonu başarısız: {error}",
+    "noRolesFound": "Doğrulanmamış veya Yeni Üye rolü bulunamadı. Önce /setup çalıştırın.",
+    "checkTitle": "🔍 Rol Kontrolü (Önizleme)",
+    "applyTitle": "🔄 Rol Senkronizasyonu Tamamlandı",
+    "totalMembers": "Toplam Üyeler",
+    "alreadyHasRole": "Zaten Rolü Var",
+    "botsSkipped": "Botlar Atlandı",
+    "errors": "Hatalar",
+    "checkFooter": "{count} üye düzeltme gerektirir",
+    "applyFooter": "{count} üye düzeltildi"
   },
   "setup": {
     "title": "🏗️ Sunucu Kurulumu Tamamlandı!",
@@ -316,7 +346,8 @@
     "verificationValue": "`/verify-setup` — Doğrulama mesajını kanala gönderir",
     "infoValue": "`/help` — Bu mesajı gösterir\n`/ping` — Bot gecikmesini gösterir",
     "suggestFeature": "💡 Öneriler",
-    "suggestValue": "`/suggest` — Moderatörlere öneri veya geri bildirim gönder"
+    "suggestValue": "`/suggest` — Moderatörlere öneri veya geri bildirim gönder",
+    "inviteButton": "Botu Davet Et"
   },
   "roleMenus": {
     "gameTitle": "🎮 Oyun Rolleri",
@@ -452,5 +483,33 @@
   },
   "voiceXp": {
     "source": "Sesli kanal XP ile kazanıldı"
+  },
+  "template": {
+    "exportSuccess": "✅ Şablon oluşturuldu: {categories} kategori, {channels} kanal, {roles} rol",
+    "exportFailed": "❌ Şablon oluşturulamadı: {error}",
+    "mustBeJson": "Dosya .json formatında olmalıdır.",
+    "fileTooLarge": "Dosya çok büyük (maks. 500KB).",
+    "invalidTemplate": "Geçersiz şablon: {errors}",
+    "previewTitle": "📋 Şablon Önizlemesi",
+    "previewDescription": "Şablon: **{name}**",
+    "newRoles": "Yeni Roller",
+    "existingRoles": "Mevcut Roller",
+    "newCategories": "Yeni Kategoriler",
+    "newChannels": "Yeni Kanallar",
+    "existingChannels": "Mevcut Kanallar",
+    "locale": "Dil",
+    "previewFooter": "Onaylamak veya iptal etmek için aşağıdaki butonları kullanın",
+    "confirmImport": "İçe Aktar",
+    "cancelImport": "İptal",
+    "importCancelled": "İçe aktarma iptal edildi.",
+    "importing": "⏳ Şablon içe aktarılıyor...",
+    "importCompleteTitle": "✅ İçe Aktarma Tamamlandı",
+    "rolesCreated": "Oluşturulan Roller",
+    "categoriesCreated": "Oluşturulan Kategoriler",
+    "channelsCreated": "Oluşturulan Kanallar",
+    "importErrors": "Hatalar",
+    "importFailed": "❌ İçe aktarma başarısız: {error}",
+    "importTimedOut": "İçe aktarma zaman aşımına uğradı.",
+    "parseFailed": "❌ Şablon okunamadı: {error}"
   }
 }

@@ -160,7 +160,25 @@
     "timeoutFailed": "❌ Mise en délai échouée : {error}",
     "rulesViolationWarning": "⚠️ **Avertissement :** Votre message enfreint les règles du serveur.\n📝 Raison : {reason}",
     "aiAutoTimeout": "⚠️ **Mise en sourdine automatique :** Votre message enfreint les règles de la communauté.\n📝 Catégorie : {category}\n⏱️ Vous avez été mis en sourdine pendant {minutes} minutes.",
-    "rulesViolationTimeout": "⚠️ **Violation de règle :** Votre message enfreint les règles du serveur.\n📝 Raison : {reason}\n⏱️ Vous avez été mis en sourdine pendant {minutes} minutes."
+    "rulesViolationTimeout": "⚠️ **Violation de règle :** Votre message enfreint les règles du serveur.\n📝 Raison : {reason}\n⏱️ Vous avez été mis en sourdine pendant {minutes} minutes.",
+    "page": "Page",
+    "totalActions": "actions totales",
+    "actions": "actions",
+    "allTime": "Tout temps",
+    "lastDays": "Derniers {days} jours",
+    "modStatsTitle": "📊 Statistiques de Modération",
+    "manualActions": "Actions Manuelles",
+    "aiActions": "Actions IA",
+    "actionBreakdown": "Répartition des Actions",
+    "topModerators": "Top Modérateurs",
+    "mostWarned": "Plus Avertis",
+    "caseNotFound": "Cas #{id} introuvable.",
+    "caseTitle": "Cas",
+    "caseType": "Type d'Action",
+    "moderator": "Modérateur",
+    "duration": "Durée",
+    "date": "Date",
+    "activeWarnings": "Avertissements Actifs"
   },
   "setup": {
     "title": "🏗️ Configuration du Serveur Terminée !",
@@ -316,7 +334,8 @@
     "verificationValue": "`/verify-setup` — Envoie le message de vérification à un canal",
     "infoValue": "`/help` — Afficher ce message\n`/ping` — Vérifier la latence du bot",
     "suggestFeature": "💡 Suggestions",
-    "suggestValue": "`/suggest` — Envoyer une suggestion ou un retour aux modérateurs"
+    "suggestValue": "`/suggest` — Envoyer une suggestion ou un retour aux modérateurs",
+    "inviteButton": "Inviter le Bot"
   },
   "roleMenus": {
     "gameTitle": "🎮 Rôles de Jeu",
@@ -452,5 +471,46 @@
   },
   "voiceXp": {
     "source": "Gagné par XP de canal vocal"
+  },
+  "sync": {
+    "commandsSynced": "✅ {count} commandes synchronisées.",
+    "commandsFailed": "❌ Synchronisation des commandes échouée: {error}",
+    "noRolesFound": "Rôle Non Vérifié ou Nouveau Membre introuvable. Exécutez /setup d'abord.",
+    "checkTitle": "🔍 Vérification des Rôles (Aperçu)",
+    "applyTitle": "🔄 Synchronisation des Rôles Terminée",
+    "totalMembers": "Total Membres",
+    "alreadyHasRole": "A déjà un Rôle",
+    "botsSkipped": "Bots Ignorés",
+    "errors": "Erreurs",
+    "checkFooter": "{count} membre(s) à corriger",
+    "applyFooter": "{count} membre(s) corrigé(s)"
+  },
+  "template": {
+    "exportSuccess": "✅ Modèle créé: {categories} catégories, {channels} canaux, {roles} rôles",
+    "exportFailed": "❌ Échec de l'export: {error}",
+    "mustBeJson": "Le fichier doit être au format .json.",
+    "fileTooLarge": "Fichier trop volumineux (max. 500Ko).",
+    "invalidTemplate": "Modèle invalide: {errors}",
+    "previewTitle": "📋 Aperçu du Modèle",
+    "previewDescription": "Modèle: **{name}**",
+    "newRoles": "Nouveaux Rôles",
+    "existingRoles": "Rôles Existants",
+    "newCategories": "Nouvelles Catégories",
+    "newChannels": "Nouveaux Canaux",
+    "existingChannels": "Canaux Existants",
+    "locale": "Langue",
+    "previewFooter": "Utilisez les boutons ci-dessous pour confirmer ou annuler",
+    "confirmImport": "Importer",
+    "cancelImport": "Annuler",
+    "importCancelled": "Importation annulée.",
+    "importing": "⏳ Importation du modèle...",
+    "importCompleteTitle": "✅ Importation Terminée",
+    "rolesCreated": "Rôles Créés",
+    "categoriesCreated": "Catégories Créées",
+    "channelsCreated": "Canaux Créés",
+    "importErrors": "Erreurs",
+    "importFailed": "❌ Échec de l'importation: {error}",
+    "importTimedOut": "Importation expirée.",
+    "parseFailed": "❌ Impossible de lire le modèle: {error}"
   }
 }

@@ -160,7 +160,37 @@
     "timeoutFailed": "❌ Timeout failed: {error}",
     "rulesViolationWarning": "⚠️ **Warning:** Your message was found to violate server rules.\n📝 Reason: {reason}",
     "aiAutoTimeout": "⚠️ **Auto Timeout:** Your message violated community guidelines.\n📝 Category: {category}\n⏱️ You have been timed out for {minutes} minutes.",
-    "rulesViolationTimeout": "⚠️ **Rule Violation:** Your message violated server rules.\n📝 Reason: {reason}\n⏱️ You have been timed out for {minutes} minutes."
+    "rulesViolationTimeout": "⚠️ **Rule Violation:** Your message violated server rules.\n📝 Reason: {reason}\n⏱️ You have been timed out for {minutes} minutes.",
+    "page": "Page",
+    "totalActions": "total actions",
+    "actions": "actions",
+    "allTime": "All time",
+    "lastDays": "Last {days} days",
+    "modStatsTitle": "📊 Moderation Statistics",
+    "manualActions": "Manual Actions",
+    "aiActions": "AI Actions",
+    "actionBreakdown": "Action Breakdown",
+    "topModerators": "Top Moderators",
+    "mostWarned": "Most Warned",
+    "caseNotFound": "Case #{id} not found.",
+    "caseTitle": "Case",
+    "caseType": "Action Type",
+    "moderator": "Moderator",
+    "date": "Date",
+    "activeWarnings": "Active Warnings"
+  },
+  "sync": {
+    "commandsSynced": "✅ {count} commands synced successfully.",
+    "commandsFailed": "❌ Command sync failed: {error}",
+    "noRolesFound": "Could not find the Unverified or New Member role. Run /setup first.",
+    "checkTitle": "🔍 Role Check (Preview)",
+    "applyTitle": "🔄 Role Sync Complete",
+    "totalMembers": "Total Members",
+    "alreadyHasRole": "Already Has Role",
+    "botsSkipped": "Bots Skipped",
+    "errors": "Errors",
+    "checkFooter": "{count} member(s) need fixing",
+    "applyFooter": "{count} member(s) fixed"
   },
   "setup": {
     "title": "🏗️ Server Setup Complete!",
@@ -316,7 +346,8 @@
     "verificationValue": "`/verify-setup` — Send the verification message to a channel",
     "infoValue": "`/help` — Show this message\n`/ping` — Check bot latency",
     "suggestFeature": "💡 Suggestions",
-    "suggestValue": "`/suggest` — Send a suggestion or feedback to moderators"
+    "suggestValue": "`/suggest` — Send a suggestion or feedback to moderators",
+    "inviteButton": "Invite Bot"
   },
   "roleMenus": {
     "gameTitle": "🎮 Game Roles",
@@ -452,5 +483,33 @@
   },
   "voiceXp": {
     "source": "Earned via voice channel XP"
+  },
+  "template": {
+    "exportSuccess": "✅ Template created: {categories} categories, {channels} channels, {roles} roles",
+    "exportFailed": "❌ Template export failed: {error}",
+    "mustBeJson": "File must be in .json format.",
+    "fileTooLarge": "File too large (max 500KB).",
+    "invalidTemplate": "Invalid template: {errors}",
+    "previewTitle": "📋 Template Preview",
+    "previewDescription": "Template: **{name}**",
+    "newRoles": "New Roles",
+    "existingRoles": "Existing Roles",
+    "newCategories": "New Categories",
+    "newChannels": "New Channels",
+    "existingChannels": "Existing Channels",
+    "locale": "Language",
+    "previewFooter": "Use the buttons below to confirm or cancel",
+    "confirmImport": "Import",
+    "cancelImport": "Cancel",
+    "importCancelled": "Import cancelled.",
+    "importing": "⏳ Importing template...",
+    "importCompleteTitle": "✅ Import Complete",
+    "rolesCreated": "Roles Created",
+    "categoriesCreated": "Categories Created",
+    "channelsCreated": "Channels Created",
+    "importErrors": "Errors",
+    "importFailed": "❌ Import failed: {error}",
+    "importTimedOut": "Import timed out.",
+    "parseFailed": "❌ Failed to read template: {error}"
   }
 }

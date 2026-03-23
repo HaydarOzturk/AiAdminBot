@@ -160,7 +160,25 @@
     "timeoutFailed": "❌ Timeout falhou: {error}",
     "rulesViolationWarning": "⚠️ **Aviso:** Sua mensagem viola as regras do servidor.\n📝 Motivo: {reason}",
     "aiAutoTimeout": "⚠️ **Silenciamento Automático:** Sua mensagem violou as diretrizes da comunidade.\n📝 Categoria: {category}\n⏱️ Você foi silenciado por {minutes} minutos.",
-    "rulesViolationTimeout": "⚠️ **Violação de Regra:** Sua mensagem violou as regras do servidor.\n📝 Motivo: {reason}\n⏱️ Você foi silenciado por {minutes} minutos."
+    "rulesViolationTimeout": "⚠️ **Violação de Regra:** Sua mensagem violou as regras do servidor.\n📝 Motivo: {reason}\n⏱️ Você foi silenciado por {minutes} minutos.",
+    "page": "Página",
+    "totalActions": "ações totais",
+    "actions": "ações",
+    "allTime": "Todo o tempo",
+    "lastDays": "Últimos {days} dias",
+    "modStatsTitle": "📊 Estatísticas de Moderação",
+    "manualActions": "Ações Manuais",
+    "aiActions": "Ações IA",
+    "actionBreakdown": "Distribuição de Ações",
+    "topModerators": "Melhores Moderadores",
+    "mostWarned": "Mais Advertidos",
+    "caseNotFound": "Caso #{id} não encontrado.",
+    "caseTitle": "Caso",
+    "caseType": "Tipo de Ação",
+    "moderator": "Moderador",
+    "duration": "Duração",
+    "date": "Data",
+    "activeWarnings": "Advertências Ativas"
   },
   "setup": {
     "title": "🏗️ Configuração do Servidor Concluída!",
@@ -316,7 +334,8 @@
     "verificationValue": "`/verify-setup` — Envia a mensagem de verificação para um canal",
     "infoValue": "`/help` — Mostrar esta mensagem\n`/ping` — Verificar latência do bot",
     "suggestFeature": "💡 Sugestões",
-    "suggestValue": "`/suggest` — Enviar uma sugestão ou feedback para os moderadores"
+    "suggestValue": "`/suggest` — Enviar uma sugestão ou feedback para os moderadores",
+    "inviteButton": "Convidar Bot"
   },
   "roleMenus": {
     "gameTitle": "🎮 Funções de Jogo",
@@ -452,5 +471,46 @@
   },
   "voiceXp": {
     "source": "Ganho por XP de canal de voz"
+  },
+  "sync": {
+    "commandsSynced": "✅ {count} comandos sincronizados.",
+    "commandsFailed": "❌ Sincronização falhou: {error}",
+    "noRolesFound": "Papel de Não Verificado ou Novo Membro não encontrado. Execute /setup primeiro.",
+    "checkTitle": "🔍 Verificação de Papéis (Prévia)",
+    "applyTitle": "🔄 Sincronização de Papéis Concluída",
+    "totalMembers": "Total de Membros",
+    "alreadyHasRole": "Já tem Papel",
+    "botsSkipped": "Bots Ignorados",
+    "errors": "Erros",
+    "checkFooter": "{count} membro(s) precisam de correção",
+    "applyFooter": "{count} membro(s) corrigidos"
+  },
+  "template": {
+    "exportSuccess": "✅ Modelo criado: {categories} categorias, {channels} canais, {roles} papéis",
+    "exportFailed": "❌ Falha na exportação: {error}",
+    "mustBeJson": "O arquivo deve ser formato .json.",
+    "fileTooLarge": "Arquivo muito grande (máx. 500KB).",
+    "invalidTemplate": "Modelo inválido: {errors}",
+    "previewTitle": "📋 Prévia do Modelo",
+    "previewDescription": "Modelo: **{name}**",
+    "newRoles": "Novos Papéis",
+    "existingRoles": "Papéis Existentes",
+    "newCategories": "Novas Categorias",
+    "newChannels": "Novos Canais",
+    "existingChannels": "Canais Existentes",
+    "locale": "Idioma",
+    "previewFooter": "Use os botões abaixo para confirmar ou cancelar",
+    "confirmImport": "Importar",
+    "cancelImport": "Cancelar",
+    "importCancelled": "Importação cancelada.",
+    "importing": "⏳ Importando modelo...",
+    "importCompleteTitle": "✅ Importação Concluída",
+    "rolesCreated": "Papéis Criados",
+    "categoriesCreated": "Categorias Criadas",
+    "channelsCreated": "Canais Criados",
+    "importErrors": "Erros",
+    "importFailed": "❌ Importação falhou: {error}",
+    "importTimedOut": "Importação expirada.",
+    "parseFailed": "❌ Falha ao ler modelo: {error}"
   }
 }

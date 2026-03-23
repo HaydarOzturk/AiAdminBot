@@ -160,7 +160,25 @@
     "timeoutFailed": "❌ Таймаут не удался: {error}",
     "rulesViolationWarning": "⚠️ **Предупреждение:** Ваше сообщение нарушает правила сервера.\n📝 Причина: {reason}",
     "aiAutoTimeout": "⚠️ **Автоматический тайм-аут:** Ваше сообщение нарушило правила сообщества.\n📝 Категория: {category}\n⏱️ Вы были заглушены на {minutes} минут.",
-    "rulesViolationTimeout": "⚠️ **Нарушение правил:** Ваше сообщение нарушило правила сервера.\n📝 Причина: {reason}\n⏱️ Вы были заглушены на {minutes} минут."
+    "rulesViolationTimeout": "⚠️ **Нарушение правил:** Ваше сообщение нарушило правила сервера.\n📝 Причина: {reason}\n⏱️ Вы были заглушены на {minutes} минут.",
+    "page": "Страница",
+    "totalActions": "всего действий",
+    "actions": "действий",
+    "allTime": "За всё время",
+    "lastDays": "Последние {days} дней",
+    "modStatsTitle": "📊 Статистика Модерации",
+    "manualActions": "Ручные Действия",
+    "aiActions": "Действия ИИ",
+    "actionBreakdown": "Распределение Действий",
+    "topModerators": "Лучшие Модераторы",
+    "mostWarned": "Больше Всего Предупреждений",
+    "caseNotFound": "Дело #{id} не найдено.",
+    "caseTitle": "Дело",
+    "caseType": "Тип Действия",
+    "moderator": "Модератор",
+    "duration": "Длительность",
+    "date": "Дата",
+    "activeWarnings": "Активные Предупреждения"
   },
   "setup": {
     "title": "🏗️ Настройка Сервера Завершена!",
@@ -316,7 +334,8 @@
     "verificationValue": "`/verify-setup` — Отправляет сообщение проверки в канал",
     "infoValue": "`/help` — Показать это сообщение\n`/ping` — Проверить задержку бота",
     "suggestFeature": "💡 Предложения",
-    "suggestValue": "`/suggest` — Отправить предложение или отзыв модераторам"
+    "suggestValue": "`/suggest` — Отправить предложение или отзыв модераторам",
+    "inviteButton": "Пригласить Бота"
   },
   "roleMenus": {
     "gameTitle": "🎮 Роли Игр",
@@ -452,5 +471,46 @@
   },
   "voiceXp": {
     "source": "Заработано через голосовой канал XP"
+  },
+  "sync": {
+    "commandsSynced": "✅ {count} команд синхронизировано.",
+    "commandsFailed": "❌ Ошибка синхронизации команд: {error}",
+    "noRolesFound": "Роль Неверифицированный или Новый Участник не найдена. Сначала выполните /setup.",
+    "checkTitle": "🔍 Проверка Ролей (Предпросмотр)",
+    "applyTitle": "🔄 Синхронизация Ролей Завершена",
+    "totalMembers": "Всего Участников",
+    "alreadyHasRole": "Уже Есть Роль",
+    "botsSkipped": "Ботов Пропущено",
+    "errors": "Ошибки",
+    "checkFooter": "{count} участник(ов) требуют исправления",
+    "applyFooter": "{count} участник(ов) исправлено"
+  },
+  "template": {
+    "exportSuccess": "✅ Шаблон создан: {categories} категорий, {channels} каналов, {roles} ролей",
+    "exportFailed": "❌ Ошибка экспорта: {error}",
+    "mustBeJson": "Файл должен быть в формате .json.",
+    "fileTooLarge": "Файл слишком большой (макс. 500КБ).",
+    "invalidTemplate": "Недействительный шаблон: {errors}",
+    "previewTitle": "📋 Предпросмотр Шаблона",
+    "previewDescription": "Шаблон: **{name}**",
+    "newRoles": "Новые Роли",
+    "existingRoles": "Существующие Роли",
+    "newCategories": "Новые Категории",
+    "newChannels": "Новые Каналы",
+    "existingChannels": "Существующие Каналы",
+    "locale": "Язык",
+    "previewFooter": "Используйте кнопки ниже для подтверждения или отмены",
+    "confirmImport": "Импортировать",
+    "cancelImport": "Отмена",
+    "importCancelled": "Импорт отменён.",
+    "importing": "⏳ Импорт шаблона...",
+    "importCompleteTitle": "✅ Импорт Завершён",
+    "rolesCreated": "Создано Ролей",
+    "categoriesCreated": "Создано Категорий",
+    "channelsCreated": "Создано Каналов",
+    "importErrors": "Ошибки",
+    "importFailed": "❌ Ошибка импорта: {error}",
+    "importTimedOut": "Время импорта истекло.",
+    "parseFailed": "❌ Не удалось прочитать шаблон: {error}"
   }
 }

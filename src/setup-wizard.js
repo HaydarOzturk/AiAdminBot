@@ -187,6 +187,22 @@ AI_MOD_CONFIDENCE_THRESHOLD=0.8
   console.log('');
   console.log('  ── Setup Complete! ──────────────────────────────────');
   console.log('');
+
+  // Try to generate invite link from bot token
+  try {
+    const tokenParts = discordToken.trim().split('.');
+    if (tokenParts.length >= 1) {
+      const clientId = Buffer.from(tokenParts[0], 'base64').toString('utf-8');
+      if (/^\d{17,20}$/.test(clientId)) {
+        console.log('  🔗 Invite your bot to a server:');
+        console.log(`     https://discord.com/oauth2/authorize?client_id=${clientId}&scope=bot+applications.commands&permissions=8`);
+        console.log('');
+      }
+    }
+  } catch {
+    // Couldn't parse token, skip invite link
+  }
+
   console.log('  Next steps:');
   console.log('');
 

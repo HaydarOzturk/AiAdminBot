@@ -19,6 +19,8 @@ module.exports = [
   require('./moderation/clear'),
   require('./moderation/kick'),
   require('./moderation/mod-history'),
+  require('./moderation/mod-stats'),
+  require('./moderation/case'),
   require('./moderation/mute'),
   require('./moderation/timeout'),
   require('./moderation/warn'),
@@ -32,6 +34,8 @@ module.exports = [
   // Setup
   require('./setup/fix-permissions'),
   require('./setup/setup'),
+  require('./setup/template-export'),
+  require('./setup/template-import'),
 
   // Utility
   require('./utility/help'),

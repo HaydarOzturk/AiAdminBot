@@ -41,6 +41,9 @@
       { "name": "Gold", "minLevel": 30, "color": "#FFD700" }
     ]
   },
+  "sync": {
+    "runOnStartup": false
+  },
   "permissions": {
     "levels": {
       "owner": 4,

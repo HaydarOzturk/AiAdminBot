@@ -160,7 +160,25 @@
     "timeoutFailed": "❌ Tiempo de espera fallido: {error}",
     "rulesViolationWarning": "⚠️ **Advertencia:** Tu mensaje viola las reglas del servidor.\n📝 Razón: {reason}",
     "aiAutoTimeout": "⚠️ **Silencio Automático:** Tu mensaje violó las normas de la comunidad.\n📝 Categoría: {category}\n⏱️ Has sido silenciado por {minutes} minutos.",
-    "rulesViolationTimeout": "⚠️ **Violación de Reglas:** Tu mensaje violó las reglas del servidor.\n📝 Razón: {reason}\n⏱️ Has sido silenciado por {minutes} minutos."
+    "rulesViolationTimeout": "⚠️ **Violación de Reglas:** Tu mensaje violó las reglas del servidor.\n📝 Razón: {reason}\n⏱️ Has sido silenciado por {minutes} minutos.",
+    "page": "Página",
+    "totalActions": "acciones totales",
+    "actions": "acciones",
+    "allTime": "Todo el tiempo",
+    "lastDays": "Últimos {days} días",
+    "modStatsTitle": "📊 Estadísticas de Moderación",
+    "manualActions": "Acciones Manuales",
+    "aiActions": "Acciones IA",
+    "actionBreakdown": "Desglose de Acciones",
+    "topModerators": "Mejores Moderadores",
+    "mostWarned": "Más Advertidos",
+    "caseNotFound": "Caso #{id} no encontrado.",
+    "caseTitle": "Caso",
+    "caseType": "Tipo de Acción",
+    "moderator": "Moderador",
+    "duration": "Duración",
+    "date": "Fecha",
+    "activeWarnings": "Advertencias Activas"
   },
   "setup": {
     "title": "🏗️ ¡Configuración del Servidor Completada!",
@@ -316,7 +334,8 @@
     "verificationValue": "`/verify-setup` — Envía el mensaje de verificación a un canal",
     "infoValue": "`/help` — Mostrar este mensaje\n`/ping` — Verificar latencia del bot",
     "suggestFeature": "💡 Sugerencias",
-    "suggestValue": "`/suggest` — Enviar una sugerencia o comentario a los moderadores"
+    "suggestValue": "`/suggest` — Enviar una sugerencia o comentario a los moderadores",
+    "inviteButton": "Invitar Bot"
   },
   "roleMenus": {
     "gameTitle": "🎮 Roles de Juegos",
@@ -452,5 +471,46 @@
   },
   "voiceXp": {
     "source": "Ganado por XP de canal de voz"
+  },
+  "sync": {
+    "commandsSynced": "✅ {count} comandos sincronizados.",
+    "commandsFailed": "❌ Sincronización de comandos fallida: {error}",
+    "noRolesFound": "No se encontró el rol de No Verificado o Nuevo Miembro. Ejecute /setup primero.",
+    "checkTitle": "🔍 Verificación de Roles (Vista previa)",
+    "applyTitle": "🔄 Sincronización de Roles Completada",
+    "totalMembers": "Total de Miembros",
+    "alreadyHasRole": "Ya tiene Rol",
+    "botsSkipped": "Bots Omitidos",
+    "errors": "Errores",
+    "checkFooter": "{count} miembro(s) necesitan corrección",
+    "applyFooter": "{count} miembro(s) corregidos"
+  },
+  "template": {
+    "exportSuccess": "✅ Plantilla creada: {categories} categorías, {channels} canales, {roles} roles",
+    "exportFailed": "❌ Exportación fallida: {error}",
+    "mustBeJson": "El archivo debe ser formato .json.",
+    "fileTooLarge": "Archivo muy grande (máx. 500KB).",
+    "invalidTemplate": "Plantilla inválida: {errors}",
+    "previewTitle": "📋 Vista Previa de Plantilla",
+    "previewDescription": "Plantilla: **{name}**",
+    "newRoles": "Nuevos Roles",
+    "existingRoles": "Roles Existentes",
+    "newCategories": "Nuevas Categorías",
+    "newChannels": "Nuevos Canales",
+    "existingChannels": "Canales Existentes",
+    "locale": "Idioma",
+    "previewFooter": "Use los botones para confirmar o cancelar",
+    "confirmImport": "Importar",
+    "cancelImport": "Cancelar",
+    "importCancelled": "Importación cancelada.",
+    "importing": "⏳ Importando plantilla...",
+    "importCompleteTitle": "✅ Importación Completada",
+    "rolesCreated": "Roles Creados",
+    "categoriesCreated": "Categorías Creadas",
+    "channelsCreated": "Canales Creados",
+    "importErrors": "Errores",
+    "importFailed": "❌ Importación fallida: {error}",
+    "importTimedOut": "Importación expirada.",
+    "parseFailed": "❌ Error al leer plantilla: {error}"
   }
 }

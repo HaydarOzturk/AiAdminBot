@@ -16,11 +16,105 @@ function findRole(guild, configName, localeKey, englishFallback) {
   return null;
 }
 
+/**
+ * Core sync logic — scans members and assigns roles.
+ * @param {import('discord.js').Guild} guild
+ * @param {boolean} dryRun - If true, only count but don't assign roles
+ * @returns {Promise<Object>} Results
+ */
+async function syncMembers(guild, dryRun = false) {
+  const { config } = require('../../utils/permissions');
+
+  const unverifiedRole = findRole(guild, config.verification?.unverifiedRoleName, 'roles.unverified', 'Unverified');
+  const verifiedRole = findRole(guild, config.verification?.verifiedRoleName, 'roles.verified', 'New Member');
+
+  if (!unverifiedRole && !verifiedRole) {
+    return { error: 'no_roles' };
+  }
+
+  // Fetch all members
+  await guild.members.fetch();
+
+  let assignedUnverified = 0;
+  let assignedVerified = 0;
+  let alreadyHasRole = 0;
+  let botSkipped = 0;
+  let errors = 0;
+
+  for (const [, member] of guild.members.cache) {
+    if (member.user.bot) {
+      botSkipped++;
+      continue;
+    }
+
+    const hasAnyRole = member.roles.cache.size > 1;
+    if (hasAnyRole) {
+      alreadyHasRole++;
+      continue;
+    }
+
+    try {
+      const isVerified = db.get(
+        'SELECT * FROM verified_users WHERE user_id = ? AND guild_id = ?',
+        [member.id, guild.id]
+      );
+
+      if (dryRun) {
+        if (isVerified && verifiedRole) assignedVerified++;
+        else if (unverifiedRole) assignedUnverified++;
+      } else {
+        if (isVerified && verifiedRole) {
+          await member.roles.add(verifiedRole);
+          assignedVerified++;
+          console.log(`  🔄 Sync: Gave "${verifiedRole.name}" to ${member.user.tag} (was verified)`);
+        } else if (unverifiedRole) {
+          await member.roles.add(unverifiedRole);
+          assignedUnverified++;
+          console.log(`  🔄 Sync: Gave "${unverifiedRole.name}" to ${member.user.tag} (not verified)`);
+        }
+      }
+    } catch (err) {
+      console.error(`  ❌ Sync failed for ${member.user.tag}: ${err.message}`);
+      errors++;
+    }
+  }
+
+  const totalMembers = guild.members.cache.filter(m => !m.user.bot).size;
+  return {
+    totalMembers,
+    assignedUnverified,
+    assignedVerified,
+    alreadyHasRole,
+    botSkipped,
+    errors,
+    unverifiedRoleName: unverifiedRole?.name || 'Unverified',
+    verifiedRoleName: verifiedRole?.name || 'Verified',
+  };
+}
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('sync')
-    .setDescription('Assign basic roles to all members who have no roles (Admin+)')
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    .setDescription('Sync member roles or slash commands (Owner)')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .addSubcommand(sub =>
+      sub
+        .setName('check')
+        .setDescription('Check how many members need role fixes (dry run)')
+    )
+    .addSubcommand(sub =>
+      sub
+        .setName('apply')
+        .setDescription('Assign roles to all members who have no roles')
+    )
+    .addSubcommand(sub =>
+      sub
+        .setName('commands')
+        .setDescription('Re-register all slash commands with Discord')
+    ),
+
+  // Export for use in ready.js auto-sync
+  syncMembers,
 
   async execute(interaction) {
     if (!hasPermission(interaction.member, 'setup-server')) {
@@ -30,88 +124,69 @@ module.exports = {
       });
     }
 
+    const subcommand = interaction.options.getSubcommand();
+
+    // ── /sync commands — re-register slash commands ─────────────────────
+    if (subcommand === 'commands') {
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+      try {
+        const { REST, Routes } = require('discord.js');
+        const allCommands = require('../../commands');
+        const commands = allCommands
+          .filter(cmd => 'data' in cmd)
+          .map(cmd => cmd.data.toJSON());
+
+        const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
+
+        await rest.put(
+          Routes.applicationGuildCommands(interaction.client.user.id, interaction.guild.id),
+          { body: commands }
+        );
+
+        return interaction.editReply({
+          content: t('sync.commandsSynced', { count: commands.length }),
+        });
+      } catch (err) {
+        console.error('Command sync failed:', err);
+        return interaction.editReply({
+          content: t('sync.commandsFailed', { error: err.message }),
+        });
+      }
+    }
+
+    // ── /sync check or /sync apply ─────────────────────────────────────
+    const dryRun = subcommand === 'check';
     await interaction.deferReply();
 
-    const guild = interaction.guild;
-    const { config } = require('../../utils/permissions');
+    const result = await syncMembers(interaction.guild, dryRun);
 
-    // Find the unverified and verified roles
-    const unverifiedRole = findRole(guild, config.verification?.unverifiedRoleName, 'roles.unverified', 'Unverified');
-    const verifiedRole = findRole(guild, config.verification?.verifiedRoleName, 'roles.verified', 'New Member');
-
-    if (!unverifiedRole && !verifiedRole) {
+    if (result.error === 'no_roles') {
       return interaction.editReply({
-        content: "Could not find the Unverified or New Member role. Run /setup first to create them.",
+        content: t('sync.noRolesFound'),
       });
     }
 
-    // Fetch all members (not just cached/online ones)
-    await guild.members.fetch();
-
-    let assignedUnverified = 0;
-    let assignedVerified = 0;
-    let alreadyHasRole = 0;
-    let botSkipped = 0;
-    let errors = 0;
-
-    for (const [, member] of guild.members.cache) {
-      // Skip bots
-      if (member.user.bot) {
-        botSkipped++;
-        continue;
-      }
-
-      // Check if member has ANY meaningful role (besides @everyone)
-      const hasAnyRole = member.roles.cache.size > 1; // 1 = only @everyone
-
-      if (hasAnyRole) {
-        alreadyHasRole++;
-        continue;
-      }
-
-      // Member has no roles — check if they are in the verified_users database
-      try {
-        const isVerified = db.get(
-          'SELECT * FROM verified_users WHERE user_id = ? AND guild_id = ?',
-          [member.id, guild.id]
-        );
-
-        if (isVerified && verifiedRole) {
-          // They verified before but lost their role somehow
-          await member.roles.add(verifiedRole);
-          assignedVerified++;
-          console.log(`  🔄 Sync: Gave "${verifiedRole.name}" to ${member.user.tag} (was verified)`);
-        } else if (unverifiedRole) {
-          // Never verified — give them unverified role so they can see the verification channel
-          await member.roles.add(unverifiedRole);
-          assignedUnverified++;
-          console.log(`  🔄 Sync: Gave "${unverifiedRole.name}" to ${member.user.tag} (not verified)`);
-        }
-      } catch (err) {
-        console.error(`  ❌ Sync failed for ${member.user.tag}: ${err.message}`);
-        errors++;
-      }
-    }
-
-    const totalFixed = assignedUnverified + assignedVerified;
-    const totalMembers = guild.members.cache.filter(m => !m.user.bot).size;
+    const totalFixed = result.assignedUnverified + result.assignedVerified;
 
     const embed = createEmbed({
-      title: '🔄 Role Sync Complete',
-      color: errors > 0 ? 'warning' : 'success',
+      title: dryRun ? t('sync.checkTitle') : t('sync.applyTitle'),
+      color: result.errors > 0 ? 'warning' : 'success',
       fields: [
-        { name: 'Total Members', value: `${totalMembers}`, inline: true },
-        { name: 'Already Had Roles', value: `${alreadyHasRole}`, inline: true },
-        { name: 'Bots Skipped', value: `${botSkipped}`, inline: true },
-        { name: `Assigned "${unverifiedRole?.name || 'Unverified'}"`, value: `${assignedUnverified}`, inline: true },
-        { name: `Assigned "${verifiedRole?.name || 'Verified'}"`, value: `${assignedVerified}`, inline: true },
-        { name: 'Errors', value: `${errors}`, inline: true },
+        { name: t('sync.totalMembers'), value: `${result.totalMembers}`, inline: true },
+        { name: t('sync.alreadyHasRole'), value: `${result.alreadyHasRole}`, inline: true },
+        { name: t('sync.botsSkipped'), value: `${result.botSkipped}`, inline: true },
+        { name: `${result.unverifiedRoleName}`, value: `${result.assignedUnverified}`, inline: true },
+        { name: `${result.verifiedRoleName}`, value: `${result.assignedVerified}`, inline: true },
+        { name: t('sync.errors'), value: `${result.errors}`, inline: true },
       ],
-      footer: `${totalFixed} member(s) fixed`,
+      footer: dryRun
+        ? t('sync.checkFooter', { count: totalFixed })
+        : t('sync.applyFooter', { count: totalFixed }),
       timestamp: true,
     });
 
     await interaction.editReply({ embeds: [embed] });
-    console.log(`🔄 Sync complete: ${totalFixed} fixed, ${alreadyHasRole} already ok, ${errors} errors`);
+    console.log(`🔄 Sync ${dryRun ? 'check' : 'apply'}: ${totalFixed} ${dryRun ? 'need fixing' : 'fixed'}, ${result.alreadyHasRole} already ok, ${result.errors} errors`);
   },
 };

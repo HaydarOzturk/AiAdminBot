@@ -160,7 +160,25 @@
     "timeoutFailed": "❌ Timeout fehlgeschlagen: {error}",
     "rulesViolationWarning": "⚠️ **Warnung:** Deine Nachricht verstößt gegen die Serverregeln.\n📝 Grund: {reason}",
     "aiAutoTimeout": "⚠️ **Auto-Stummschaltung:** Deine Nachricht verstößt gegen die Community-Richtlinien.\n📝 Kategorie: {category}\n⏱️ Du wurdest für {minutes} Minuten stummgeschaltet.",
-    "rulesViolationTimeout": "⚠️ **Regelverstoß:** Deine Nachricht verstößt gegen die Serverregeln.\n📝 Grund: {reason}\n⏱️ Du wurdest für {minutes} Minuten stummgeschaltet."
+    "rulesViolationTimeout": "⚠️ **Regelverstoß:** Deine Nachricht verstößt gegen die Serverregeln.\n📝 Grund: {reason}\n⏱️ Du wurdest für {minutes} Minuten stummgeschaltet.",
+    "page": "Seite",
+    "totalActions": "Gesamtaktionen",
+    "actions": "Aktionen",
+    "allTime": "Gesamte Zeit",
+    "lastDays": "Letzte {days} Tage",
+    "modStatsTitle": "📊 Moderationsstatistiken",
+    "manualActions": "Manuelle Aktionen",
+    "aiActions": "KI-Aktionen",
+    "actionBreakdown": "Aktionsübersicht",
+    "topModerators": "Top-Moderatoren",
+    "mostWarned": "Am meisten verwarnt",
+    "caseNotFound": "Fall #{id} nicht gefunden.",
+    "caseTitle": "Fall",
+    "caseType": "Aktionstyp",
+    "moderator": "Moderator",
+    "duration": "Dauer",
+    "date": "Datum",
+    "activeWarnings": "Aktive Verwarnungen"
   },
   "setup": {
     "title": "🏗️ Server-Setup abgeschlossen!",
@@ -316,7 +334,8 @@
     "verificationValue": "`/verify-setup` — Sendet die Verifizierungsnachricht in einen Kanal",
     "infoValue": "`/help` — Diese Nachricht anzeigen\n`/ping` — Bot-Latenz anzeigen",
     "suggestFeature": "💡 Vorschläge",
-    "suggestValue": "`/suggest` — Einen Vorschlag oder Feedback an Moderatoren senden"
+    "suggestValue": "`/suggest` — Einen Vorschlag oder Feedback an Moderatoren senden",
+    "inviteButton": "Bot einladen"
   },
   "roleMenus": {
     "gameTitle": "🎮 Spielrollen",
@@ -452,5 +471,46 @@
   },
   "voiceXp": {
     "source": "Durch Sprachkanal-XP verdient"
+  },
+  "sync": {
+    "commandsSynced": "✅ {count} Befehle erfolgreich synchronisiert.",
+    "commandsFailed": "❌ Befehlssynchronisierung fehlgeschlagen: {error}",
+    "noRolesFound": "Unverifiziert- oder Neumitglied-Rolle nicht gefunden. Führen Sie zuerst /setup aus.",
+    "checkTitle": "🔍 Rollenprüfung (Vorschau)",
+    "applyTitle": "🔄 Rollensynchronisierung abgeschlossen",
+    "totalMembers": "Gesamtmitglieder",
+    "alreadyHasRole": "Hat bereits eine Rolle",
+    "botsSkipped": "Bots übersprungen",
+    "errors": "Fehler",
+    "checkFooter": "{count} Mitglied(er) müssen korrigiert werden",
+    "applyFooter": "{count} Mitglied(er) korrigiert"
+  },
+  "template": {
+    "exportSuccess": "✅ Vorlage erstellt: {categories} Kategorien, {channels} Kanäle, {roles} Rollen",
+    "exportFailed": "❌ Vorlagenexport fehlgeschlagen: {error}",
+    "mustBeJson": "Datei muss im .json-Format sein.",
+    "fileTooLarge": "Datei zu groß (max. 500KB).",
+    "invalidTemplate": "Ungültige Vorlage: {errors}",
+    "previewTitle": "📋 Vorlagenvorschau",
+    "previewDescription": "Vorlage: **{name}**",
+    "newRoles": "Neue Rollen",
+    "existingRoles": "Vorhandene Rollen",
+    "newCategories": "Neue Kategorien",
+    "newChannels": "Neue Kanäle",
+    "existingChannels": "Vorhandene Kanäle",
+    "locale": "Sprache",
+    "previewFooter": "Verwenden Sie die Schaltflächen unten zum Bestätigen oder Abbrechen",
+    "confirmImport": "Importieren",
+    "cancelImport": "Abbrechen",
+    "importCancelled": "Import abgebrochen.",
+    "importing": "⏳ Vorlage wird importiert...",
+    "importCompleteTitle": "✅ Import abgeschlossen",
+    "rolesCreated": "Erstellte Rollen",
+    "categoriesCreated": "Erstellte Kategorien",
+    "channelsCreated": "Erstellte Kanäle",
+    "importErrors": "Fehler",
+    "importFailed": "❌ Import fehlgeschlagen: {error}",
+    "importTimedOut": "Import-Zeitüberschreitung.",
+    "parseFailed": "❌ Vorlage konnte nicht gelesen werden: {error}"
   }
 }
