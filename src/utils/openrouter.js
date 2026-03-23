@@ -28,7 +28,8 @@ function isConfigured() {
 
 function getModel() {
   if (process.env.AI_MODEL) return process.env.AI_MODEL;
-  return getProvider() === 'gemini' ? 'gemini-2.0-flash' : 'openrouter/free';
+  // Gemini 3.1 Flash Lite: highest free rate limits (15 RPM, 500 RPD)
+  return getProvider() === 'gemini' ? 'gemini-3.1-flash-lite-preview' : 'openrouter/free';
 }
 
 // Free OpenRouter models for reference
