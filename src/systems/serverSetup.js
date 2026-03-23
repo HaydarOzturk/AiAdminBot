@@ -43,17 +43,15 @@ function buildLocalizedDefaultConfig() {
           {
             name: cn('rules'), type: 'text', topic: 'Server rules',
             permissions: {
-              everyone: { deny: ['SendMessages'], allow: ['ViewChannel'] },
-              [unverifiedRole]: { allow: ['ViewChannel'] },
-              [verifiedRole]: { allow: ['ViewChannel'] },
+              everyone: { deny: ['SendMessages'], allow: ['ViewChannel', 'ReadMessageHistory'] },
             },
           },
           {
             name: cn('verification'), type: 'text', topic: 'Click the verify button!',
             autoSetup: 'verification',
             permissions: {
-              everyone: { deny: ['SendMessages', 'ViewChannel'] },
-              [unverifiedRole]: { allow: ['ViewChannel', 'ReadMessageHistory'] },
+              everyone: { deny: ['SendMessages'], allow: ['ViewChannel', 'ReadMessageHistory'] },
+              [verifiedRole]: { deny: ['ViewChannel'] },
             },
           },
         ],
