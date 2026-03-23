@@ -394,5 +394,24 @@
     "twitchSub": "Подписка Twitch",
     "youtubeSub": "Подписка YouTube",
     "kickSub": "Подписка Kick"
+  },
+  "fixPerms": {
+    "commandDesc": "Исправить разрешения проверки для существующих серверов",
+    "reason": "Исправление разрешений от AdminBot",
+    "title": "🔧 Разрешения исправлены!",
+    "description": "Каналы проверки были обновлены, чтобы новые участники всегда могли их видеть, даже когда бот отключен.",
+    "changesTitle": "Применённые Изменения",
+    "errorsTitle": "Ошибки",
+    "noChangesTitle": "Изменения Не Требуются",
+    "noChangesDesc": "Все каналы проверки уже имеют правильные разрешения.",
+    "createdCategory": "Создана категория: {name}",
+    "createdChannel": "Создан канал: #{name}",
+    "fixedChannel": "Разрешения исправлены на #{name}",
+    "hiddenFromVerified": "#{name} скрыт от проверенных участников",
+    "verificationSent": "Кнопка проверки отправлена на #{name}",
+    "failedCategory": "Ошибка при создании категории: {error}",
+    "failedChannel": "Ошибка на #{name}: {error}",
+    "failedRole": "Ошибка переопределения роли на #{name}: {error}",
+    "failedVerification": "Ошибка при отправке сообщения проверки: {error}"
   }
 }

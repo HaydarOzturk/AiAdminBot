@@ -394,5 +394,24 @@
     "twitchSub": "Twitch Abone",
     "youtubeSub": "YouTube Abone",
     "kickSub": "Kick Abone"
+  },
+  "fixPerms": {
+    "commandDesc": "Mevcut sunucular için doğrulama izinlerini düzelt",
+    "reason": "AdminBot tarafından izin düzeltmesi",
+    "title": "🔧 İzinler Düzeltildi!",
+    "description": "Doğrulama kanalları güncellendi, böylece yeni üyeler bot çevrimdışı olsa bile bunları görebilirler.",
+    "changesTitle": "Uygulanan Değişiklikler",
+    "errorsTitle": "Hatalar",
+    "noChangesTitle": "Değişiklik Gerekli Değil",
+    "noChangesDesc": "Tüm doğrulama kanalları zaten doğru izinlere sahip.",
+    "createdCategory": "Kategori oluşturuldu: {name}",
+    "createdChannel": "Kanal oluşturuldu: #{name}",
+    "fixedChannel": "#{name} üzerindeki izinler düzeltildi",
+    "hiddenFromVerified": "#{name} doğrulanmış üyelerden gizlendi",
+    "verificationSent": "#{name} için doğrulama butonu gönderildi",
+    "failedCategory": "Kategori oluşturma başarısız: {error}",
+    "failedChannel": "#{name} üzerinde başarısız: {error}",
+    "failedRole": "#{name} üzerinde rol geçersiz kılma başarısız: {error}",
+    "failedVerification": "Doğrulama mesajı gönderme başarısız: {error}"
   }
 }

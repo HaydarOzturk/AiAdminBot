@@ -394,5 +394,24 @@
     "twitchSub": "Twitch-Abo",
     "youtubeSub": "YouTube-Abo",
     "kickSub": "Kick-Abo"
+  },
+  "fixPerms": {
+    "commandDesc": "Verifizierungsberechtigungen für bestehende Server beheben",
+    "reason": "Berechtigungsbehebung durch AdminBot",
+    "title": "🔧 Berechtigungen behoben!",
+    "description": "Verifizierungskanäle wurden aktualisiert, damit neue Mitglieder sie jederzeit sehen können, auch wenn der Bot offline ist.",
+    "changesTitle": "Angewendete Änderungen",
+    "errorsTitle": "Fehler",
+    "noChangesTitle": "Keine Änderungen erforderlich",
+    "noChangesDesc": "Alle Verifizierungskanäle haben bereits die richtigen Berechtigungen.",
+    "createdCategory": "Kategorie erstellt: {name}",
+    "createdChannel": "Kanal erstellt: #{name}",
+    "fixedChannel": "Berechtigungen auf #{name} behoben",
+    "hiddenFromVerified": "#{name} vor verifizierten Mitgliedern verborgen",
+    "verificationSent": "Verifizierungsschaltfläche an #{name} gesendet",
+    "failedCategory": "Fehler beim Erstellen der Kategorie: {error}",
+    "failedChannel": "Fehler bei #{name}: {error}",
+    "failedRole": "Rollenüberschreibung auf #{name} fehlgeschlagen: {error}",
+    "failedVerification": "Fehler beim Senden der Verifizierungsnachricht: {error}"
   }
 }

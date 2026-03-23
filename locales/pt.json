@@ -394,5 +394,24 @@
     "twitchSub": "Sub Twitch",
     "youtubeSub": "Sub YouTube",
     "kickSub": "Sub Kick"
+  },
+  "fixPerms": {
+    "commandDesc": "Corrigir permissões de verificação para servidores existentes",
+    "reason": "Correção de permissões por AdminBot",
+    "title": "🔧 Permissões Corrigidas!",
+    "description": "Os canais de verificação foram atualizados para que os novos membros sempre possam vê-los, mesmo quando o bot está offline.",
+    "changesTitle": "Mudanças Aplicadas",
+    "errorsTitle": "Erros",
+    "noChangesTitle": "Nenhuma Mudança Necessária",
+    "noChangesDesc": "Todos os canais de verificação já têm as permissões corretas.",
+    "createdCategory": "Categoria criada: {name}",
+    "createdChannel": "Canal criado: #{name}",
+    "fixedChannel": "Permissões corrigidas em #{name}",
+    "hiddenFromVerified": "#{name} ocultado de membros verificados",
+    "verificationSent": "Botão de verificação enviado para #{name}",
+    "failedCategory": "Falha ao criar categoria: {error}",
+    "failedChannel": "Falha em #{name}: {error}",
+    "failedRole": "Falha na substituição de função em #{name}: {error}",
+    "failedVerification": "Falha ao enviar mensagem de verificação: {error}"
   }
 }

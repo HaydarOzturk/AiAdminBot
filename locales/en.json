@@ -394,5 +394,24 @@
     "twitchSub": "Twitch Sub",
     "youtubeSub": "YouTube Sub",
     "kickSub": "Kick Sub"
+  },
+  "fixPerms": {
+    "commandDesc": "Fix verification permissions for existing servers",
+    "reason": "Permission fix by AdminBot",
+    "title": "🔧 Permissions Fixed!",
+    "description": "Verification channels have been updated so new members can always see them, even when the bot is offline.",
+    "changesTitle": "Changes Applied",
+    "errorsTitle": "Errors",
+    "noChangesTitle": "No Changes Needed",
+    "noChangesDesc": "All verification channels already have the correct permissions.",
+    "createdCategory": "Created category: {name}",
+    "createdChannel": "Created channel: #{name}",
+    "fixedChannel": "Fixed permissions on #{name}",
+    "hiddenFromVerified": "Hidden #{name} from verified members",
+    "verificationSent": "Sent verification button to #{name}",
+    "failedCategory": "Failed to create category: {error}",
+    "failedChannel": "Failed on #{name}: {error}",
+    "failedRole": "Failed role override on #{name}: {error}",
+    "failedVerification": "Failed to send verification message: {error}"
   }
 }

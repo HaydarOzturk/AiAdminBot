@@ -394,5 +394,24 @@
     "twitchSub": "Abo Twitch",
     "youtubeSub": "Abo YouTube",
     "kickSub": "Abo Kick"
+  },
+  "fixPerms": {
+    "commandDesc": "Corriger les autorisations de vérification pour les serveurs existants",
+    "reason": "Correction des autorisations par AdminBot",
+    "title": "🔧 Autorisations Corrigées!",
+    "description": "Les canaux de vérification ont été mis à jour pour que les nouveaux membres puissent toujours les voir, même lorsque le bot est hors ligne.",
+    "changesTitle": "Modifications Appliquées",
+    "errorsTitle": "Erreurs",
+    "noChangesTitle": "Aucun Changement Nécessaire",
+    "noChangesDesc": "Tous les canaux de vérification ont déjà les bonnes autorisations.",
+    "createdCategory": "Catégorie créée : {name}",
+    "createdChannel": "Canal créé : #{name}",
+    "fixedChannel": "Autorisations corrigées sur #{name}",
+    "hiddenFromVerified": "#{name} caché des membres vérifiés",
+    "verificationSent": "Bouton de vérification envoyé à #{name}",
+    "failedCategory": "Échec de la création de catégorie : {error}",
+    "failedChannel": "Échec sur #{name} : {error}",
+    "failedRole": "Échec du remplacement de rôle sur #{name} : {error}",
+    "failedVerification": "Échec de l'envoi du message de vérification : {error}"
   }
 }

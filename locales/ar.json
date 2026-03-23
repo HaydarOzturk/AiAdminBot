@@ -394,5 +394,24 @@
     "twitchSub": "مشترك Twitch",
     "youtubeSub": "مشترك YouTube",
     "kickSub": "مشترك Kick"
+  },
+  "fixPerms": {
+    "commandDesc": "إصلاح أذونات التحقق للخوادم الموجودة",
+    "reason": "إصلاح الأذونات بواسطة AdminBot",
+    "title": "🔧 تم إصلاح الأذونات!",
+    "description": "تم تحديث قنوات التحقق بحيث يمكن للأعضاء الجدد دائماً رؤيتها، حتى عندما يكون البوت في وضع عدم الاتصال.",
+    "changesTitle": "التغييرات المطبقة",
+    "errorsTitle": "الأخطاء",
+    "noChangesTitle": "لا تتطلب تغييرات",
+    "noChangesDesc": "جميع قنوات التحقق لديها بالفعل الأذونات الصحيحة.",
+    "createdCategory": "تم إنشاء فئة: {name}",
+    "createdChannel": "تم إنشاء قناة: #{name}",
+    "fixedChannel": "تم إصلاح الأذونات على #{name}",
+    "hiddenFromVerified": "تم إخفاء #{name} عن الأعضاء المُتحققين",
+    "verificationSent": "تم إرسال زر التحقق إلى #{name}",
+    "failedCategory": "فشل في إنشاء فئة: {error}",
+    "failedChannel": "فشل على #{name}: {error}",
+    "failedRole": "فشل تجاوز الدور على #{name}: {error}",
+    "failedVerification": "فشل في إرسال رسالة التحقق: {error}"
   }
 }
