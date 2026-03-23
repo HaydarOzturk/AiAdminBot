@@ -11,11 +11,11 @@
     "dev": "node --watch src/index.js",
     "lint": "eslint src/",
     "test": "node --test tests/",
-    "build": "pkg . --out-path dist",
-    "build:win": "pkg . --targets node18-win-x64 --out-path dist",
-    "build:mac": "pkg . --targets node18-macos-x64 --out-path dist",
-    "build:linux": "pkg . --targets node18-linux-x64 --out-path dist",
-    "build:all": "pkg . --targets node18-win-x64,node18-macos-x64,node18-linux-x64 --out-path dist"
+    "build": "node scripts/build.js win",
+    "build:win": "node scripts/build.js win",
+    "build:mac": "node scripts/build.js mac",
+    "build:linux": "node scripts/build.js linux",
+    "build:all": "node scripts/build.js all"
   },
   "pkg": {
     "scripts": [
