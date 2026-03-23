@@ -413,5 +413,23 @@
     "failedChannel": "#{name} üzerinde başarısız: {error}",
     "failedRole": "#{name} üzerinde rol geçersiz kılma başarısız: {error}",
     "failedVerification": "Doğrulama mesajı gönderme başarısız: {error}"
+  },
+  "blocklist": {
+    "commandDesc": "Otomatik moderasyon için engellenen sözcükleri yönet",
+    "addDesc": "Engelleme listesine bir sözcük ekle",
+    "removeDesc": "Engelleme listesinden bir sözcüğü kaldır",
+    "listDesc": "Tüm engellenen sözcükleri görüntüle",
+    "wordOption": "Eklenecek veya kaldırılacak sözcük",
+    "tooShort": "Sözcük en az 2 karakterden oluşmalıdır.",
+    "alreadyExists": "Sözcük `{word}` zaten engelleme listesinde var.",
+    "notFound": "Sözcük `{word}` engelleme listesinde bulunamadı.",
+    "addedTitle": "✅ Sözcük Eklendi",
+    "addedDesc": "`{word}` engelleme listesine eklendi. Artık otomatik olarak moderasyona tabi tutulacak.",
+    "removedTitle": "✅ Sözcük Kaldırıldı",
+    "removedDesc": "`{word}` engelleme listesinden kaldırıldı.",
+    "empty": "Henüz özel engellenen sözcük eklenmemiştir. Varsayılan liste hala aktiftir.",
+    "listTitle": "📋 Engellenen Sözcükler",
+    "listDesc2": "Engelleme listesinde {count} özel sözcük:",
+    "wordsField": "Sözcükler"
   }
 }

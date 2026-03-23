@@ -413,5 +413,23 @@
     "failedChannel": "Failed on #{name}: {error}",
     "failedRole": "Failed role override on #{name}: {error}",
     "failedVerification": "Failed to send verification message: {error}"
+  },
+  "blocklist": {
+    "commandDesc": "Manage blocked words for auto-moderation",
+    "addDesc": "Add a word to the blocklist",
+    "removeDesc": "Remove a word from the blocklist",
+    "listDesc": "View all blocked words",
+    "wordOption": "The word to add or remove",
+    "tooShort": "Word must be at least 2 characters.",
+    "alreadyExists": "The word `{word}` is already in the blocklist.",
+    "notFound": "The word `{word}` is not in the blocklist.",
+    "addedTitle": "✅ Word Added",
+    "addedDesc": "Added `{word}` to the blocklist. It will now be auto-moderated.",
+    "removedTitle": "✅ Word Removed",
+    "removedDesc": "Removed `{word}` from the blocklist.",
+    "empty": "No custom blocked words have been added yet. The default list is still active.",
+    "listTitle": "📋 Blocked Words",
+    "listDesc2": "{count} custom words in the blocklist:",
+    "wordsField": "Words"
   }
 }

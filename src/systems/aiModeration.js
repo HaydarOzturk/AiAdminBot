@@ -12,46 +12,88 @@ const recentChecks = new Map();
 const CACHE_TTL = 300000; // 5 minutes
 
 // ── Keyword pre-filter ──────────────────────────────────────────────────────
-// Loads blocked words from config/moderation.json if available,
-// otherwise uses a sensible default list.
+// Merges a built-in default list with per-guild custom words from the DB.
+// Also supports config/moderation.json for global overrides.
 
-let _blockedWords = null;
+// Default list — covers common Turkish and English slurs/profanity
+const DEFAULT_BLOCKED = [
+  // Turkish
+  'orospu', 'piç', 'siktir', 'amına', 'amina', 'yarrak', 'göt', 'got',
+  'sikerim', 'sikeyim', 'ananı', 'anani', 'pezevenk', 'gavat', 'ibne',
+  'döl', 'kaltak', 'fahişe', 'fahise', 'köpek herif',
+  // English
+  'nigger', 'nigga', 'faggot', 'retard', 'cunt',
+];
 
-function getBlockedWords() {
-  if (_blockedWords) return _blockedWords;
+// Per-guild cache: guildId -> Set<string>
+const _guildCache = new Map();
+const GUILD_CACHE_TTL = 600000; // 10 minutes
 
+/**
+ * Load config-based overrides (once)
+ */
+let _configWords = null;
+function getConfigWords() {
+  if (_configWords !== null) return _configWords;
   try {
     const modConfig = loadConfig('moderation.json');
     if (modConfig.blockedWords && Array.isArray(modConfig.blockedWords)) {
-      _blockedWords = modConfig.blockedWords.map(w => w.toLowerCase());
-      return _blockedWords;
+      _configWords = modConfig.blockedWords.map(w => w.toLowerCase());
+      return _configWords;
     }
-  } catch { /* file not found, use defaults */ }
+  } catch { /* file not found */ }
+  _configWords = [];
+  return _configWords;
+}
 
-  // Default list — covers common Turkish and English slurs/profanity
-  _blockedWords = [
-    // Turkish
-    'orospu', 'piç', 'siktir', 'amına', 'amina', 'yarrak', 'göt', 'got',
-    'sikerim', 'sikeyim', 'ananı', 'anani', 'pezevenk', 'gavat', 'ibne',
-    'döl', 'kaltak', 'fahişe', 'fahise', 'köpek herif',
-    // English
-    'nigger', 'nigga', 'faggot', 'retard', 'cunt',
-  ];
-  return _blockedWords;
+/**
+ * Get the full blocked word set for a guild:
+ *   defaults + config/moderation.json + DB per-guild words
+ */
+function getBlockedWordsForGuild(guildId) {
+  if (_guildCache.has(guildId)) return _guildCache.get(guildId);
+
+  const words = new Set([
+    ...DEFAULT_BLOCKED,
+    ...getConfigWords(),
+  ]);
+
+  // Load per-guild words from DB
+  try {
+    const rows = db.all(
+      'SELECT word FROM blocked_words WHERE guild_id = ?',
+      [guildId]
+    );
+    for (const row of rows) {
+      words.add(row.word.toLowerCase());
+    }
+  } catch { /* DB not ready yet */ }
+
+  _guildCache.set(guildId, words);
+  setTimeout(() => _guildCache.delete(guildId), GUILD_CACHE_TTL);
+
+  return words;
+}
+
+/**
+ * Clear cached blocklist for a guild (called when /blocklist add/remove runs)
+ */
+function clearGuildCache(guildId) {
+  _guildCache.delete(guildId);
 }
 
 /**
  * Fast keyword check — catches obvious slurs without needing AI.
  * Returns a moderation result if a blocked word is found, null otherwise.
  */
-function keywordCheck(content) {
+function keywordCheck(content, guildId) {
   const lower = content.toLowerCase();
   // Normalize Turkish special chars for bypass attempts
   const normalized = lower
     .replace(/1/g, 'i').replace(/3/g, 'e').replace(/0/g, 'o')
     .replace(/\$/g, 's').replace(/@/g, 'a').replace(/!/g, 'i');
 
-  const blocked = getBlockedWords();
+  const blocked = getBlockedWordsForGuild(guildId);
 
   for (const word of blocked) {
     if (lower.includes(word) || normalized.includes(word)) {
@@ -89,7 +131,7 @@ async function checkMessage(message) {
 
   try {
     // Phase 1: Fast keyword pre-filter (works even without AI configured)
-    let result = keywordCheck(message.content);
+    let result = keywordCheck(message.content, message.guild.id);
 
     // Phase 2: AI moderation for messages that pass the keyword filter
     if (!result && isConfigured() && message.content.length >= 5) {
@@ -188,4 +230,4 @@ function categoryLabel(category) {
   return labels[category] || category;
 }
 
-module.exports = { checkMessage };
+module.exports = { checkMessage, clearGuildCache };

@@ -413,5 +413,23 @@
     "failedChannel": "Fehler bei #{name}: {error}",
     "failedRole": "Rollenüberschreibung auf #{name} fehlgeschlagen: {error}",
     "failedVerification": "Fehler beim Senden der Verifizierungsnachricht: {error}"
+  },
+  "blocklist": {
+    "commandDesc": "Gesperrte Wörter für automatische Moderation verwalten",
+    "addDesc": "Ein Wort zur Sperrliste hinzufügen",
+    "removeDesc": "Ein Wort aus der Sperrliste entfernen",
+    "listDesc": "Alle gesperrten Wörter anzeigen",
+    "wordOption": "Das Wort zum Hinzufügen oder Entfernen",
+    "tooShort": "Das Wort muss mindestens 2 Zeichen lang sein.",
+    "alreadyExists": "Das Wort `{word}` befindet sich bereits auf der Sperrliste.",
+    "notFound": "Das Wort `{word}` befindet sich nicht auf der Sperrliste.",
+    "addedTitle": "✅ Wort Hinzugefügt",
+    "addedDesc": "`{word}` wurde zur Sperrliste hinzugefügt. Es wird jetzt automatisch moderiert.",
+    "removedTitle": "✅ Wort Entfernt",
+    "removedDesc": "`{word}` wurde aus der Sperrliste entfernt.",
+    "empty": "Es wurden noch keine benutzerdefinierten gesperrten Wörter hinzugefügt. Die Standardliste ist noch aktiv.",
+    "listTitle": "📋 Gesperrte Wörter",
+    "listDesc2": "{count} benutzerdefinierte Wörter auf der Sperrliste:",
+    "wordsField": "Wörter"
   }
 }

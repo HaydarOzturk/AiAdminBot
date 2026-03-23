@@ -413,5 +413,23 @@
     "failedChannel": "Falha em #{name}: {error}",
     "failedRole": "Falha na substituição de função em #{name}: {error}",
     "failedVerification": "Falha ao enviar mensagem de verificação: {error}"
+  },
+  "blocklist": {
+    "commandDesc": "Gerenciar palavras bloqueadas para auto-moderação",
+    "addDesc": "Adicionar uma palavra à lista de bloqueio",
+    "removeDesc": "Remover uma palavra da lista de bloqueio",
+    "listDesc": "Visualizar todas as palavras bloqueadas",
+    "wordOption": "A palavra a ser adicionada ou removida",
+    "tooShort": "A palavra deve ter pelo menos 2 caracteres.",
+    "alreadyExists": "A palavra `{word}` já está na lista de bloqueio.",
+    "notFound": "A palavra `{word}` não está na lista de bloqueio.",
+    "addedTitle": "✅ Palavra Adicionada",
+    "addedDesc": "Adicionada `{word}` à lista de bloqueio. Agora será auto-moderada.",
+    "removedTitle": "✅ Palavra Removida",
+    "removedDesc": "Removida `{word}` da lista de bloqueio.",
+    "empty": "Nenhuma palavra bloqueada personalizada foi adicionada ainda. A lista padrão ainda está ativa.",
+    "listTitle": "📋 Palavras Bloqueadas",
+    "listDesc2": "{count} palavras personalizadas na lista de bloqueio:",
+    "wordsField": "Palavras"
   }
 }

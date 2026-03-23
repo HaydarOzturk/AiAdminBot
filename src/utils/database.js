@@ -69,6 +69,17 @@ async function initDatabase() {
     )
   `);
 
+  db.run(`
+    CREATE TABLE IF NOT EXISTS blocked_words (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      guild_id TEXT NOT NULL,
+      word TEXT NOT NULL,
+      added_by TEXT NOT NULL,
+      added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(guild_id, word)
+    )
+  `);
+
   // Save to disk after creating tables
   saveDatabase();
 

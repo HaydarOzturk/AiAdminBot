@@ -413,5 +413,23 @@
     "failedChannel": "Fallo en #{name}: {error}",
     "failedRole": "Fallo en la anulación de rol en #{name}: {error}",
     "failedVerification": "Fallo al enviar mensaje de verificación: {error}"
+  },
+  "blocklist": {
+    "commandDesc": "Gestionar palabras bloqueadas para auto-moderación",
+    "addDesc": "Añadir una palabra a la lista de bloqueos",
+    "removeDesc": "Eliminar una palabra de la lista de bloqueos",
+    "listDesc": "Ver todas las palabras bloqueadas",
+    "wordOption": "La palabra a añadir o eliminar",
+    "tooShort": "La palabra debe tener al menos 2 caracteres.",
+    "alreadyExists": "La palabra `{word}` ya está en la lista de bloqueos.",
+    "notFound": "La palabra `{word}` no se encuentra en la lista de bloqueos.",
+    "addedTitle": "✅ Palabra Añadida",
+    "addedDesc": "Se ha añadido `{word}` a la lista de bloqueos. Ahora será auto-moderada.",
+    "removedTitle": "✅ Palabra Eliminada",
+    "removedDesc": "Se ha eliminado `{word}` de la lista de bloqueos.",
+    "empty": "No se han añadido palabras bloqueadas personalizadas aún. La lista predeterminada sigue activa.",
+    "listTitle": "📋 Palabras Bloqueadas",
+    "listDesc2": "{count} palabras personalizadas en la lista de bloqueos:",
+    "wordsField": "Palabras"
   }
 }

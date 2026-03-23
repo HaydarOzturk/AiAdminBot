@@ -413,5 +413,23 @@
     "failedChannel": "Échec sur #{name} : {error}",
     "failedRole": "Échec du remplacement de rôle sur #{name} : {error}",
     "failedVerification": "Échec de l'envoi du message de vérification : {error}"
+  },
+  "blocklist": {
+    "commandDesc": "Gérer les mots bloqués pour la modération automatique",
+    "addDesc": "Ajouter un mot à la liste de blocage",
+    "removeDesc": "Supprimer un mot de la liste de blocage",
+    "listDesc": "Voir tous les mots bloqués",
+    "wordOption": "Le mot à ajouter ou supprimer",
+    "tooShort": "Le mot doit contenir au moins 2 caractères.",
+    "alreadyExists": "Le mot `{word}` est déjà dans la liste de blocage.",
+    "notFound": "Le mot `{word}` ne se trouve pas dans la liste de blocage.",
+    "addedTitle": "✅ Mot Ajouté",
+    "addedDesc": "Ajout de `{word}` à la liste de blocage. Il sera désormais auto-modéré.",
+    "removedTitle": "✅ Mot Supprimé",
+    "removedDesc": "Suppression de `{word}` de la liste de blocage.",
+    "empty": "Aucun mot bloqué personnalisé n'a encore été ajouté. La liste par défaut est toujours active.",
+    "listTitle": "📋 Mots Bloqués",
+    "listDesc2": "{count} mots personnalisés dans la liste de blocage:",
+    "wordsField": "Mots"
   }
 }
