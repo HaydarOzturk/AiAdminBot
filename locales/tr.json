@@ -305,12 +305,14 @@
     "moderationValue": "`/warn` — Uyarı ver (kullanıcıya DM gider)\n`/mute` — Sustur (timeout)\n`/kick` — Sunucudan at\n`/ban` — Yasakla (sadece Owner)\n`/timeout` — Zaman aşımı ver\n`/clear` — Mesajları toplu sil",
     "modLogs": "📋 Moderasyon Kayıtları",
     "modLogsValue": "`/warnings` — Kullanıcının uyarılarını gör\n`/mod-history` — Tüm moderasyon geçmişini gör",
-    "levelingValue": "`/rank` — Seviye ve XP bilgini gör\n`/leaderboard` — En yüksek seviyeli üyeler",
+    "levelingValue": "`/rank` — Seviye ve XP bilgini gör\n`/leaderboard` — En yüksek seviyeli üyeler\n🔊 Sesli kanallarda saatte 1 XP kazan",
     "setupValue": "`/setup` — Sunucuyu otomatik kur (Owner)\n`/ai-setup` — AI ile sunucu kurulumu\n`/ai-setup-apply` — AI planını uygula\n`/ai-setup-cancel` — AI kurulumu iptal et",
     "aiFeatures": "🤖 AI Özellikleri",
     "aiFeaturesValue": "`/ai-chat status` — AI sohbet durumu\n`/ai-chat reset` — Sohbet geçmişini sıfırla\nAI sohbet kanalında yazarak AI ile konuş",
     "verificationValue": "`/verify-setup` — Doğrulama mesajını kanala gönderir",
-    "infoValue": "`/help` — Bu mesajı gösterir\n`/ping` — Bot gecikmesini gösterir"
+    "infoValue": "`/help` — Bu mesajı gösterir\n`/ping` — Bot gecikmesini gösterir",
+    "suggestFeature": "💡 Öneriler",
+    "suggestValue": "`/suggest` — Moderatörlere öneri veya geri bildirim gönder"
   },
   "roleMenus": {
     "gameTitle": "🎮 Oyun Rolleri",
@@ -431,5 +433,20 @@
     "listTitle": "📋 Engellenen Sözcükler",
     "listDesc2": "Engelleme listesinde {count} özel sözcük:",
     "wordsField": "Sözcükler"
+  },
+  "suggest": {
+    "commandDesc": "Moderatörlere bir öneri veya geri bildirim gönder",
+    "messageOption": "Öneriniz veya geri bildiriminiz",
+    "tooShort": "Öneriniz en az 10 karakter olmalıdır.",
+    "tooLong": "Öneriniz 1500 karakteri geçemez.",
+    "noStaffChannel": "Staff kanalı bulunamadı. Lütfen bir yöneticiye bildirin.",
+    "newSuggestion": "💡 Yeni Öneri",
+    "from": "Gönderen",
+    "channel": "Kanal",
+    "sent": "✅ Öneriniz moderatörlere iletildi! Teşekkürler.",
+    "sendFailed": "❌ Öneri gönderilemedi. Lütfen daha sonra tekrar deneyin."
+  },
+  "voiceXp": {
+    "source": "Sesli kanal XP ile kazanıldı"
   }
 }

@@ -305,12 +305,14 @@
     "moderationValue": "`/warn` — Warn a user (sends DM)\n`/mute` — Mute (timeout)\n`/kick` — Kick from server\n`/ban` — Ban (Owner only)\n`/timeout` — Give a timeout\n`/clear` — Bulk delete messages",
     "modLogs": "📋 Moderation Records",
     "modLogsValue": "`/warnings` — View user's warnings\n`/mod-history` — View full moderation history",
-    "levelingValue": "`/rank` — View your level and XP\n`/leaderboard` — Top members by level",
+    "levelingValue": "`/rank` — View your level and XP\n`/leaderboard` — Top members by level\n🔊 Earn 1 XP per hour in voice channels",
     "setupValue": "`/setup` — Auto-setup server (Owner)\n`/ai-setup` — AI-guided server setup\n`/ai-setup-apply` — Apply AI plan\n`/ai-setup-cancel` — Cancel AI setup",
     "aiFeatures": "🤖 AI Features",
     "aiFeaturesValue": "`/ai-chat status` — AI chat status\n`/ai-chat reset` — Reset chat history\nChat with AI in the AI chat channel",
     "verificationValue": "`/verify-setup` — Send the verification message to a channel",
-    "infoValue": "`/help` — Show this message\n`/ping` — Check bot latency"
+    "infoValue": "`/help` — Show this message\n`/ping` — Check bot latency",
+    "suggestFeature": "💡 Suggestions",
+    "suggestValue": "`/suggest` — Send a suggestion or feedback to moderators"
   },
   "roleMenus": {
     "gameTitle": "🎮 Game Roles",
@@ -431,5 +433,20 @@
     "listTitle": "📋 Blocked Words",
     "listDesc2": "{count} custom words in the blocklist:",
     "wordsField": "Words"
+  },
+  "suggest": {
+    "commandDesc": "Send a suggestion or feedback to moderators",
+    "messageOption": "Your suggestion or feedback",
+    "tooShort": "Your suggestion must be at least 10 characters.",
+    "tooLong": "Your suggestion cannot exceed 1500 characters.",
+    "noStaffChannel": "Staff channel not found. Please notify an administrator.",
+    "newSuggestion": "💡 New Suggestion",
+    "from": "From",
+    "channel": "Channel",
+    "sent": "✅ Your suggestion has been sent to the moderators! Thank you.",
+    "sendFailed": "❌ Failed to send suggestion. Please try again later."
+  },
+  "voiceXp": {
+    "source": "Earned via voice channel XP"
   }
 }

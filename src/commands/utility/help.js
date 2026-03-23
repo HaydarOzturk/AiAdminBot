@@ -49,6 +49,11 @@ module.exports = {
           inline: false,
         },
         {
+          name: t('help.suggestFeature'),
+          value: t('help.suggestValue'),
+          inline: false,
+        },
+        {
           name: t('help.info'),
           value: t('help.infoValue'),
           inline: false,

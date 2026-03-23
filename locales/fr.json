@@ -305,12 +305,14 @@
     "moderationValue": "`/warn` — Avertit un utilisateur (envoie un MD)\n`/mute` — Rend muet (timeout)\n`/kick` — Expulse du serveur\n`/ban` — Bannit (Propriétaire uniquement)\n`/timeout` — Donne un délai d'attente\n`/clear` — Supprime en masse des messages",
     "modLogs": "📋 Enregistrements de Modération",
     "modLogsValue": "`/warnings` — Voir les avertissements de l'utilisateur\n`/mod-history` — Voir l'historique complet de modération",
-    "levelingValue": "`/rank` — Voir votre niveau et XP\n`/leaderboard` — Meilleurs membres par niveau",
+    "levelingValue": "`/rank` — Voir ton niveau et XP\n`/leaderboard` — Meilleurs membres par niveau\n🔊 Gagne 1 XP par heure dans les canaux vocaux",
     "setupValue": "`/setup` — Auto-configuration du serveur (Propriétaire)\n`/ai-setup` — Configuration guidée par IA\n`/ai-setup-apply` — Appliquer le plan IA\n`/ai-setup-cancel` — Annuler la configuration IA",
     "aiFeatures": "🤖 Fonctionnalités IA",
     "aiFeaturesValue": "`/ai-chat status` — Statut du chat IA\n`/ai-chat reset` — Réinitialiser l'historique du chat\nDiscutez avec l'IA dans le canal de chat IA",
     "verificationValue": "`/verify-setup` — Envoie le message de vérification à un canal",
-    "infoValue": "`/help` — Afficher ce message\n`/ping` — Vérifier la latence du bot"
+    "infoValue": "`/help` — Afficher ce message\n`/ping` — Vérifier la latence du bot",
+    "suggestFeature": "💡 Suggestions",
+    "suggestValue": "`/suggest` — Envoyer une suggestion ou un retour aux modérateurs"
   },
   "roleMenus": {
     "gameTitle": "🎮 Rôles de Jeu",
@@ -431,5 +433,20 @@
     "listTitle": "📋 Mots Bloqués",
     "listDesc2": "{count} mots personnalisés dans la liste de blocage:",
     "wordsField": "Mots"
+  },
+  "suggest": {
+    "commandDesc": "Envoyer une suggestion ou un retour aux modérateurs",
+    "messageOption": "Votre suggestion ou retour",
+    "tooShort": "Votre suggestion doit contenir au moins 10 caractères.",
+    "tooLong": "Votre suggestion ne peut pas dépasser 1500 caractères.",
+    "noStaffChannel": "Canal staff introuvable. Veuillez informer un administrateur.",
+    "newSuggestion": "💡 Nouvelle Suggestion",
+    "from": "De",
+    "channel": "Canal",
+    "sent": "✅ Votre suggestion a été envoyée aux modérateurs ! Merci.",
+    "sendFailed": "❌ Échec de l envoi de la suggestion. Veuillez réessayer plus tard."
+  },
+  "voiceXp": {
+    "source": "Gagné par XP de canal vocal"
   }
 }

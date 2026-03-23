@@ -51,5 +51,10 @@ module.exports = {
     // Start the log cleaner (auto-clears log channels every 72 hours)
     const { startLogCleaner } = require('../systems/logCleaner');
     startLogCleaner(client);
+
+    // Start voice XP tracking
+    const voiceXp = require('../systems/voiceXp');
+    voiceXp.initVoiceTracking(client);
+    voiceXp.startVoiceXpTimer(client);
   },
 };

@@ -305,12 +305,14 @@
     "moderationValue": "`/warn` — Verwarnung erteilen (sendet DM)\n`/mute` — Stummschalten (Timeout)\n`/kick` — Vom Server werfen\n`/ban` — Verbannen (nur Owner)\n`/timeout` — Timeout geben\n`/clear` — Nachrichten massenlöschen",
     "modLogs": "📋 Moderationseinträge",
     "modLogsValue": "`/warnings` — Verwarnungen des Benutzers anzeigen\n`/mod-history` — Gesamte Moderationsgeschichte anzeigen",
-    "levelingValue": "`/rank` — Zeige deinen Level und XP an\n`/leaderboard` — Top-Mitglieder nach Level",
+    "levelingValue": "`/rank` — Dein Level und XP anzeigen\n`/leaderboard` — Top-Mitglieder nach Level\n🔊 Verdiene 1 XP pro Stunde in Sprachkanälen",
     "setupValue": "`/setup` — Server automatisch einrichten (Owner)\n`/ai-setup` — KI-gesteuertes Server-Setup\n`/ai-setup-apply` — KI-Plan anwenden\n`/ai-setup-cancel` — KI-Setup abbrechen",
     "aiFeatures": "🤖 KI-Funktionen",
     "aiFeaturesValue": "`/ai-chat status` — KI-Chat-Status\n`/ai-chat reset` — Chat-Verlauf zurücksetzen\nSpreche mit der KI im KI-Chat-Kanal",
     "verificationValue": "`/verify-setup` — Sendet die Verifizierungsnachricht in einen Kanal",
-    "infoValue": "`/help` — Diese Nachricht anzeigen\n`/ping` — Bot-Latenz anzeigen"
+    "infoValue": "`/help` — Diese Nachricht anzeigen\n`/ping` — Bot-Latenz anzeigen",
+    "suggestFeature": "💡 Vorschläge",
+    "suggestValue": "`/suggest` — Einen Vorschlag oder Feedback an Moderatoren senden"
   },
   "roleMenus": {
     "gameTitle": "🎮 Spielrollen",
@@ -431,5 +433,20 @@
     "listTitle": "📋 Gesperrte Wörter",
     "listDesc2": "{count} benutzerdefinierte Wörter auf der Sperrliste:",
     "wordsField": "Wörter"
+  },
+  "suggest": {
+    "commandDesc": "Einen Vorschlag oder Feedback an Moderatoren senden",
+    "messageOption": "Dein Vorschlag oder Feedback",
+    "tooShort": "Dein Vorschlag muss mindestens 10 Zeichen lang sein.",
+    "tooLong": "Dein Vorschlag darf 1500 Zeichen nicht überschreiten.",
+    "noStaffChannel": "Staff-Kanal nicht gefunden. Bitte informiere einen Administrator.",
+    "newSuggestion": "💡 Neuer Vorschlag",
+    "from": "Von",
+    "channel": "Kanal",
+    "sent": "✅ Dein Vorschlag wurde an die Moderatoren gesendet! Danke.",
+    "sendFailed": "❌ Vorschlag konnte nicht gesendet werden. Bitte versuche es später erneut."
+  },
+  "voiceXp": {
+    "source": "Durch Sprachkanal-XP verdient"
   }
 }

@@ -2,11 +2,12 @@
  * AI provider abstraction — supports Google Gemini (direct) and OpenRouter.
  *
  * Priority: GEMINI_API_KEY → OPENROUTER_API_KEY
+ * Failover: If the primary provider fails, automatically tries the other.
  *
  * Gemini (recommended):
  *   Get a free key at https://aistudio.google.com/apikey
  *   Set GEMINI_API_KEY in .env — that's it.
- *   Default model: gemini-2.0-flash (free, fast, great at Turkish)
+ *   Default model: gemini-3.1-flash-lite-preview (15 RPM, 500 RPD)
  *
  * OpenRouter (fallback):
  *   Get a free key at https://openrouter.ai/keys
@@ -22,14 +23,27 @@ function getProvider() {
   return null;
 }
 
+/**
+ * Check if a fallback provider is available (both keys configured)
+ */
+function getFallbackProvider() {
+  const primary = getProvider();
+  if (primary === 'gemini' && process.env.OPENROUTER_API_KEY) return 'openrouter';
+  if (primary === 'openrouter' && process.env.GEMINI_API_KEY) return 'gemini';
+  return null;
+}
+
 function isConfigured() {
   return getProvider() !== null;
 }
 
+function getModelForProvider(provider) {
+  if (process.env.AI_MODEL && provider === getProvider()) return process.env.AI_MODEL;
+  return provider === 'gemini' ? 'gemini-3.1-flash-lite-preview' : 'openrouter/free';
+}
+
 function getModel() {
-  if (process.env.AI_MODEL) return process.env.AI_MODEL;
-  // Gemini 3.1 Flash Lite: highest free rate limits (15 RPM, 500 RPD)
-  return getProvider() === 'gemini' ? 'gemini-3.1-flash-lite-preview' : 'openrouter/free';
+  return getModelForProvider(getProvider());
 }
 
 // Free OpenRouter models for reference
@@ -45,7 +59,7 @@ const FREE_MODELS = [
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 async function geminiChat(messages, options = {}) {
-  const model = options.model || getModel();
+  const model = options._forceModel || options.model || getModelForProvider('gemini');
   const maxTokens = options.maxTokens || 1024;
   const temperature = options.temperature ?? 0.7;
 
@@ -106,7 +120,7 @@ async function geminiChat(messages, options = {}) {
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 async function openrouterChat(messages, options = {}) {
-  const model = options.model || getModel();
+  const model = options._forceModel || options.model || getModelForProvider('openrouter');
   const maxTokens = options.maxTokens || 1024;
   const temperature = options.temperature ?? 0.7;
 
@@ -147,10 +161,12 @@ async function openrouterChat(messages, options = {}) {
   return text;
 }
 
-// ── Unified chat function ───────────────────────────────────────────────────
+// ── Unified chat function with failover ─────────────────────────────────────
 
 /**
  * Send a chat completion request to the configured AI provider.
+ * If the primary provider fails and a fallback is available, automatically retries.
+ *
  * @param {Array<{role: string, content: string}>} messages
  * @param {object} [options]
  * @param {string} [options.model] - Override model
@@ -172,10 +188,44 @@ async function chat(messages, options = {}) {
   }
   fullMessages.push(...messages);
 
-  if (provider === 'gemini') {
-    return geminiChat(fullMessages, options);
+  // Try primary provider
+  try {
+    if (provider === 'gemini') {
+      return await geminiChat(fullMessages, options);
+    }
+    return await openrouterChat(fullMessages, options);
+  } catch (primaryError) {
+    // Check if there's a fallback provider
+    const fallback = getFallbackProvider();
+    if (!fallback) {
+      // No fallback available, throw original error
+      throw primaryError;
+    }
+
+    console.warn(`⚠️ Primary AI provider (${provider}) failed: ${primaryError.message}`);
+    console.warn(`🔄 Falling back to ${fallback}...`);
+
+    // Try fallback provider with its own default model
+    try {
+      const fallbackOptions = {
+        ...options,
+        _forceModel: getModelForProvider(fallback),
+      };
+      // Remove user model override for fallback — it's likely provider-specific
+      delete fallbackOptions.model;
+
+      if (fallback === 'gemini') {
+        return await geminiChat(fullMessages, fallbackOptions);
+      }
+      return await openrouterChat(fullMessages, fallbackOptions);
+    } catch (fallbackError) {
+      console.error(`❌ Fallback provider (${fallback}) also failed: ${fallbackError.message}`);
+      // Throw the original error since both failed
+      throw new Error(
+        `Both AI providers failed. ${provider}: ${primaryError.message} | ${fallback}: ${fallbackError.message}`
+      );
+    }
   }
-  return openrouterChat(fullMessages, options);
 }
 
 // ── Moderation ──────────────────────────────────────────────────────────────
@@ -245,4 +295,4 @@ Rules:
   }
 }
 
-module.exports = { chat, moderateContent, isConfigured, getModel, getProvider, FREE_MODELS };
+module.exports = { chat, moderateContent, isConfigured, getModel, getProvider, getFallbackProvider, FREE_MODELS };

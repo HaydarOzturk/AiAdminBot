@@ -305,12 +305,14 @@
     "moderationValue": "`/warn` — Advierte a un usuario (envía DM)\n`/mute` — Silencia (timeout)\n`/kick` — Expulsa del servidor\n`/ban` — Banea (Solo Owner)\n`/timeout` — Da un tiempo fuera\n`/clear` — Elimina mensajes en masa",
     "modLogs": "📋 Registros de Moderación",
     "modLogsValue": "`/warnings` — Ver advertencias del usuario\n`/mod-history` — Ver historial de moderación completo",
-    "levelingValue": "`/rank` — Ver tu nivel y XP\n`/leaderboard` — Miembros principales por nivel",
+    "levelingValue": "`/rank` — Ver tu nivel y XP\n`/leaderboard` — Miembros con más nivel\n🔊 Gana 1 XP por hora en canales de voz",
     "setupValue": "`/setup` — Auto-configurar servidor (Owner)\n`/ai-setup` — Configuración guiada por IA\n`/ai-setup-apply` — Aplicar plan IA\n`/ai-setup-cancel` — Cancelar configuración IA",
     "aiFeatures": "🤖 Características IA",
     "aiFeaturesValue": "`/ai-chat status` — Estado del chat IA\n`/ai-chat reset` — Reiniciar historial de chat\nChatea con IA en el canal de chat IA",
     "verificationValue": "`/verify-setup` — Envía el mensaje de verificación a un canal",
-    "infoValue": "`/help` — Mostrar este mensaje\n`/ping` — Verificar latencia del bot"
+    "infoValue": "`/help` — Mostrar este mensaje\n`/ping` — Verificar latencia del bot",
+    "suggestFeature": "💡 Sugerencias",
+    "suggestValue": "`/suggest` — Enviar una sugerencia o comentario a los moderadores"
   },
   "roleMenus": {
     "gameTitle": "🎮 Roles de Juegos",
@@ -431,5 +433,20 @@
     "listTitle": "📋 Palabras Bloqueadas",
     "listDesc2": "{count} palabras personalizadas en la lista de bloqueos:",
     "wordsField": "Palabras"
+  },
+  "suggest": {
+    "commandDesc": "Enviar una sugerencia o comentario a los moderadores",
+    "messageOption": "Tu sugerencia o comentario",
+    "tooShort": "Tu sugerencia debe tener al menos 10 caracteres.",
+    "tooLong": "Tu sugerencia no puede superar los 1500 caracteres.",
+    "noStaffChannel": "Canal de staff no encontrado. Por favor notifica a un administrador.",
+    "newSuggestion": "💡 Nueva Sugerencia",
+    "from": "De",
+    "channel": "Canal",
+    "sent": "✅ Tu sugerencia ha sido enviada a los moderadores. ¡Gracias!",
+    "sendFailed": "❌ No se pudo enviar la sugerencia. Por favor intenta de nuevo más tarde."
+  },
+  "voiceXp": {
+    "source": "Ganado por XP de canal de voz"
   }
 }

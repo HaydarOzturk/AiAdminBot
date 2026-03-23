@@ -15,6 +15,7 @@ module.exports = [
 
   // Moderation
   require('./moderation/ban'),
+  require('./moderation/blocklist'),
   require('./moderation/clear'),
   require('./moderation/kick'),
   require('./moderation/mod-history'),
@@ -29,11 +30,13 @@ module.exports = [
   require('./roles/role-menu'),
 
   // Setup
+  require('./setup/fix-permissions'),
   require('./setup/setup'),
 
   // Utility
   require('./utility/help'),
   require('./utility/ping'),
+  require('./utility/suggest'),
   require('./utility/sync'),
 
   // Verification
