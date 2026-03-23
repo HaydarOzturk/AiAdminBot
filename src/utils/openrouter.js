@@ -1,19 +1,37 @@
 /**
- * OpenRouter API client for AI features.
- * Uses free models by default. Requires OPENROUTER_API_KEY in .env.
+ * AI provider abstraction — supports Google Gemini (direct) and OpenRouter.
  *
- * Default: "openrouter/free" — auto-routes to the best available free model.
- * You can also specify a model directly, e.g.:
- *   - meta-llama/llama-3.3-70b-instruct:free
- *   - google/gemini-2.0-flash-exp:free
- *   - qwen/qwen3-235b-a22b:free
+ * Priority: GEMINI_API_KEY → OPENROUTER_API_KEY
  *
- * Browse all free models: https://openrouter.ai/models?q=free
+ * Gemini (recommended):
+ *   Get a free key at https://aistudio.google.com/apikey
+ *   Set GEMINI_API_KEY in .env — that's it.
+ *   Default model: gemini-2.0-flash (free, fast, great at Turkish)
+ *
+ * OpenRouter (fallback):
+ *   Get a free key at https://openrouter.ai/keys
+ *   Set OPENROUTER_API_KEY in .env
+ *   Default model: openrouter/free
  */
 
-const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+// ── Provider detection ──────────────────────────────────────────────────────
 
-// Free models — "openrouter/free" auto-selects the best available
+function getProvider() {
+  if (process.env.GEMINI_API_KEY) return 'gemini';
+  if (process.env.OPENROUTER_API_KEY) return 'openrouter';
+  return null;
+}
+
+function isConfigured() {
+  return getProvider() !== null;
+}
+
+function getModel() {
+  if (process.env.AI_MODEL) return process.env.AI_MODEL;
+  return getProvider() === 'gemini' ? 'gemini-2.0-flash' : 'openrouter/free';
+}
+
+// Free OpenRouter models for reference
 const FREE_MODELS = [
   'openrouter/free',
   'meta-llama/llama-3.3-70b-instruct:free',
@@ -21,51 +39,79 @@ const FREE_MODELS = [
   'google/gemini-2.0-flash-exp:free',
 ];
 
-/**
- * Check if the OpenRouter API key is configured
- * @returns {boolean}
- */
-function isConfigured() {
-  return !!process.env.OPENROUTER_API_KEY;
-}
+// ── Gemini API ──────────────────────────────────────────────────────────────
 
-/**
- * Get the model to use (from env or default free model)
- * @returns {string}
- */
-function getModel() {
-  return process.env.AI_MODEL || FREE_MODELS[0];
-}
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 
-/**
- * Send a chat completion request to OpenRouter
- * @param {Array<{role: string, content: string}>} messages - Chat messages
- * @param {object} [options]
- * @param {string} [options.model] - Override model
- * @param {number} [options.maxTokens] - Max response tokens (default 1024)
- * @param {number} [options.temperature] - Temperature (default 0.7)
- * @param {string} [options.systemPrompt] - System prompt (prepended to messages)
- * @returns {Promise<string>} The AI response text
- */
-async function chat(messages, options = {}) {
-  if (!isConfigured()) {
-    throw new Error('OPENROUTER_API_KEY is not set. Add it to your .env file.');
-  }
-
+async function geminiChat(messages, options = {}) {
   const model = options.model || getModel();
   const maxTokens = options.maxTokens || 1024;
   const temperature = options.temperature ?? 0.7;
 
-  // Prepend system prompt if provided
-  const fullMessages = [];
-  if (options.systemPrompt) {
-    fullMessages.push({ role: 'system', content: options.systemPrompt });
+  // Convert OpenAI-style messages to Gemini format
+  const contents = [];
+  let systemInstruction = null;
+
+  for (const msg of messages) {
+    if (msg.role === 'system') {
+      systemInstruction = msg.content;
+    } else {
+      contents.push({
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: msg.content }],
+      });
+    }
   }
-  fullMessages.push(...messages);
+
+  const body = {
+    contents,
+    generationConfig: {
+      maxOutputTokens: maxTokens,
+      temperature,
+    },
+  };
+
+  // Gemini supports system instructions natively
+  if (systemInstruction) {
+    body.systemInstruction = {
+      parts: [{ text: systemInstruction }],
+    };
+  }
+
+  const url = `${GEMINI_API_URL}/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`Gemini API error ${response.status}: ${errorBody}`);
+  }
+
+  const data = await response.json();
+
+  if (!data.candidates || data.candidates.length === 0) {
+    throw new Error('Gemini returned no candidates');
+  }
+
+  return data.candidates[0].content?.parts?.[0]?.text || '';
+}
+
+// ── OpenRouter API ──────────────────────────────────────────────────────────
+
+const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+
+async function openrouterChat(messages, options = {}) {
+  const model = options.model || getModel();
+  const maxTokens = options.maxTokens || 1024;
+  const temperature = options.temperature ?? 0.7;
 
   const body = {
     model,
-    messages: fullMessages,
+    messages,
     max_tokens: maxTokens,
     temperature,
   };
@@ -94,16 +140,47 @@ async function chat(messages, options = {}) {
 
   let text = data.choices[0].message?.content || '';
 
-  // Some models (like DeepSeek R1) wrap output in <think>...</think> tags
-  // Strip the thinking portion and return only the final answer
+  // Some models wrap output in <think>...</think> tags
   text = text.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
 
   return text;
 }
 
+// ── Unified chat function ───────────────────────────────────────────────────
+
+/**
+ * Send a chat completion request to the configured AI provider.
+ * @param {Array<{role: string, content: string}>} messages
+ * @param {object} [options]
+ * @param {string} [options.model] - Override model
+ * @param {number} [options.maxTokens] - Max response tokens (default 1024)
+ * @param {number} [options.temperature] - Temperature (default 0.7)
+ * @param {string} [options.systemPrompt] - System prompt (prepended to messages)
+ * @returns {Promise<string>} The AI response text
+ */
+async function chat(messages, options = {}) {
+  const provider = getProvider();
+  if (!provider) {
+    throw new Error('No AI provider configured. Set GEMINI_API_KEY or OPENROUTER_API_KEY in .env');
+  }
+
+  // Prepend system prompt if provided
+  const fullMessages = [];
+  if (options.systemPrompt) {
+    fullMessages.push({ role: 'system', content: options.systemPrompt });
+  }
+  fullMessages.push(...messages);
+
+  if (provider === 'gemini') {
+    return geminiChat(fullMessages, options);
+  }
+  return openrouterChat(fullMessages, options);
+}
+
+// ── Moderation ──────────────────────────────────────────────────────────────
+
 /**
  * Classify content for moderation using AI.
- * Returns a structured result with category and confidence.
  * @param {string} content - Message content to check
  * @returns {Promise<{flagged: boolean, category: string, confidence: number, reason: string}>}
  */
@@ -144,7 +221,7 @@ Rules:
       {
         systemPrompt,
         maxTokens: 256,
-        temperature: 0.1, // Low temperature for consistent moderation
+        temperature: 0.1,
       }
     );
 
@@ -167,4 +244,4 @@ Rules:
   }
 }
 
-module.exports = { chat, moderateContent, isConfigured, getModel, FREE_MODELS };
+module.exports = { chat, moderateContent, isConfigured, getModel, getProvider, FREE_MODELS };
