@@ -130,7 +130,8 @@
       "spam": "📢 Spam",
       "nsfw": "🔞 NSFW",
       "threat": "⚠️ Tehdit",
-      "clean": "✅ Temiz"
+      "clean": "✅ Temiz",
+      "rules": "📜 Kural İhlali"
     },
     "actionTypes": {
       "warn": "Uyarı",
@@ -156,7 +157,8 @@
     "muteFailed": "❌ Susturma başarısız: {error}",
     "noHistoryFound": "{user} için moderasyon geçmişi bulunamadı.",
     "noWarningsFound": "{user} için uyarı bulunamadı.",
-    "timeoutFailed": "❌ Zaman aşımı başarısız: {error}"
+    "timeoutFailed": "❌ Zaman aşımı başarısız: {error}",
+    "rulesViolationWarning": "⚠️ **Uyarı:** Mesajın sunucu kurallarına aykırı bulundu.\n📝 Sebep: {reason}"
   },
   "setup": {
     "title": "🏗️ Sunucu Kurulumu Tamamlandı!",

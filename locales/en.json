@@ -130,7 +130,8 @@
       "spam": "📢 Spam",
       "nsfw": "🔞 NSFW",
       "threat": "⚠️ Threat",
-      "clean": "✅ Clean"
+      "clean": "✅ Clean",
+      "rules": "📜 Rule Violation"
     },
     "actionTypes": {
       "warn": "Warning",
@@ -156,7 +157,8 @@
     "muteFailed": "❌ Mute failed: {error}",
     "noHistoryFound": "No moderation history found for {user}.",
     "noWarningsFound": "No warnings found for {user}.",
-    "timeoutFailed": "❌ Timeout failed: {error}"
+    "timeoutFailed": "❌ Timeout failed: {error}",
+    "rulesViolationWarning": "⚠️ **Warning:** Your message was found to violate server rules.\n📝 Reason: {reason}"
   },
   "setup": {
     "title": "🏗️ Server Setup Complete!",

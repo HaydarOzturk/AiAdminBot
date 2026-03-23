@@ -1,6 +1,7 @@
 const { chat, isConfigured } = require('../utils/openrouter');
 const { createEmbed } = require('../utils/embedBuilder');
 const { t } = require('../utils/locale');
+const { fetchRules } = require('./rulesReader');
 
 // Per-user conversation history (userId -> messages[])
 // Limited to last 10 messages to keep token usage low on free models
@@ -12,8 +13,13 @@ const rateLimits = new Map();
 const RATE_LIMIT = parseInt(process.env.AI_CHAT_RATE_LIMIT) || 5; // messages per minute
 const RATE_WINDOW = 60000; // 1 minute
 
-function buildAiChatSystemPrompt() {
-  return `You are AiAdminBot AI, a friendly assistant in a Discord server powered by AiAdminBot — an AI-powered administration bot.
+/**
+ * Build the AI chat system prompt, optionally including server rules
+ * @param {string|null} rulesText - The server rules text (or null)
+ * @returns {string}
+ */
+function buildAiChatSystemPrompt(rulesText) {
+  let prompt = `You are AiAdminBot AI, a friendly assistant in a Discord server powered by AiAdminBot — an AI-powered administration bot.
 
 You know about all the bot's features and can help users understand them:
 - Verification: New members verify and get the verified role
@@ -22,21 +28,35 @@ You know about all the bot's features and can help users understand them:
 - Leveling: Users earn 15-25 XP per message (60s cooldown) AND 1 XP per hour in voice channels. Check rank with /rank, see leaderboard with /leaderboard
 - Suggestions: Users can send suggestions/feedback to moderators using /suggest
 - AI Chat: This channel! Ask me anything
-- /help shows all available commands
+- /help shows all available commands`;
+
+  // Inject server rules if available
+  if (rulesText) {
+    prompt += `
+
+=== SERVER RULES ===
+The following are this server's official rules. You have direct access to these rules and CAN share them with users when asked. Summarize or quote the relevant rules when users ask about them.
+
+${rulesText}
+=== END RULES ===`;
+  }
+
+  prompt += `
 
 Guidelines:
 - Respond in the same language the user writes in (Turkish, English, or others)
 - Keep responses concise (under 2000 characters for Discord)
 - Be friendly, fun, and helpful
 - You can help with: general questions, gaming tips, tech support, fun conversations, explaining bot features
+- If users ask about server rules, answer based on the rules above (if available). If rules are not available, direct them to the rules channel.
 - Don't pretend to have access to real-time data, server stats, or the internet
 - If asked about moderation actions or specific user data, explain you can't access that and suggest asking a moderator
 - If a user wants to send a suggestion, feedback, or idea to moderators, tell them to use the /suggest command
 - Use casual, friendly tone appropriate for the community
 - You can use some emojis but don't overdo it`;
-}
 
-const SYSTEM_PROMPT = buildAiChatSystemPrompt();
+  return prompt;
+}
 
 /**
  * Check rate limit for a user
@@ -93,6 +113,17 @@ async function handleMessage(message) {
   // Show typing indicator
   await message.channel.sendTyping();
 
+  // Fetch server rules for this guild (cached, async)
+  let rulesText = null;
+  try {
+    rulesText = await fetchRules(message.guild);
+  } catch {
+    // Rules not available, continue without them
+  }
+
+  // Build dynamic system prompt with rules
+  const systemPrompt = buildAiChatSystemPrompt(rulesText);
+
   // Build conversation with history
   const history = getHistory(message.author.id);
   history.push({ role: 'user', content: message.content });
@@ -104,7 +135,7 @@ async function handleMessage(message) {
 
   try {
     const response = await chat(history, {
-      systemPrompt: SYSTEM_PROMPT,
+      systemPrompt,
       maxTokens: 1024,
       temperature: 0.8,
     });

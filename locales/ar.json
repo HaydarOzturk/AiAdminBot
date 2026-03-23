@@ -130,7 +130,8 @@
       "spam": "📢 رسائل غير مرغوب بها",
       "nsfw": "🔞 محتوى غير آمن",
       "threat": "⚠️ تهديد",
-      "clean": "✅ نظيف"
+      "clean": "✅ نظيف",
+      "rules": "📜 مخالفة القواعد"
     },
     "actionTypes": {
       "warn": "تحذير",
@@ -156,7 +157,8 @@
     "muteFailed": "❌ فشل الكتم: {error}",
     "noHistoryFound": "لم يتم العثور على سجل إشراف لـ {user}.",
     "noWarningsFound": "لم يتم العثور على تحذيرات لـ {user}.",
-    "timeoutFailed": "❌ فشل المهلة: {error}"
+    "timeoutFailed": "❌ فشل المهلة: {error}",
+    "rulesViolationWarning": "⚠️ **تحذير:** رسالتك تنتهك قواعد الخادم.\n📝 السبب: {reason}"
   },
   "setup": {
     "title": "🏗️ اكتمل إعداد الخادم!",

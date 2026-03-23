@@ -1,8 +1,9 @@
-const { moderateContent, isConfigured } = require('../utils/openrouter');
+const { chat, moderateContent, isConfigured } = require('../utils/openrouter');
 const { createEmbed } = require('../utils/embedBuilder');
 const { sendModLog, logModAction } = require('../utils/modLogger');
 const { t, channelName } = require('../utils/locale');
 const { loadConfig } = require('../utils/paths');
+const { fetchRules } = require('./rulesReader');
 const db = require('../utils/database');
 
 const CONFIDENCE_THRESHOLD = parseFloat(process.env.AI_MOD_CONFIDENCE_THRESHOLD) || 0.8;
@@ -109,6 +110,104 @@ function keywordCheck(content, guildId) {
 }
 
 /**
+ * Build moderation prompt with optional server rules context
+ * @param {string|null} rulesText
+ * @returns {string}
+ */
+function buildModerationPrompt(rulesText) {
+  let prompt = `You are a Discord server content moderator for a gaming community. You MUST detect violations in ALL languages, especially Turkish and English.
+
+Categories:
+- toxicity: Insults, slurs, harassment, hate speech, personal attacks, swearing AT someone
+- spam: Repetitive messages, excessive caps, gibberish, advertisement links
+- nsfw: Sexual or explicit content, sexual slurs
+- threat: Threats of violence or harm
+- rules: Message violates a specific server rule (only if server rules are provided below)
+- none: Message is clean
+
+Turkish profanity examples that MUST be flagged as toxicity:
+- "orospu" and any variation (orosbu, 0rospu, etc.) — severe slur
+- "siktir", "sikerim", "sikeyim" — vulgar insults
+- "amına", "amina koyayım" — vulgar insults
+- "piç", "pezevenk", "gavat", "ibne" — slurs
+- "ananı", "anani" — maternal insults
+- Combining slurs with usernames (e.g. "orospu [name]") — personal attack, HIGH confidence`;
+
+  if (rulesText) {
+    prompt += `
+
+=== SERVER RULES ===
+The following are the server's official rules. Messages that CLEARLY violate these rules should be flagged with category "rules".
+Only flag if the violation is obvious — don't flag borderline cases.
+
+${rulesText}
+=== END RULES ===`;
+  }
+
+  prompt += `
+
+Respond in EXACTLY this JSON format, nothing else:
+{"flagged": true/false, "category": "category_name", "confidence": 0.0-1.0, "reason": "brief explanation"}
+
+Rules:
+- Flag Turkish profanity with confidence >= 0.9
+- Normal gaming talk, slang, abbreviations (gg, wp, ez) = NOT flagged
+- Friendly casual language and banter = NOT flagged
+- When in doubt about Turkish words, flag with lower confidence (0.6-0.7)
+- For server rule violations, use confidence 0.7-0.9 depending on how clear the violation is`;
+
+  return prompt;
+}
+
+/**
+ * Run AI moderation with server rules context
+ * @param {string} content - Message to check
+ * @param {import('discord.js').Guild} guild - The guild (for fetching rules)
+ * @returns {Promise<{flagged: boolean, category: string, confidence: number, reason: string}>}
+ */
+async function moderateWithRules(content, guild) {
+  if (!isConfigured()) {
+    return { flagged: false, category: 'none', confidence: 0, reason: 'AI not configured' };
+  }
+
+  // Fetch rules (cached)
+  let rulesText = null;
+  try {
+    rulesText = await fetchRules(guild);
+  } catch { /* rules not available */ }
+
+  const systemPrompt = buildModerationPrompt(rulesText);
+
+  try {
+    const result = await chat(
+      [{ role: 'user', content: `Analyze this message:\n"${content}"` }],
+      {
+        systemPrompt,
+        maxTokens: 256,
+        temperature: 0.1,
+      }
+    );
+
+    // Parse JSON from response
+    const jsonMatch = result.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      return { flagged: false, category: 'none', confidence: 0, reason: 'Failed to parse AI response' };
+    }
+
+    const parsed = JSON.parse(jsonMatch[0]);
+    return {
+      flagged: !!parsed.flagged,
+      category: parsed.category || 'none',
+      confidence: parseFloat(parsed.confidence) || 0,
+      reason: parsed.reason || '',
+    };
+  } catch (err) {
+    console.error('AI moderation error:', err.message);
+    return { flagged: false, category: 'none', confidence: 0, reason: 'AI error: ' + err.message };
+  }
+}
+
+/**
  * Check a message for content violations using keyword filter + AI
  * @param {import('discord.js').Message} message
  * @returns {Promise<void>}
@@ -133,9 +232,9 @@ async function checkMessage(message) {
     // Phase 1: Fast keyword pre-filter (works even without AI configured)
     let result = keywordCheck(message.content, message.guild.id);
 
-    // Phase 2: AI moderation for messages that pass the keyword filter
+    // Phase 2: AI moderation with server rules context
     if (!result && isConfigured() && message.content.length >= 5) {
-      result = await moderateContent(message.content);
+      result = await moderateWithRules(message.content, message.guild);
     }
 
     if (!result) return;
@@ -203,6 +302,17 @@ async function checkMessage(message) {
       }
     }
 
+    // For rule violations, just warn — don't auto-punish
+    if (result.category === 'rules' && result.confidence >= 0.8) {
+      try {
+        await message.reply({
+          content: t('moderation.rulesViolationWarning', { reason: result.reason }),
+        });
+      } catch {
+        // Message might have been deleted
+      }
+    }
+
     // For spam, delete the message
     if (result.category === 'spam' && result.confidence >= 0.9) {
       try {
@@ -225,6 +335,7 @@ function categoryLabel(category) {
     spam: t('moderation.categories.spam'),
     nsfw: t('moderation.categories.nsfw'),
     threat: t('moderation.categories.threat'),
+    rules: t('moderation.categories.rules'),
     none: t('moderation.categories.clean'),
   };
   return labels[category] || category;
