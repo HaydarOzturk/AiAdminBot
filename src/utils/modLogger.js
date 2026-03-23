@@ -2,16 +2,10 @@ const fs = require('fs');
 const path = require('path');
 const { createEmbed } = require('./embedBuilder');
 const { t } = require('./locale');
+const { loadConfig } = require('./paths');
 
 // Load config for log channel names
-let config;
-try {
-  const configPath = path.join(__dirname, '..', '..', 'config', 'config.json');
-  config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-} catch {
-  const examplePath = path.join(__dirname, '..', '..', 'config', 'config.example.json');
-  config = JSON.parse(fs.readFileSync(examplePath, 'utf-8'));
-}
+const config = loadConfig('config.json');
 
 /**
  * Send a moderation log embed to the appropriate log channel

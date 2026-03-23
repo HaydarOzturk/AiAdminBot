@@ -1,16 +1,9 @@
 const fs = require('fs');
 const path = require('path');
+const { loadConfig } = require('./paths');
 
 // Load config
-let config;
-try {
-  const configPath = path.join(__dirname, '..', '..', 'config', 'config.json');
-  config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-} catch {
-  // Fallback to example config if no real config exists
-  const examplePath = path.join(__dirname, '..', '..', 'config', 'config.example.json');
-  config = JSON.parse(fs.readFileSync(examplePath, 'utf-8'));
-}
+const config = loadConfig('config.json');
 
 /**
  * Get the permission level of a guild member

@@ -4,16 +4,10 @@ const { createEmbed } = require('../../utils/embedBuilder');
 const { sendModLog, logModAction } = require('../../utils/modLogger');
 const { t } = require('../../utils/locale');
 const db = require('../../utils/database');
-const fs = require('fs');
-const path = require('path');
+const { loadConfig } = require('../../utils/paths');
 
 // Load config once
-let config;
-try {
-  config = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', '..', 'config', 'config.json'), 'utf-8'));
-} catch {
-  config = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', '..', 'config', 'config.example.json'), 'utf-8'));
-}
+const config = loadConfig('config.json');
 
 module.exports = {
   data: new SlashCommandBuilder()

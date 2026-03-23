@@ -2,17 +2,14 @@ const { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('
 const { createEmbed } = require('../utils/embedBuilder');
 const fs = require('fs');
 const path = require('path');
+const { loadConfig } = require('../utils/paths');
 
 /**
  * Load role menu config from file
  * @returns {object} Role menu configuration
  */
 function loadRoleMenuConfig() {
-  const configPath = path.join(__dirname, '..', '..', 'config', 'role-menus.json');
-  const examplePath = path.join(__dirname, '..', '..', 'config', 'role-menus.example.json');
-
-  const filePath = fs.existsSync(configPath) ? configPath : examplePath;
-  return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+  return loadConfig('role-menus.json');
 }
 
 /**

@@ -6,14 +6,12 @@ const {
 const fs = require('fs');
 const path = require('path');
 const { channelName, t } = require('../utils/locale');
+const { projectPath, loadConfig } = require('../utils/paths');
 
 // ── Config loading ──────────────────────────────────────────────────────────
 
 function loadSetupConfig() {
-  const configPath = path.join(__dirname, '..', '..', 'config', 'server-setup.json');
-  const examplePath = path.join(__dirname, '..', '..', 'config', 'server-setup.example.json');
-  const filePath = fs.existsSync(configPath) ? configPath : examplePath;
-  return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+  return loadConfig('server-setup.json');
 }
 
 /**
@@ -256,7 +254,7 @@ function permStringsToFlags(permStrings) {
  */
 async function runSetup(guild) {
   // Use the custom config if the user created one, otherwise use locale-aware defaults
-  const customConfigPath = path.join(__dirname, '..', '..', 'config', 'server-setup.json');
+  const customConfigPath = projectPath('config', 'server-setup.json');
   const config = fs.existsSync(customConfigPath)
     ? JSON.parse(fs.readFileSync(customConfigPath, 'utf-8'))
     : buildLocalizedDefaultConfig();

@@ -3,6 +3,7 @@ const path = require('path');
 const { chat, isConfigured } = require('../utils/openrouter');
 const { createEmbed } = require('../utils/embedBuilder');
 const { t, channelName } = require('../utils/locale');
+const { projectPath } = require('../utils/paths');
 
 // Active interview sessions: guildId -> { userId, messages[], step, config }
 const activeSessions = new Map();
@@ -180,7 +181,7 @@ async function handleMessage(message) {
         await message.reply({ embeds: [embed] });
 
         // Save to file
-        const configPath = path.join(__dirname, '..', '..', 'config', 'ai-generated-setup.json');
+        const configPath = projectPath('config', 'ai-generated-setup.json');
         fs.writeFileSync(configPath, JSON.stringify(generatedConfig, null, 2));
 
         console.log('✅ AI-generated setup config saved to config/ai-generated-setup.json');
@@ -241,7 +242,7 @@ function hasActiveSession(guildId) {
  * @returns {object|null} Server setup config, or null if no file exists
  */
 function loadGeneratedConfig() {
-  const configPath = path.join(__dirname, '..', '..', 'config', 'ai-generated-setup.json');
+  const configPath = projectPath('config', 'ai-generated-setup.json');
   if (!fs.existsSync(configPath)) return null;
 
   const aiConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
@@ -432,7 +433,7 @@ async function runDefaultSetup(interaction, language) {
     const localizedConfig = buildLocalizedDefaultConfig();
 
     // Save as a temporary config file so runSetup can use it
-    const tempConfigPath = path.join(__dirname, '..', '..', 'config', 'server-setup.json');
+    const tempConfigPath = projectPath('config', 'server-setup.json');
     const hadExistingConfig = fs.existsSync(tempConfigPath);
     let existingConfigBackup = null;
 

@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { localePath, localesDir } = require('./paths');
 
 let strings = {};
 
@@ -8,16 +9,16 @@ let strings = {};
  */
 function loadLocale() {
   const locale = process.env.LOCALE || 'tr';
-  const localePath = path.join(__dirname, '..', '..', 'locales', `${locale}.json`);
+  const locFile = localePath(`${locale}.json`);
 
-  if (!fs.existsSync(localePath)) {
-    console.warn(`Locale file not found: ${localePath}. Falling back to Turkish.`);
-    const fallback = path.join(__dirname, '..', '..', 'locales', 'tr.json');
+  if (!fs.existsSync(locFile)) {
+    console.warn(`Locale file not found: ${locFile}. Falling back to Turkish.`);
+    const fallback = localePath('tr.json');
     strings = JSON.parse(fs.readFileSync(fallback, 'utf-8'));
     return;
   }
 
-  strings = JSON.parse(fs.readFileSync(localePath, 'utf-8'));
+  strings = JSON.parse(fs.readFileSync(locFile, 'utf-8'));
   console.log(`✅ Locale loaded: ${locale}`);
 }
 
@@ -82,12 +83,12 @@ function getAllAiChatNames() {
   names.add('ai-chat');
 
   // Scan all locale files for their ai-chat channel name
-  const localesDir = path.join(__dirname, '..', '..', 'locales');
+  const locDir = localesDir();
   try {
-    const files = fs.readdirSync(localesDir).filter(f => f.endsWith('.json'));
+    const files = fs.readdirSync(locDir).filter(f => f.endsWith('.json'));
     for (const file of files) {
       try {
-        const data = JSON.parse(fs.readFileSync(path.join(localesDir, file), 'utf-8'));
+        const data = JSON.parse(fs.readFileSync(path.join(locDir, file), 'utf-8'));
         if (data.channelNames?.['ai-chat']) {
           names.add(data.channelNames['ai-chat']);
         }

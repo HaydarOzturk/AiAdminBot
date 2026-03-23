@@ -9,16 +9,9 @@
 
 const fs = require('fs');
 const path = require('path');
+const { projectPath } = require('./paths');
 
-// Determine base path (works for both source and pkg exe)
-function getBasePath() {
-  if (process.pkg) {
-    return path.dirname(process.execPath);
-  }
-  return path.join(__dirname, '..', '..');
-}
-
-const LOG_DIR = path.join(getBasePath(), 'logs');
+const LOG_DIR = projectPath('logs');
 const MAX_LOG_FILES = 14; // Keep 14 days of logs
 
 // Ensure log directory exists

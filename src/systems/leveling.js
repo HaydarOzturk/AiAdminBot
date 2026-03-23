@@ -2,14 +2,10 @@ const fs = require('fs');
 const path = require('path');
 const db = require('../utils/database');
 const { createEmbed } = require('../utils/embedBuilder');
+const { loadConfig } = require('../utils/paths');
 
 // Load config
-let config;
-try {
-  config = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'config', 'config.json'), 'utf-8'));
-} catch {
-  config = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'config', 'config.example.json'), 'utf-8'));
-}
+const config = loadConfig('config.json');
 
 const levelingConfig = config.leveling || {};
 const xpMin = levelingConfig.xpPerMessage?.min || 15;
