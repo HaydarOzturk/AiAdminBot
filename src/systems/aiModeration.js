@@ -310,17 +310,25 @@ async function checkMessage(message) {
         console.error(`Failed to timeout ${message.author.tag}:`, err.message);
       }
 
-      // Reply with warning + timeout notice
+      // Delete the toxic message
       try {
-        await message.reply({
-          content: t('moderation.aiAutoTimeout', { category: categoryLabel(result.category), minutes: AI_TIMEOUT_MINUTES }),
+        await message.delete();
+        console.log(`🗑️ Deleted toxic message from ${message.author.tag}`);
+      } catch {
+        // Might not have permission to delete
+      }
+
+      // Send warning to channel (not as reply since message is deleted)
+      try {
+        await message.channel.send({
+          content: t('moderation.aiAutoTimeout', { category: categoryLabel(result.category), minutes: AI_TIMEOUT_MINUTES }) + ` (<@${message.author.id}>)`,
         });
       } catch {
-        // Message might have been deleted
+        // Channel might not be accessible
       }
     }
 
-    // For rule violations: warn + timeout
+    // For rule violations: warn + timeout + delete
     if (result.category === 'rules' && result.confidence >= 0.8) {
       const timeoutMs = AI_TIMEOUT_MINUTES * 60 * 1000;
       try {
@@ -333,12 +341,20 @@ async function checkMessage(message) {
         console.error(`Failed to timeout ${message.author.tag}:`, err.message);
       }
 
+      // Delete the rule-violating message
       try {
-        await message.reply({
-          content: t('moderation.rulesViolationTimeout', { reason: result.reason, minutes: AI_TIMEOUT_MINUTES }),
+        await message.delete();
+        console.log(`🗑️ Deleted rule-violating message from ${message.author.tag}`);
+      } catch {
+        // Might not have permission to delete
+      }
+
+      try {
+        await message.channel.send({
+          content: t('moderation.rulesViolationTimeout', { reason: result.reason, minutes: AI_TIMEOUT_MINUTES }) + ` (<@${message.author.id}>)`,
         });
       } catch {
-        // Message might have been deleted
+        // Channel might not be accessible
       }
     }
 

@@ -29,19 +29,32 @@ module.exports = {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     try {
-      let deleted;
+      // Fetch pinned messages to know which to exempt
+      const pinnedMessages = await interaction.channel.messages.fetchPinned().catch(() => new Map());
+      const pinnedIds = new Set(pinnedMessages.keys());
 
-      if (targetUser) {
-        // Fetch more messages and filter by user, then delete
-        const messages = await interaction.channel.messages.fetch({ limit: 100 });
-        const userMessages = messages
-          .filter(m => m.author.id === targetUser.id)
-          .first(amount);
+      // Fetch messages from the channel
+      const fetched = await interaction.channel.messages.fetch({ limit: 100 });
 
-        deleted = await interaction.channel.bulkDelete(userMessages, true);
-      } else {
-        deleted = await interaction.channel.bulkDelete(amount, true);
-      }
+      // Filter messages: include bot + user messages, but exempt pinned and interactive bot messages
+      let deletable = fetched.filter(m => {
+        // Never delete pinned messages
+        if (pinnedIds.has(m.id) || m.pinned) return false;
+
+        // Never delete bot messages that have components (buttons/selects) — these are
+        // important interactive messages like verification, role menus, etc.
+        if (m.author.bot && m.components && m.components.length > 0) return false;
+
+        // If filtering by user, only include that user's messages
+        if (targetUser && m.author.id !== targetUser.id) return false;
+
+        return true;
+      });
+
+      // Limit to requested amount
+      const toDelete = deletable.first(amount);
+
+      const deleted = await interaction.channel.bulkDelete(toDelete, true);
 
       const response = targetUser
         ? t('moderation.messagesDeletedByUser', { count: deleted.size, user: targetUser.tag })
