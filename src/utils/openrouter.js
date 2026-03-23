@@ -112,23 +112,31 @@ async function moderateContent(content) {
     return { flagged: false, category: 'none', confidence: 0, reason: 'AI not configured' };
   }
 
-  const systemPrompt = `You are a Discord server content moderator. Analyze the following message and determine if it violates community guidelines.
+  const systemPrompt = `You are a Discord server content moderator for a Turkish gaming community. You MUST detect violations in BOTH Turkish and English.
 
-Categories of violations:
-- toxicity: Insults, harassment, hate speech, personal attacks
+Categories:
+- toxicity: Insults, slurs, harassment, hate speech, personal attacks, swearing AT someone
 - spam: Repetitive messages, excessive caps, gibberish, advertisement links
-- nsfw: Sexual or explicit content
+- nsfw: Sexual or explicit content, sexual slurs
 - threat: Threats of violence or harm
-- none: Message is fine
+- none: Message is clean
+
+Turkish profanity examples that MUST be flagged as toxicity:
+- "orospu" and any variation (orosbu, 0rospu, etc.) — severe slur
+- "siktir", "sikerim", "sikeyim" — vulgar insults
+- "amına", "amina koyayım" — vulgar insults
+- "piç", "pezevenk", "gavat", "ibne" — slurs
+- "ananı", "anani" — maternal insults
+- Combining slurs with usernames (e.g. "orospu [name]") — personal attack, HIGH confidence
 
 Respond in EXACTLY this JSON format, nothing else:
 {"flagged": true/false, "category": "category_name", "confidence": 0.0-1.0, "reason": "brief explanation"}
 
-Important:
-- Only flag messages you are confident about (confidence > 0.7)
-- Normal gaming talk, slang, and casual language should NOT be flagged
-- Friendly banter between friends is OK
-- Consider Turkish language and culture context`;
+Rules:
+- Flag Turkish profanity with confidence >= 0.9
+- Normal gaming talk, slang, abbreviations (gg, wp, ez) = NOT flagged
+- Friendly casual language and banter = NOT flagged
+- When in doubt about Turkish words, flag with lower confidence (0.6-0.7)`;
 
   try {
     const result = await chat(

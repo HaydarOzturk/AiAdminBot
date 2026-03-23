@@ -2,6 +2,7 @@ const { moderateContent, isConfigured } = require('../utils/openrouter');
 const { createEmbed } = require('../utils/embedBuilder');
 const { sendModLog, logModAction } = require('../utils/modLogger');
 const { t, channelName } = require('../utils/locale');
+const { loadConfig } = require('../utils/paths');
 const db = require('../utils/database');
 
 const CONFIDENCE_THRESHOLD = parseFloat(process.env.AI_MOD_CONFIDENCE_THRESHOLD) || 0.8;
@@ -10,19 +11,73 @@ const CONFIDENCE_THRESHOLD = parseFloat(process.env.AI_MOD_CONFIDENCE_THRESHOLD)
 const recentChecks = new Map();
 const CACHE_TTL = 300000; // 5 minutes
 
+// ── Keyword pre-filter ──────────────────────────────────────────────────────
+// Loads blocked words from config/moderation.json if available,
+// otherwise uses a sensible default list.
+
+let _blockedWords = null;
+
+function getBlockedWords() {
+  if (_blockedWords) return _blockedWords;
+
+  try {
+    const modConfig = loadConfig('moderation.json');
+    if (modConfig.blockedWords && Array.isArray(modConfig.blockedWords)) {
+      _blockedWords = modConfig.blockedWords.map(w => w.toLowerCase());
+      return _blockedWords;
+    }
+  } catch { /* file not found, use defaults */ }
+
+  // Default list — covers common Turkish and English slurs/profanity
+  _blockedWords = [
+    // Turkish
+    'orospu', 'piç', 'siktir', 'amına', 'amina', 'yarrak', 'göt', 'got',
+    'sikerim', 'sikeyim', 'ananı', 'anani', 'pezevenk', 'gavat', 'ibne',
+    'döl', 'kaltak', 'fahişe', 'fahise', 'köpek herif',
+    // English
+    'nigger', 'nigga', 'faggot', 'retard', 'cunt',
+  ];
+  return _blockedWords;
+}
+
 /**
- * Check a message for content violations using AI
+ * Fast keyword check — catches obvious slurs without needing AI.
+ * Returns a moderation result if a blocked word is found, null otherwise.
+ */
+function keywordCheck(content) {
+  const lower = content.toLowerCase();
+  // Normalize Turkish special chars for bypass attempts
+  const normalized = lower
+    .replace(/1/g, 'i').replace(/3/g, 'e').replace(/0/g, 'o')
+    .replace(/\$/g, 's').replace(/@/g, 'a').replace(/!/g, 'i');
+
+  const blocked = getBlockedWords();
+
+  for (const word of blocked) {
+    if (lower.includes(word) || normalized.includes(word)) {
+      return {
+        flagged: true,
+        category: 'toxicity',
+        confidence: 0.95,
+        reason: `Blocked word detected`,
+      };
+    }
+  }
+  return null;
+}
+
+/**
+ * Check a message for content violations using keyword filter + AI
  * @param {import('discord.js').Message} message
  * @returns {Promise<void>}
  */
 async function checkMessage(message) {
-  if (!isConfigured()) return;
   if (process.env.AI_MODERATION_ENABLED !== 'true') return;
 
-  // Don't moderate bots, DMs, or very short messages
+  // Don't moderate bots or DMs
   if (message.author.bot) return;
   if (!message.guild) return;
-  if (!message.content || message.content.length < 5) return;
+  if (!message.content || message.content.trim().length === 0) return;
 
   // Don't moderate staff
   const { getPermissionLevel } = require('../utils/permissions');
@@ -33,7 +88,15 @@ async function checkMessage(message) {
   if (recentChecks.has(message.id)) return;
 
   try {
-    const result = await moderateContent(message.content);
+    // Phase 1: Fast keyword pre-filter (works even without AI configured)
+    let result = keywordCheck(message.content);
+
+    // Phase 2: AI moderation for messages that pass the keyword filter
+    if (!result && isConfigured() && message.content.length >= 5) {
+      result = await moderateContent(message.content);
+    }
+
+    if (!result) return;
 
     // Cache the result
     recentChecks.set(message.id, result);
