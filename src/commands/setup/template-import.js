@@ -14,9 +14,10 @@ module.exports = {
     ),
 
   async execute(interaction) {
+    const g = interaction.guild?.id;
     if (!hasPermission(interaction.member, 'setup-server')) {
       return interaction.reply({
-        content: t('setup.ownerOnly'),
+        content: t('setup.ownerOnly', {}, g),
         flags: MessageFlags.Ephemeral,
       });
     }
@@ -26,14 +27,14 @@ module.exports = {
     // Validate file
     if (!attachment.name.endsWith('.json')) {
       return interaction.reply({
-        content: t('template.mustBeJson'),
+        content: t('template.mustBeJson', {}, g),
         flags: MessageFlags.Ephemeral,
       });
     }
 
     if (attachment.size > 512000) { // 500KB max
       return interaction.reply({
-        content: t('template.fileTooLarge'),
+        content: t('template.fileTooLarge', {}, g),
         flags: MessageFlags.Ephemeral,
       });
     }
@@ -50,7 +51,7 @@ module.exports = {
       const validation = validateTemplate(template);
       if (!validation.valid) {
         return interaction.editReply({
-          content: t('template.invalidTemplate', { errors: validation.errors.join(', ') }),
+          content: t('template.invalidTemplate', { errors: validation.errors.join(', ') }, g),
         });
       }
 
@@ -58,30 +59,30 @@ module.exports = {
       const preview = previewImport(template, interaction.guild);
 
       const embed = createEmbed({
-        title: t('template.previewTitle'),
-        description: t('template.previewDescription', { name: preview.templateName }),
+        title: t('template.previewTitle', {}, g),
+        description: t('template.previewDescription', { name: preview.templateName }, g),
         color: 'primary',
         fields: [
-          { name: t('template.newRoles'), value: `${preview.newRoles}`, inline: true },
-          { name: t('template.existingRoles'), value: `${preview.existingRoleCount}`, inline: true },
-          { name: t('template.newCategories'), value: `${preview.newCategories}`, inline: true },
-          { name: t('template.newChannels'), value: `${preview.newChannels}`, inline: true },
-          { name: t('template.existingChannels'), value: `${preview.existingChannelCount}`, inline: true },
-          { name: t('template.locale'), value: preview.locale, inline: true },
+          { name: t('template.newRoles', {}, g), value: `${preview.newRoles}`, inline: true },
+          { name: t('template.existingRoles', {}, g), value: `${preview.existingRoleCount}`, inline: true },
+          { name: t('template.newCategories', {}, g), value: `${preview.newCategories}`, inline: true },
+          { name: t('template.newChannels', {}, g), value: `${preview.newChannels}`, inline: true },
+          { name: t('template.existingChannels', {}, g), value: `${preview.existingChannelCount}`, inline: true },
+          { name: t('template.locale', {}, g), value: preview.locale, inline: true },
         ],
-        footer: t('template.previewFooter'),
+        footer: t('template.previewFooter', {}, g),
         timestamp: true,
       });
 
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId('template_confirm')
-          .setLabel(t('template.confirmImport'))
+          .setLabel(t('template.confirmImport', {}, g))
           .setStyle(ButtonStyle.Success)
           .setEmoji('✅'),
         new ButtonBuilder()
           .setCustomId('template_cancel')
-          .setLabel(t('template.cancelImport'))
+          .setLabel(t('template.cancelImport', {}, g))
           .setStyle(ButtonStyle.Danger)
           .setEmoji('❌'),
       );
@@ -102,7 +103,7 @@ module.exports = {
 
         if (i.customId === 'template_cancel') {
           return i.update({
-            content: t('template.importCancelled'),
+            content: t('template.importCancelled', {}, g),
             embeds: [],
             components: [],
           });
@@ -110,7 +111,7 @@ module.exports = {
 
         // Confirmed — import the template
         await i.update({
-          content: t('template.importing'),
+          content: t('template.importing', {}, g),
           embeds: [],
           components: [],
         });
@@ -119,19 +120,19 @@ module.exports = {
           const results = await importTemplate(template, interaction.guild);
 
           const resultEmbed = createEmbed({
-            title: t('template.importCompleteTitle'),
+            title: t('template.importCompleteTitle', {}, g),
             color: results.errors.length > 0 ? 'warning' : 'success',
             fields: [
-              { name: t('template.rolesCreated'), value: `${results.rolesCreated}`, inline: true },
-              { name: t('template.categoriesCreated'), value: `${results.categoriesCreated}`, inline: true },
-              { name: t('template.channelsCreated'), value: `${results.channelsCreated}`, inline: true },
+              { name: t('template.rolesCreated', {}, g), value: `${results.rolesCreated}`, inline: true },
+              { name: t('template.categoriesCreated', {}, g), value: `${results.categoriesCreated}`, inline: true },
+              { name: t('template.channelsCreated', {}, g), value: `${results.channelsCreated}`, inline: true },
             ],
             timestamp: true,
           });
 
           if (results.errors.length > 0) {
             resultEmbed.addFields({
-              name: t('template.importErrors'),
+              name: t('template.importErrors', {}, g),
               value: results.errors.slice(0, 5).join('\n'),
               inline: false,
             });
@@ -141,7 +142,7 @@ module.exports = {
         } catch (err) {
           console.error('Template import failed:', err);
           await interaction.editReply({
-            content: t('template.importFailed', { error: err.message }),
+            content: t('template.importFailed', { error: err.message }, g),
           });
         }
       });
@@ -149,7 +150,7 @@ module.exports = {
       collector.on('end', (collected, reason) => {
         if (reason === 'time') {
           interaction.editReply({
-            content: t('template.importTimedOut'),
+            content: t('template.importTimedOut', {}, g),
             embeds: [],
             components: [],
           }).catch(() => {});
@@ -158,7 +159,7 @@ module.exports = {
     } catch (err) {
       console.error('Template parse failed:', err);
       await interaction.editReply({
-        content: t('template.parseFailed', { error: err.message }),
+        content: t('template.parseFailed', { error: err.message }, g),
       });
     }
   },

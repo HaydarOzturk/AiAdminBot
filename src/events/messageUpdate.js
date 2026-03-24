@@ -22,31 +22,33 @@ module.exports = {
     // If content didn't actually change (could be embed loading), skip
     if (oldMessage.content === newMessage.content) return;
 
+    const g = newMessage.guild?.id;
+
     try {
-      const logChannelName = config.moderation?.logChannels?.message || channelName('message-log');
+      const logChannelName = config.moderation?.logChannels?.message || channelName('message-log', g);
       const logChannel = newMessage.guild.channels.cache.find(
         c => c.name === logChannelName && c.isTextBased()
       );
 
       if (!logChannel) return;
 
-      const oldContent = oldMessage.content || t('general.empty');
-      const newContent = newMessage.content || t('general.empty');
+      const oldContent = oldMessage.content || t('general.empty', {}, g);
+      const newContent = newMessage.content || t('general.empty', {}, g);
 
       // Truncate long messages
       const displayOld = oldContent.length > 512 ? oldContent.slice(0, 509) + '...' : oldContent;
       const displayNew = newContent.length > 512 ? newContent.slice(0, 509) + '...' : newContent;
 
       const embed = createEmbed({
-        title: t('logging.messageEdited'),
+        title: t('logging.messageEdited', {}, g),
         color: 'warning',
         fields: [
-          { name: t('logging.author'), value: `${newMessage.author.tag}\n<@${newMessage.author.id}>`, inline: true },
-          { name: t('logging.channel'), value: `<#${newMessage.channel.id}>`, inline: true },
-          { name: t('logging.oldContent'), value: displayOld, inline: false },
-          { name: t('logging.newContent'), value: displayNew, inline: false },
+          { name: t('logging.author', {}, g), value: `${newMessage.author.tag}\n<@${newMessage.author.id}>`, inline: true },
+          { name: t('logging.channel', {}, g), value: `<#${newMessage.channel.id}>`, inline: true },
+          { name: t('logging.oldContent', {}, g), value: displayOld, inline: false },
+          { name: t('logging.newContent', {}, g), value: displayNew, inline: false },
         ],
-        footer: `${t('general.messageId')}: ${newMessage.id}`,
+        footer: `${t('general.messageId', {}, g)}: ${newMessage.id}`,
         timestamp: true,
       });
 

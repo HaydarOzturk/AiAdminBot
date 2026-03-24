@@ -11,18 +11,19 @@ module.exports = {
     ),
 
   async execute(interaction) {
+    const g = interaction.guild?.id;
     const suggestion = interaction.options.getString('message');
 
     if (suggestion.length < 10) {
       return interaction.reply({
-        content: t('suggest.tooShort'),
+        content: t('suggest.tooShort', {}, g),
         flags: MessageFlags.Ephemeral,
       });
     }
 
     if (suggestion.length > 1500) {
       return interaction.reply({
-        content: t('suggest.tooLong'),
+        content: t('suggest.tooLong', {}, g),
         flags: MessageFlags.Ephemeral,
       });
     }
@@ -62,19 +63,19 @@ module.exports = {
 
     if (!staffChannel) {
       return interaction.reply({
-        content: t('suggest.noStaffChannel'),
+        content: t('suggest.noStaffChannel', {}, g),
         flags: MessageFlags.Ephemeral,
       });
     }
 
     // Build the suggestion embed
     const embed = createEmbed({
-      title: t('suggest.newSuggestion'),
+      title: t('suggest.newSuggestion', {}, g),
       description: suggestion,
       color: 'primary',
       fields: [
-        { name: t('suggest.from'), value: `${interaction.user.tag}\n<@${interaction.user.id}>`, inline: true },
-        { name: t('suggest.channel'), value: `<#${interaction.channel.id}>`, inline: true },
+        { name: t('suggest.from', {}, g), value: `${interaction.user.tag}\n<@${interaction.user.id}>`, inline: true },
+        { name: t('suggest.channel', {}, g), value: `<#${interaction.channel.id}>`, inline: true },
       ],
       thumbnail: interaction.user.displayAvatarURL({ dynamic: true, size: 128 }),
       timestamp: true,
@@ -84,13 +85,13 @@ module.exports = {
       await staffChannel.send({ embeds: [embed] });
 
       await interaction.reply({
-        content: t('suggest.sent'),
+        content: t('suggest.sent', {}, g),
         flags: MessageFlags.Ephemeral,
       });
     } catch (err) {
       console.error('Suggest command error:', err.message);
       await interaction.reply({
-        content: t('suggest.sendFailed'),
+        content: t('suggest.sendFailed', {}, g),
         flags: MessageFlags.Ephemeral,
       });
     }

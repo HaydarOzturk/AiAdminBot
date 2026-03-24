@@ -121,16 +121,16 @@ async function awardVoiceXp(client) {
               const member = await guild.members.fetch(userId).catch(() => null);
               if (member) {
                 const description = tierChanged
-                  ? t('leveling.levelUpTierDesc', { user: member.user.username, level: currentLevel, tier: tier.name })
-                  : t('leveling.levelUpDesc', { user: member.user.username, level: currentLevel });
+                  ? t('leveling.levelUpTierDesc', { user: member.user.username, level: currentLevel, tier: tier.name }, guildId)
+                  : t('leveling.levelUpDesc', { user: member.user.username, level: currentLevel }, guildId);
 
                 const embed = createEmbed({
-                  title: t('leveling.levelUp'),
-                  description: `${description}\n🔊 ${t('voiceXp.source')}`,
+                  title: t('leveling.levelUp', {}, guildId),
+                  description: `${description}\n🔊 ${t('voiceXp.source', {}, guildId)}`,
                   color: tier?.color ? undefined : 'success',
                   fields: [
-                    { name: t('leveling.level'), value: `${currentLevel}`, inline: true },
-                    { name: t('leveling.tier'), value: tier?.name || '-', inline: true },
+                    { name: t('leveling.level', {}, guildId), value: `${currentLevel}`, inline: true },
+                    { name: t('leveling.tier', {}, guildId), value: tier?.name || '-', inline: true },
                   ],
                   thumbnail: member.user.displayAvatarURL({ dynamic: true, size: 128 }),
                   timestamp: true,

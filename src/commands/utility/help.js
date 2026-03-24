@@ -9,58 +9,59 @@ module.exports = {
     .setDescription('Show bot commands and features'),
 
   async execute(interaction) {
+    const g = interaction.guild?.id;
     const embed = createEmbed({
-      title: t('help.title'),
-      description: t('help.description'),
+      title: t('help.title', {}, g),
+      description: t('help.description', {}, g),
       color: 'primary',
       fields: [
         {
-          name: t('help.verification'),
-          value: t('help.verificationValue'),
+          name: t('help.verification', {}, g),
+          value: t('help.verificationValue', {}, g),
           inline: false,
         },
         {
-          name: t('help.roleManagement'),
-          value: t('help.roleManagementValue'),
+          name: t('help.roleManagement', {}, g),
+          value: t('help.roleManagementValue', {}, g),
           inline: false,
         },
         {
-          name: t('help.moderation'),
-          value: t('help.moderationValue'),
+          name: t('help.moderation', {}, g),
+          value: t('help.moderationValue', {}, g),
           inline: false,
         },
         {
-          name: t('help.modLogs'),
-          value: t('help.modLogsValue'),
+          name: t('help.modLogs', {}, g),
+          value: t('help.modLogsValue', {}, g),
           inline: false,
         },
         {
-          name: t('help.leveling'),
-          value: t('help.levelingValue'),
+          name: t('help.leveling', {}, g),
+          value: t('help.levelingValue', {}, g),
           inline: false,
         },
         {
-          name: t('help.setup'),
-          value: t('help.setupValue'),
+          name: t('help.setup', {}, g),
+          value: t('help.setupValue', {}, g),
           inline: false,
         },
         {
-          name: t('help.aiFeatures'),
-          value: t('help.aiFeaturesValue'),
+          name: t('help.aiFeatures', {}, g),
+          value: t('help.aiFeaturesValue', {}, g),
           inline: false,
         },
         {
-          name: t('help.suggestFeature'),
-          value: t('help.suggestValue'),
+          name: t('help.suggestFeature', {}, g),
+          value: t('help.suggestValue', {}, g),
           inline: false,
         },
         {
-          name: t('help.info'),
-          value: t('help.infoValue'),
+          name: t('help.info', {}, g),
+          value: t('help.infoValue', {}, g),
           inline: false,
         },
       ],
-      footer: t('help.footer'),
+      footer: t('help.footer', {}, g),
     });
 
     // Build reply components — add invite button if we have a client ID
@@ -69,7 +70,7 @@ module.exports = {
     if (inviteUrl) {
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
-          .setLabel(t('help.inviteButton'))
+          .setLabel(t('help.inviteButton', {}, g))
           .setStyle(ButtonStyle.Link)
           .setURL(inviteUrl)
           .setEmoji('🔗')

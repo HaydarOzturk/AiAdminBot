@@ -10,6 +10,8 @@ module.exports = {
     if (message.author.bot) return;
     if (!message.guild) return;
 
+    const g = message.guild?.id;
+
     // ── XP / Leveling ─────────────────────────────────────────────────────
     const leveling = require('../systems/leveling');
 
@@ -25,16 +27,16 @@ module.exports = {
 
         if (targetChannel) {
           const description = result.tierChanged
-            ? t('leveling.levelUpTierDesc', { user: message.author.username, level: result.newLevel, tier: result.tier.name })
-            : t('leveling.levelUpDesc', { user: message.author.username, level: result.newLevel });
+            ? t('leveling.levelUpTierDesc', { user: message.author.username, level: result.newLevel, tier: result.tier.name }, g)
+            : t('leveling.levelUpDesc', { user: message.author.username, level: result.newLevel }, g);
 
           const embed = createEmbed({
-            title: t('leveling.levelUp'),
+            title: t('leveling.levelUp', {}, g),
             description,
             color: result.tier?.color ? undefined : 'success',
             fields: [
-              { name: t('leveling.level'), value: `${result.newLevel}`, inline: true },
-              { name: t('leveling.tier'), value: result.tier?.name || '-', inline: true },
+              { name: t('leveling.level', {}, g), value: `${result.newLevel}`, inline: true },
+              { name: t('leveling.tier', {}, g), value: result.tier?.name || '-', inline: true },
             ],
             thumbnail: message.author.displayAvatarURL({ dynamic: true, size: 128 }),
             timestamp: true,

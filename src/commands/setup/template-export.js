@@ -10,9 +10,10 @@ module.exports = {
     .setDefaultMemberPermissions(0x0000000000000008), // Administrator
 
   async execute(interaction) {
+    const g = interaction.guild?.id;
     if (!hasPermission(interaction.member, 'setup-server')) {
       return interaction.reply({
-        content: t('setup.ownerOnly'),
+        content: t('setup.ownerOnly', {}, g),
         flags: MessageFlags.Ephemeral,
       });
     }
@@ -36,13 +37,13 @@ module.exports = {
           categories: catCount,
           channels: channelCount,
           roles: roleCount,
-        }),
+        }, g),
         files: [attachment],
       });
     } catch (err) {
       console.error('Template export failed:', err);
       await interaction.editReply({
-        content: t('template.exportFailed', { error: err.message }),
+        content: t('template.exportFailed', { error: err.message }, g),
       });
     }
   },

@@ -270,22 +270,22 @@ async function checkMessage(message) {
 
     // Build log embed
     const embed = createEmbed({
-      title: t('moderation.aiWarningTitle'),
+      title: t('moderation.aiWarningTitle', {}, guild.id),
       color: result.category === 'threat' ? 'danger' : 'orange',
       fields: [
-        { name: t('moderation.user'), value: `${message.author.tag}\n<@${message.author.id}>`, inline: true },
-        { name: t('moderation.channel'), value: `<#${message.channel.id}>`, inline: true },
-        { name: t('moderation.category'), value: categoryLabel(result.category), inline: true },
-        { name: t('moderation.confidence'), value: `${Math.round(result.confidence * 100)}%`, inline: true },
-        { name: t('moderation.reason'), value: result.reason || '-', inline: false },
-        { name: t('moderation.message'), value: message.content.length > 512 ? message.content.slice(0, 509) + '...' : message.content, inline: false },
-        { name: t('moderation.caseId'), value: `#${caseId}`, inline: true },
+        { name: t('moderation.user', {}, guild.id), value: `${message.author.tag}\n<@${message.author.id}>`, inline: true },
+        { name: t('moderation.channel', {}, guild.id), value: `<#${message.channel.id}>`, inline: true },
+        { name: t('moderation.category', {}, guild.id), value: categoryLabel(result.category, guild.id), inline: true },
+        { name: t('moderation.confidence', {}, guild.id), value: `${Math.round(result.confidence * 100)}%`, inline: true },
+        { name: t('moderation.reason', {}, guild.id), value: result.reason || '-', inline: false },
+        { name: t('moderation.message', {}, guild.id), value: message.content.length > 512 ? message.content.slice(0, 509) + '...' : message.content, inline: false },
+        { name: t('moderation.caseId', {}, guild.id), value: `#${caseId}`, inline: true },
       ],
       timestamp: true,
     });
 
     // Send to punishment log
-    const logChannelName = channelName('punishment-log');
+    const logChannelName = channelName('punishment-log', guild.id);
     const logChannel = guild.channels.cache.find(c => c.name === logChannelName && c.isTextBased());
     if (logChannel) {
       await logChannel.send({ embeds: [embed] });
@@ -295,7 +295,7 @@ async function checkMessage(message) {
     if (result.confidence >= 0.9 && (result.category === 'toxicity' || result.category === 'threat')) {
       db.run(
         'INSERT INTO warnings (user_id, guild_id, moderator_id, reason) VALUES (?, ?, ?, ?)',
-        [message.author.id, guild.id, botUser.id, t('moderation.aiAutoWarningReason', { reason: result.reason })]
+        [message.author.id, guild.id, botUser.id, t('moderation.aiAutoWarningReason', { reason: result.reason }, guild.id)]
       );
 
       // Timeout the user for configured duration
@@ -321,7 +321,7 @@ async function checkMessage(message) {
       // Send warning to channel (not as reply since message is deleted)
       try {
         await message.channel.send({
-          content: t('moderation.aiAutoTimeout', { category: categoryLabel(result.category), minutes: AI_TIMEOUT_MINUTES }) + ` (<@${message.author.id}>)`,
+          content: t('moderation.aiAutoTimeout', { category: categoryLabel(result.category, guild.id), minutes: AI_TIMEOUT_MINUTES }, guild.id) + ` (<@${message.author.id}>)`,
         });
       } catch {
         // Channel might not be accessible
@@ -351,7 +351,7 @@ async function checkMessage(message) {
 
       try {
         await message.channel.send({
-          content: t('moderation.rulesViolationTimeout', { reason: result.reason, minutes: AI_TIMEOUT_MINUTES }) + ` (<@${message.author.id}>)`,
+          content: t('moderation.rulesViolationTimeout', { reason: result.reason, minutes: AI_TIMEOUT_MINUTES }, guild.id) + ` (<@${message.author.id}>)`,
         });
       } catch {
         // Channel might not be accessible
@@ -382,14 +382,14 @@ async function checkMessage(message) {
 /**
  * Human-readable category labels
  */
-function categoryLabel(category) {
+function categoryLabel(category, guildId = null) {
   const labels = {
-    toxicity: t('moderation.categories.toxicity'),
-    spam: t('moderation.categories.spam'),
-    nsfw: t('moderation.categories.nsfw'),
-    threat: t('moderation.categories.threat'),
-    rules: t('moderation.categories.rules'),
-    none: t('moderation.categories.clean'),
+    toxicity: t('moderation.categories.toxicity', {}, guildId),
+    spam: t('moderation.categories.spam', {}, guildId),
+    nsfw: t('moderation.categories.nsfw', {}, guildId),
+    threat: t('moderation.categories.threat', {}, guildId),
+    rules: t('moderation.categories.rules', {}, guildId),
+    none: t('moderation.categories.clean', {}, guildId),
   };
   return labels[category] || category;
 }

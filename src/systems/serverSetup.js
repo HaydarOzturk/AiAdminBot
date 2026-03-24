@@ -464,7 +464,7 @@ async function runSetup(guild) {
 
       if (autoSetup === 'verification') {
         const verification = require('./verification');
-        await verification.sendVerificationMessage(channel);
+        await verification.sendVerificationMessage(channel, guild.id);
         result.verificationSent = true;
         console.log(`    ✅ Sent verification message to #${channel.name}`);
       } else if (autoSetup.startsWith('roleMenu:')) {

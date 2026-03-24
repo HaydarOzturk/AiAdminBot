@@ -21,10 +21,11 @@ module.exports = {
     ),
 
   async execute(interaction) {
+    const g = interaction.guild?.id;
     // Owner only — level 4
     if (!hasPermission(interaction.member, 'setup-server')) {
       return interaction.reply({
-        content: t('setup.ownerOnly'),
+        content: t('setup.ownerOnly', {}, g),
         flags: MessageFlags.Ephemeral,
       });
     }
@@ -38,39 +39,39 @@ module.exports = {
     const memberCount = guild.memberCount;
 
     const modeLabel = mode === 'channels'
-      ? t('serverReset.channelsOnly')
+      ? t('serverReset.channelsOnly', {}, g)
       : mode === 'roles'
-        ? t('serverReset.rolesOnly')
-        : t('serverReset.everything');
+        ? t('serverReset.rolesOnly', {}, g)
+        : t('serverReset.everything', {}, g);
 
     // Preview embed
     const embed = createEmbed({
-      title: t('serverReset.confirmTitle'),
-      description: t('serverReset.confirmDescription'),
+      title: t('serverReset.confirmTitle', {}, g),
+      description: t('serverReset.confirmDescription', {}, g),
       color: 'danger',
       fields: [
-        { name: t('serverReset.mode'), value: modeLabel, inline: true },
-        { name: t('serverReset.membersKept'), value: `${memberCount}`, inline: true },
+        { name: t('serverReset.mode', {}, g), value: modeLabel, inline: true },
+        { name: t('serverReset.membersKept', {}, g), value: `${memberCount}`, inline: true },
       ],
       timestamp: true,
     });
 
     if (mode === 'channels' || mode === 'all') {
-      embed.addFields({ name: t('serverReset.channelsToDelete'), value: `${channelCount}`, inline: true });
+      embed.addFields({ name: t('serverReset.channelsToDelete', {}, g), value: `${channelCount}`, inline: true });
     }
     if (mode === 'roles' || mode === 'all') {
-      embed.addFields({ name: t('serverReset.rolesToDelete'), value: `${roleCount}`, inline: true });
+      embed.addFields({ name: t('serverReset.rolesToDelete', {}, g), value: `${roleCount}`, inline: true });
     }
 
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId('server_reset_confirm')
-        .setLabel(t('serverReset.confirmButton'))
+        .setLabel(t('serverReset.confirmButton', {}, g))
         .setStyle(ButtonStyle.Danger)
         .setEmoji('⚠️'),
       new ButtonBuilder()
         .setCustomId('server_reset_cancel')
-        .setLabel(t('serverReset.cancelButton'))
+        .setLabel(t('serverReset.cancelButton', {}, g))
         .setStyle(ButtonStyle.Secondary)
         .setEmoji('❌'),
     );
@@ -92,7 +93,7 @@ module.exports = {
 
       if (i.customId === 'server_reset_cancel') {
         return i.update({
-          content: t('serverReset.cancelled'),
+          content: t('serverReset.cancelled', {}, g),
           embeds: [],
           components: [],
         });
@@ -100,7 +101,7 @@ module.exports = {
 
       // ── CONFIRMED — start deletion ─────────────────────────────────
       await i.update({
-        content: t('serverReset.inProgress'),
+        content: t('serverReset.inProgress', {}, g),
         embeds: [],
         components: [],
       });
@@ -155,15 +156,15 @@ module.exports = {
       }
 
       const resultEmbed = createEmbed({
-        title: t('serverReset.completeTitle'),
+        title: t('serverReset.completeTitle', {}, g),
         color: errors > 0 ? 'warning' : 'success',
         fields: [
-          { name: t('serverReset.channelsDeleted'), value: `${deletedChannels}`, inline: true },
-          { name: t('serverReset.rolesDeleted'), value: `${deletedRoles}`, inline: true },
-          { name: t('serverReset.errors'), value: `${errors}`, inline: true },
-          { name: t('serverReset.membersKept'), value: `${memberCount}`, inline: true },
+          { name: t('serverReset.channelsDeleted', {}, g), value: `${deletedChannels}`, inline: true },
+          { name: t('serverReset.rolesDeleted', {}, g), value: `${deletedRoles}`, inline: true },
+          { name: t('serverReset.errors', {}, g), value: `${errors}`, inline: true },
+          { name: t('serverReset.membersKept', {}, g), value: `${memberCount}`, inline: true },
         ],
-        footer: t('serverReset.completeFooter'),
+        footer: t('serverReset.completeFooter', {}, g),
         timestamp: true,
       });
 
@@ -177,7 +178,7 @@ module.exports = {
     collector.on('end', (collected, reason) => {
       if (reason === 'time') {
         interaction.editReply({
-          content: t('serverReset.timedOut'),
+          content: t('serverReset.timedOut', {}, g),
           embeds: [],
           components: [],
         }).catch(() => {});

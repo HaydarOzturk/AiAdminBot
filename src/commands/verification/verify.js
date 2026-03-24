@@ -9,17 +9,18 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction) {
+    const g = interaction.guild?.id;
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     try {
-      await sendVerificationMessage(interaction.channel);
+      await sendVerificationMessage(interaction.channel, interaction.guild.id);
       await interaction.editReply({
-        content: t('verification.messageSent'),
+        content: t('verification.messageSent', {}, g),
       });
     } catch (error) {
       console.error('Failed to send verification message:', error);
       await interaction.editReply({
-        content: t('verification.messageSendFailed'),
+        content: t('verification.messageSendFailed', {}, g),
       });
     }
   },

@@ -4,6 +4,8 @@ const { t } = require('../utils/locale');
 module.exports = {
   name: Events.InteractionCreate,
   async execute(interaction) {
+    const g = interaction.guild?.id;
+
     // Handle slash commands
     if (interaction.isChatInputCommand()) {
       const command = interaction.client.commands.get(interaction.commandName);
@@ -18,7 +20,7 @@ module.exports = {
       } catch (error) {
         console.error(`Error executing /${interaction.commandName}:`, error);
 
-        const errorMsg = { content: t('general.error'), flags: MessageFlags.Ephemeral };
+        const errorMsg = { content: t('general.error', {}, g), flags: MessageFlags.Ephemeral };
 
         if (interaction.replied || interaction.deferred) {
           await interaction.followUp(errorMsg);

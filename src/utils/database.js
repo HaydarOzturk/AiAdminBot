@@ -80,6 +80,14 @@ async function initDatabase() {
     )
   `);
 
+  db.run(`
+    CREATE TABLE IF NOT EXISTS guild_settings (
+      guild_id TEXT PRIMARY KEY,
+      locale TEXT NOT NULL DEFAULT 'tr',
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   // Save to disk after creating tables
   saveDatabase();
 

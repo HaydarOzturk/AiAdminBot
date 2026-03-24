@@ -22,6 +22,7 @@ const config = loadConfig('config.json');
  * @param {Array} [options.extraFields] - Additional embed fields
  */
 async function sendModLog(guild, logType, options) {
+  const guildId = guild.id;
   const channelNameMap = {
     punishment: config.moderation?.logChannels?.punishment || 'ceza-log',
     ban: config.moderation?.logChannels?.ban || 'ban-log',
@@ -41,17 +42,17 @@ async function sendModLog(guild, logType, options) {
   }
 
   const fields = [
-    { name: t('moderation.user'), value: `${options.targetUser} (${options.targetUser.tag})`, inline: true },
-    { name: t('moderation.moderator'), value: `${options.moderator} (${options.moderator.tag})`, inline: true },
-    { name: t('moderation.reason'), value: options.reason || t('moderation.noReason'), inline: false },
+    { name: t('moderation.user', {}, guildId), value: `${options.targetUser} (${options.targetUser.tag})`, inline: true },
+    { name: t('moderation.moderator', {}, guildId), value: `${options.moderator} (${options.moderator.tag})`, inline: true },
+    { name: t('moderation.reason', {}, guildId), value: options.reason || t('moderation.noReason', {}, guildId), inline: false },
   ];
 
   if (options.duration) {
-    fields.push({ name: t('moderation.duration'), value: options.duration, inline: true });
+    fields.push({ name: t('moderation.duration', {}, guildId), value: options.duration, inline: true });
   }
 
   if (options.caseId) {
-    fields.push({ name: t('moderation.caseId'), value: `#${options.caseId}`, inline: true });
+    fields.push({ name: t('moderation.caseId', {}, guildId), value: `#${options.caseId}`, inline: true });
   }
 
   if (options.extraFields) {

@@ -36,9 +36,10 @@ module.exports = {
     ),
 
   async execute(interaction) {
+    const g = interaction.guild?.id;
     if (!hasPermission(interaction.member, 'setup-server')) {
       return interaction.reply({
-        content: t('setup.ownerOnly'),
+        content: t('setup.ownerOnly', {}, g),
         flags: MessageFlags.Ephemeral,
       });
     }

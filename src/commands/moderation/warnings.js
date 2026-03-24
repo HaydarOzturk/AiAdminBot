@@ -13,8 +13,9 @@ module.exports = {
     ),
 
   async execute(interaction) {
+    const g = interaction.guild?.id;
     if (!hasPermission(interaction.member, 'warn')) {
-      return interaction.reply({ content: t('general.noPermission'), flags: MessageFlags.Ephemeral });
+      return interaction.reply({ content: t('general.noPermission', {}, g), flags: MessageFlags.Ephemeral });
     }
 
     const targetUser = interaction.options.getUser('user');
@@ -26,7 +27,7 @@ module.exports = {
 
     if (warnings.length === 0) {
       return interaction.reply({
-        content: t('moderation.noWarningsFound', { user: targetUser.tag }),
+        content: t('moderation.noWarningsFound', { user: targetUser.tag }, g),
         flags: MessageFlags.Ephemeral,
       });
     }
@@ -39,15 +40,15 @@ module.exports = {
 
     const warningList = warnings.map((w, i) => {
       const date = w.created_at ? new Date(w.created_at + 'Z').toLocaleDateString(process.env.LOCALE === 'tr' ? 'tr-TR' : 'en-US') : '?';
-      return `**${i + 1}.** ${w.reason || t('moderation.noReason')} — <@${w.moderator_id}> (${date})`;
+      return `**${i + 1}.** ${w.reason || t('moderation.noReason', {}, g)} — <@${w.moderator_id}> (${date})`;
     });
 
     const embed = createEmbed({
-      title: t('moderation.warningsTitle', { user: targetUser.tag }),
+      title: t('moderation.warningsTitle', { user: targetUser.tag }, g),
       description: warningList.join('\n'),
       color: 'warning',
       fields: [
-        { name: t('moderation.totalWarnings'), value: `${totalCount}`, inline: true },
+        { name: t('moderation.totalWarnings', {}, g), value: `${totalCount}`, inline: true },
       ],
       timestamp: true,
     });

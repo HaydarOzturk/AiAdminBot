@@ -21,24 +21,25 @@ module.exports = {
     ),
 
   async execute(interaction) {
+    const g = interaction.guild?.id;
     if (!hasPermission(interaction.member, 'warn')) {
-      return interaction.reply({ content: t('general.noPermission'), flags: MessageFlags.Ephemeral });
+      return interaction.reply({ content: t('general.noPermission', {}, g), flags: MessageFlags.Ephemeral });
     }
 
     const targetUser = interaction.options.getUser('user');
-    const reason = interaction.options.getString('reason') || t('moderation.noReason');
+    const reason = interaction.options.getString('reason') || t('moderation.noReason', {}, g);
     const member = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
 
     if (!member) {
-      return interaction.reply({ content: t('moderation.userNotFound'), flags: MessageFlags.Ephemeral });
+      return interaction.reply({ content: t('moderation.userNotFound', {}, g), flags: MessageFlags.Ephemeral });
     }
 
     if (targetUser.id === interaction.user.id) {
-      return interaction.reply({ content: t('moderation.cannotWarnSelf'), flags: MessageFlags.Ephemeral });
+      return interaction.reply({ content: t('moderation.cannotWarnSelf', {}, g), flags: MessageFlags.Ephemeral });
     }
 
     if (targetUser.bot) {
-      return interaction.reply({ content: t('moderation.cannotWarnBot'), flags: MessageFlags.Ephemeral });
+      return interaction.reply({ content: t('moderation.cannotWarnBot', {}, g), flags: MessageFlags.Ephemeral });
     }
 
     // Save warning to DB
@@ -59,14 +60,14 @@ module.exports = {
 
     // Reply in channel
     const embed = createEmbed({
-      title: t('moderation.warnTitle'),
+      title: t('moderation.warnTitle', {}, g),
       color: 'warning',
       fields: [
-        { name: t('moderation.user'), value: `${targetUser} (${targetUser.tag})`, inline: true },
-        { name: t('moderation.moderator'), value: `${interaction.user}`, inline: true },
-        { name: t('moderation.reason'), value: reason, inline: false },
-        { name: t('moderation.totalWarnings'), value: `${totalWarnings}`, inline: true },
-        { name: t('moderation.caseId'), value: `#${caseId}`, inline: true },
+        { name: t('moderation.user', {}, g), value: `${targetUser} (${targetUser.tag})`, inline: true },
+        { name: t('moderation.moderator', {}, g), value: `${interaction.user}`, inline: true },
+        { name: t('moderation.reason', {}, g), value: reason, inline: false },
+        { name: t('moderation.totalWarnings', {}, g), value: `${totalWarnings}`, inline: true },
+        { name: t('moderation.caseId', {}, g), value: `#${caseId}`, inline: true },
       ],
       timestamp: true,
     });
@@ -76,14 +77,14 @@ module.exports = {
     // ── DM the warned user ──────────────────────────────────────────────
     try {
       const dmEmbed = createEmbed({
-        title: t('moderation.warnDmTitle', { server: interaction.guild.name }),
+        title: t('moderation.warnDmTitle', { server: interaction.guild.name }, g),
         color: 'warning',
         fields: [
-          { name: t('moderation.reason'), value: reason, inline: false },
-          { name: t('moderation.moderator'), value: interaction.user.tag, inline: true },
-          { name: t('moderation.totalWarnings'), value: `${totalWarnings} / ${config.moderation?.maxWarnings || 5}`, inline: true },
+          { name: t('moderation.reason', {}, g), value: reason, inline: false },
+          { name: t('moderation.moderator', {}, g), value: interaction.user.tag, inline: true },
+          { name: t('moderation.totalWarnings', {}, g), value: `${totalWarnings} / ${config.moderation?.maxWarnings || 5}`, inline: true },
         ],
-        footer: t('moderation.caseIdFooter', { caseId }),
+        footer: t('moderation.caseIdFooter', { caseId }, g),
         timestamp: true,
       });
 
@@ -93,8 +94,8 @@ module.exports = {
         const referencedMessage = interaction.options.resolved?.messages?.first?.();
         if (referencedMessage) {
           dmEmbed.addFields({
-            name: t('moderation.evidenceMessage'),
-            value: referencedMessage.content?.slice(0, 512) || t('general.noText'),
+            name: t('moderation.evidenceMessage', {}, g),
+            value: referencedMessage.content?.slice(0, 512) || t('general.noText', {}, g),
             inline: false,
           });
         }
@@ -107,13 +108,13 @@ module.exports = {
 
     // Log to punishment channel
     await sendModLog(interaction.guild, 'punishment', {
-      title: t('moderation.warnTitle'),
+      title: t('moderation.warnTitle', {}, g),
       color: 'warning',
       targetUser,
       moderator: interaction.user,
       reason,
       caseId: String(caseId),
-      extraFields: [{ name: t('moderation.totalWarnings'), value: `${totalWarnings}`, inline: true }],
+      extraFields: [{ name: t('moderation.totalWarnings', {}, g), value: `${totalWarnings}`, inline: true }],
     });
 
     // Auto-mute check
@@ -121,9 +122,9 @@ module.exports = {
     if (config.moderation?.autoMuteOnMaxWarnings && totalWarnings >= maxWarnings) {
       const muteDuration = config.moderation?.muteDuration || 3600000;
       try {
-        await member.timeout(muteDuration, t('moderation.autoMuteReason', { maxWarnings }));
+        await member.timeout(muteDuration, t('moderation.autoMuteReason', { maxWarnings }, g));
         await interaction.followUp({
-          content: t('moderation.autoMuteApplied', { user: targetUser.tag, maxWarnings, duration: muteDuration / 60000 }),
+          content: t('moderation.autoMuteApplied', { user: targetUser.tag, maxWarnings, duration: muteDuration / 60000 }, g),
         });
       } catch (err) {
         console.error('Auto-mute failed:', err.message);

@@ -7,8 +7,8 @@ const db = require('../../utils/database');
 /**
  * Find a role by checking multiple possible names (config, locale, English fallback).
  */
-function findRole(guild, configName, localeKey, englishFallback) {
-  const names = [configName, t(localeKey), englishFallback].filter(Boolean);
+function findRole(guild, configName, localeKey, englishFallback, g) {
+  const names = [configName, t(localeKey, {}, g), englishFallback].filter(Boolean);
   for (const name of names) {
     const role = guild.roles.cache.find(r => r.name.toLowerCase() === name.toLowerCase());
     if (role) return role;
@@ -22,11 +22,11 @@ function findRole(guild, configName, localeKey, englishFallback) {
  * @param {boolean} dryRun - If true, only count but don't assign roles
  * @returns {Promise<Object>} Results
  */
-async function syncMembers(guild, dryRun = false) {
+async function syncMembers(guild, dryRun = false, g) {
   const { config } = require('../../utils/permissions');
 
-  const unverifiedRole = findRole(guild, config.verification?.unverifiedRoleName, 'roles.unverified', 'Unverified');
-  const verifiedRole = findRole(guild, config.verification?.verifiedRoleName, 'roles.verified', 'New Member');
+  const unverifiedRole = findRole(guild, config.verification?.unverifiedRoleName, 'roles.unverified', 'Unverified', g);
+  const verifiedRole = findRole(guild, config.verification?.verifiedRoleName, 'roles.verified', 'New Member', g);
 
   if (!unverifiedRole && !verifiedRole) {
     return { error: 'no_roles' };
@@ -117,9 +117,10 @@ module.exports = {
   syncMembers,
 
   async execute(interaction) {
+    const g = interaction.guild?.id;
     if (!hasPermission(interaction.member, 'setup-server')) {
       return interaction.reply({
-        content: t('setup.ownerOnly'),
+        content: t('setup.ownerOnly', {}, g),
         flags: MessageFlags.Ephemeral,
       });
     }
@@ -145,12 +146,12 @@ module.exports = {
         );
 
         return interaction.editReply({
-          content: t('sync.commandsSynced', { count: commands.length }),
+          content: t('sync.commandsSynced', { count: commands.length }, g),
         });
       } catch (err) {
         console.error('Command sync failed:', err);
         return interaction.editReply({
-          content: t('sync.commandsFailed', { error: err.message }),
+          content: t('sync.commandsFailed', { error: err.message }, g),
         });
       }
     }
@@ -159,30 +160,30 @@ module.exports = {
     const dryRun = subcommand === 'check';
     await interaction.deferReply();
 
-    const result = await syncMembers(interaction.guild, dryRun);
+    const result = await syncMembers(interaction.guild, dryRun, g);
 
     if (result.error === 'no_roles') {
       return interaction.editReply({
-        content: t('sync.noRolesFound'),
+        content: t('sync.noRolesFound', {}, g),
       });
     }
 
     const totalFixed = result.assignedUnverified + result.assignedVerified;
 
     const embed = createEmbed({
-      title: dryRun ? t('sync.checkTitle') : t('sync.applyTitle'),
+      title: dryRun ? t('sync.checkTitle', {}, g) : t('sync.applyTitle', {}, g),
       color: result.errors > 0 ? 'warning' : 'success',
       fields: [
-        { name: t('sync.totalMembers'), value: `${result.totalMembers}`, inline: true },
-        { name: t('sync.alreadyHasRole'), value: `${result.alreadyHasRole}`, inline: true },
-        { name: t('sync.botsSkipped'), value: `${result.botSkipped}`, inline: true },
+        { name: t('sync.totalMembers', {}, g), value: `${result.totalMembers}`, inline: true },
+        { name: t('sync.alreadyHasRole', {}, g), value: `${result.alreadyHasRole}`, inline: true },
+        { name: t('sync.botsSkipped', {}, g), value: `${result.botSkipped}`, inline: true },
         { name: `${result.unverifiedRoleName}`, value: `${result.assignedUnverified}`, inline: true },
         { name: `${result.verifiedRoleName}`, value: `${result.assignedVerified}`, inline: true },
-        { name: t('sync.errors'), value: `${result.errors}`, inline: true },
+        { name: t('sync.errors', {}, g), value: `${result.errors}`, inline: true },
       ],
       footer: dryRun
-        ? t('sync.checkFooter', { count: totalFixed })
-        : t('sync.applyFooter', { count: totalFixed }),
+        ? t('sync.checkFooter', { count: totalFixed }, g)
+        : t('sync.applyFooter', { count: totalFixed }, g),
       timestamp: true,
     });
 

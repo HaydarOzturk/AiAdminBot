@@ -15,14 +15,14 @@ const typeEmoji = {
   'ai-flag': '🤖',
 };
 
-function getTypeLabel(type) {
+function getTypeLabel(type, g) {
   const labels = {
-    warn: t('moderation.actionTypes.warn'),
-    mute: t('moderation.actionTypes.mute'),
-    kick: t('moderation.actionTypes.kick'),
-    ban: t('moderation.actionTypes.ban'),
-    timeout: t('moderation.actionTypes.timeout'),
-    'ai-flag': t('moderation.actionTypes.aiFlag'),
+    warn: t('moderation.actionTypes.warn', {}, g),
+    mute: t('moderation.actionTypes.mute', {}, g),
+    kick: t('moderation.actionTypes.kick', {}, g),
+    ban: t('moderation.actionTypes.ban', {}, g),
+    timeout: t('moderation.actionTypes.timeout', {}, g),
+    'ai-flag': t('moderation.actionTypes.aiFlag', {}, g),
   };
   return labels[type] || type;
 }
@@ -59,26 +59,26 @@ function getActions(userId, guildId, type, page) {
 /**
  * Build the embed for a page of actions
  */
-function buildPageEmbed(actions, targetUser, page, totalPages, totalCount, filterType) {
+function buildPageEmbed(actions, targetUser, page, totalPages, totalCount, filterType, g) {
   const lines = actions.map(a => {
     const emoji = typeEmoji[a.action_type] || '📌';
-    const label = getTypeLabel(a.action_type);
+    const label = getTypeLabel(a.action_type, g);
     const date = a.created_at ? new Date(a.created_at + 'Z').toLocaleDateString(process.env.LOCALE === 'tr' ? 'tr-TR' : 'en-US') : '?';
-    const reason = a.reason || t('moderation.noReason');
+    const reason = a.reason || t('moderation.noReason', {}, g);
     const duration = a.duration ? ` (${a.duration})` : '';
     return `**#${a.id}** ${emoji} ${label}${duration} — ${reason}\n  <@${a.moderator_id}> • ${date}`;
   });
 
   const title = filterType
-    ? t('moderation.modHistoryTitle', { user: targetUser.tag }) + ` [${getTypeLabel(filterType)}]`
-    : t('moderation.modHistoryTitle', { user: targetUser.tag });
+    ? t('moderation.modHistoryTitle', { user: targetUser.tag }, g) + ` [${getTypeLabel(filterType, g)}]`
+    : t('moderation.modHistoryTitle', { user: targetUser.tag }, g);
 
   return createEmbed({
     title,
-    description: lines.join('\n\n') || t('moderation.noHistoryFound', { user: targetUser.tag }),
+    description: lines.join('\n\n') || t('moderation.noHistoryFound', { user: targetUser.tag }, g),
     color: 'orange',
     thumbnail: targetUser.displayAvatarURL({ dynamic: true, size: 64 }),
-    footer: `${t('moderation.page')} ${page + 1}/${totalPages} • ${totalCount} ${t('moderation.totalActions')}`,
+    footer: `${t('moderation.page', {}, g)} ${page + 1}/${totalPages} • ${totalCount} ${t('moderation.totalActions', {}, g)}`,
     timestamp: true,
   });
 }
@@ -109,8 +109,9 @@ module.exports = {
     ),
 
   async execute(interaction) {
+    const g = interaction.guild?.id;
     if (!hasPermission(interaction.member, 'warn')) {
-      return interaction.reply({ content: t('general.noPermission'), flags: MessageFlags.Ephemeral });
+      return interaction.reply({ content: t('general.noPermission', {}, g), flags: MessageFlags.Ephemeral });
     }
 
     const targetUser = interaction.options.getUser('user');
@@ -133,7 +134,7 @@ module.exports = {
 
       if (allActions.length === 0) {
         return interaction.editReply({
-          content: t('moderation.noHistoryFound', { user: targetUser.tag }),
+          content: t('moderation.noHistoryFound', { user: targetUser.tag }, g),
         });
       }
 
@@ -160,12 +161,12 @@ module.exports = {
 
     if (total === 0) {
       return interaction.reply({
-        content: t('moderation.noHistoryFound', { user: targetUser.tag }),
+        content: t('moderation.noHistoryFound', { user: targetUser.tag }, g),
         flags: MessageFlags.Ephemeral,
       });
     }
 
-    const embed = buildPageEmbed(rows, targetUser, currentPage, totalPages, total, filterType);
+    const embed = buildPageEmbed(rows, targetUser, currentPage, totalPages, total, filterType, g);
 
     // Build navigation buttons
     function buildButtons(page) {
@@ -210,7 +211,7 @@ module.exports = {
       }
 
       const { rows: newRows } = getActions(targetUser.id, interaction.guild.id, filterType, currentPage);
-      const newEmbed = buildPageEmbed(newRows, targetUser, currentPage, totalPages, total, filterType);
+      const newEmbed = buildPageEmbed(newRows, targetUser, currentPage, totalPages, total, filterType, g);
 
       await i.update({
         embeds: [newEmbed],

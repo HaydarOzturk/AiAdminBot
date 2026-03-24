@@ -16,12 +16,13 @@ module.exports = {
     ),
 
   async execute(interaction) {
+    const g = interaction.guild?.id;
     const sub = interaction.options.getSubcommand();
 
     if (sub === 'reset') {
       resetConversation(interaction.user.id);
       await interaction.reply({
-        content: t('aiChat.historyReset'),
+        content: t('aiChat.historyReset', {}, g),
         flags: MessageFlags.Ephemeral,
       });
     }
@@ -32,12 +33,12 @@ module.exports = {
       const chatChannelName = process.env.AI_CHAT_CHANNEL || 'ai-sohbet';
 
       const embed = createEmbed({
-        title: t('aiChat.statusTitle'),
+        title: t('aiChat.statusTitle', {}, g),
         color: configured && enabled ? 'success' : 'danger',
         fields: [
-          { name: t('aiChat.api'), value: configured ? t('general.connected') : t('general.notConfigured'), inline: true },
-          { name: t('aiChat.status'), value: enabled ? t('general.active') : t('general.inactive'), inline: true },
-          { name: t('aiChat.channel'), value: `#${chatChannelName}`, inline: true },
+          { name: t('aiChat.api', {}, g), value: configured ? t('general.connected', {}, g) : t('general.notConfigured', {}, g), inline: true },
+          { name: t('aiChat.status', {}, g), value: enabled ? t('general.active', {}, g) : t('general.inactive', {}, g), inline: true },
+          { name: t('aiChat.channel', {}, g), value: `#${chatChannelName}`, inline: true },
         ],
       });
 

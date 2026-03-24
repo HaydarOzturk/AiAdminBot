@@ -10,9 +10,10 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction) {
+    const g = interaction.guild?.id;
     if (!hasPermission(interaction.member, 'setup-server')) {
       return interaction.reply({
-        content: t('setup.ownerOnly'),
+        content: t('setup.ownerOnly', {}, g),
         flags: MessageFlags.Ephemeral,
       });
     }
@@ -195,7 +196,7 @@ module.exports = {
 
           if (autoSetup === 'verification') {
             const verification = require('../../systems/verification');
-            await verification.sendVerificationMessage(channel);
+            await verification.sendVerificationMessage(channel, guild.id);
             result.verificationSent = true;
           }
         } catch (err) {
@@ -211,16 +212,16 @@ module.exports = {
       ];
 
       if (result.verificationSent) {
-        fields.push({ name: t('setup.verification'), value: t('setup.verificationSent') });
+        fields.push({ name: t('setup.verification', {}, g), value: t('setup.verificationSent', {}, g) });
       }
 
       if (result.errors.length > 0) {
-        fields.push({ name: t('setup.warnings'), value: result.errors.slice(0, 5).join('\n') });
+        fields.push({ name: t('setup.warnings', {}, g), value: result.errors.slice(0, 5).join('\n') });
       }
 
       const embed = createEmbed({
         title: '🤖 AI Setup Plan Applied!',
-        description: t('setup.setupCompleteSummary'),
+        description: t('setup.setupCompleteSummary', {}, g),
         color: result.errors.length > 0 ? 'warning' : 'success',
         fields,
         timestamp: true,

@@ -27,29 +27,30 @@ module.exports = {
     ),
 
   async execute(interaction) {
+    const g = interaction.guild?.id;
     // Ban is owner-only (permission level 4)
     if (!hasPermission(interaction.member, 'ban')) {
-      return interaction.reply({ content: t('moderation.banOnlyOwner'), flags: MessageFlags.Ephemeral });
+      return interaction.reply({ content: t('moderation.banOnlyOwner', {}, g), flags: MessageFlags.Ephemeral });
     }
 
     const targetUser = interaction.options.getUser('user');
-    const reason = interaction.options.getString('reason') || t('moderation.noReason');
+    const reason = interaction.options.getString('reason') || t('moderation.noReason', {}, g);
     const deleteMessageDays = interaction.options.getInteger('delete-messages') || 0;
 
     if (targetUser.id === interaction.user.id) {
-      return interaction.reply({ content: t('moderation.cannotBanSelf'), flags: MessageFlags.Ephemeral });
+      return interaction.reply({ content: t('moderation.cannotBanSelf', {}, g), flags: MessageFlags.Ephemeral });
     }
 
     const member = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
 
     if (member && !member.bannable) {
-      return interaction.reply({ content: t('moderation.cannotBanUser'), flags: MessageFlags.Ephemeral });
+      return interaction.reply({ content: t('moderation.cannotBanUser', {}, g), flags: MessageFlags.Ephemeral });
     }
 
     try {
       // DM the user before banning
       try {
-        await targetUser.send(t('moderation.banDmMessage', { server: interaction.guild.name, reason }));
+        await targetUser.send(t('moderation.banDmMessage', { server: interaction.guild.name, reason }, g));
       } catch {
         // User might have DMs disabled
       }
@@ -62,13 +63,13 @@ module.exports = {
       const caseId = logModAction('ban', targetUser.id, interaction.guild.id, interaction.user.id, reason);
 
       const embed = createEmbed({
-        title: t('moderation.banTitle'),
+        title: t('moderation.banTitle', {}, g),
         color: 'danger',
         fields: [
-          { name: t('moderation.user'), value: `${targetUser} (${targetUser.tag})`, inline: true },
-          { name: t('moderation.moderator'), value: `${interaction.user}`, inline: true },
-          { name: t('moderation.reason'), value: reason, inline: false },
-          { name: t('moderation.caseId'), value: `#${caseId}`, inline: true },
+          { name: t('moderation.user', {}, g), value: `${targetUser} (${targetUser.tag})`, inline: true },
+          { name: t('moderation.moderator', {}, g), value: `${interaction.user}`, inline: true },
+          { name: t('moderation.reason', {}, g), value: reason, inline: false },
+          { name: t('moderation.caseId', {}, g), value: `#${caseId}`, inline: true },
         ],
         timestamp: true,
       });
@@ -77,7 +78,7 @@ module.exports = {
 
       // Log to ban-log channel specifically
       await sendModLog(interaction.guild, 'ban', {
-        title: t('moderation.banTitle'),
+        title: t('moderation.banTitle', {}, g),
         color: 'danger',
         targetUser,
         moderator: interaction.user,
@@ -86,7 +87,7 @@ module.exports = {
       });
     } catch (err) {
       console.error('Ban failed:', err);
-      await interaction.reply({ content: t('moderation.banFailed', { error: err.message }), flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: t('moderation.banFailed', { error: err.message }, g), flags: MessageFlags.Ephemeral });
     }
   },
 };

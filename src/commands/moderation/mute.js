@@ -32,34 +32,35 @@ module.exports = {
     ),
 
   async execute(interaction) {
+    const g = interaction.guild?.id;
     if (!hasPermission(interaction.member, 'mute')) {
-      return interaction.reply({ content: t('general.noPermission'), flags: MessageFlags.Ephemeral });
+      return interaction.reply({ content: t('general.noPermission', {}, g), flags: MessageFlags.Ephemeral });
     }
 
     const targetUser = interaction.options.getUser('user');
     const durationMinutes = interaction.options.getInteger('duration');
-    const reason = interaction.options.getString('reason') || t('moderation.noReason');
+    const reason = interaction.options.getString('reason') || t('moderation.noReason', {}, g);
     const durationMs = durationMinutes * 60 * 1000;
 
     const member = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
 
     if (!member) {
-      return interaction.reply({ content: t('moderation.userNotFound'), flags: MessageFlags.Ephemeral });
+      return interaction.reply({ content: t('moderation.userNotFound', {}, g), flags: MessageFlags.Ephemeral });
     }
 
     if (targetUser.id === interaction.user.id) {
-      return interaction.reply({ content: t('moderation.cannotMuteSelf'), flags: MessageFlags.Ephemeral });
+      return interaction.reply({ content: t('moderation.cannotMuteSelf', {}, g), flags: MessageFlags.Ephemeral });
     }
 
     if (!member.moderatable) {
-      return interaction.reply({ content: t('moderation.cannotMuteUser'), flags: MessageFlags.Ephemeral });
+      return interaction.reply({ content: t('moderation.cannotMuteUser', {}, g), flags: MessageFlags.Ephemeral });
     }
 
     // Format duration text
     let durationText;
-    if (durationMinutes >= 1440) durationText = t('time.days', { count: durationMinutes / 1440 });
-    else if (durationMinutes >= 60) durationText = t('time.hours', { count: durationMinutes / 60 });
-    else durationText = t('time.minutes', { count: durationMinutes });
+    if (durationMinutes >= 1440) durationText = t('time.days', { count: durationMinutes / 1440 }, g);
+    else if (durationMinutes >= 60) durationText = t('time.hours', { count: durationMinutes / 60 }, g);
+    else durationText = t('time.minutes', { count: durationMinutes }, g);
 
     try {
       await member.timeout(durationMs, reason);
@@ -67,14 +68,14 @@ module.exports = {
       const caseId = logModAction('mute', targetUser.id, interaction.guild.id, interaction.user.id, reason, durationText);
 
       const embed = createEmbed({
-        title: t('moderation.muteTitle'),
+        title: t('moderation.muteTitle', {}, g),
         color: 'warning',
         fields: [
-          { name: t('moderation.user'), value: `${targetUser} (${targetUser.tag})`, inline: true },
-          { name: t('moderation.moderator'), value: `${interaction.user}`, inline: true },
-          { name: t('moderation.reason'), value: reason, inline: false },
-          { name: t('moderation.duration'), value: durationText, inline: true },
-          { name: t('moderation.caseId'), value: `#${caseId}`, inline: true },
+          { name: t('moderation.user', {}, g), value: `${targetUser} (${targetUser.tag})`, inline: true },
+          { name: t('moderation.moderator', {}, g), value: `${interaction.user}`, inline: true },
+          { name: t('moderation.reason', {}, g), value: reason, inline: false },
+          { name: t('moderation.duration', {}, g), value: durationText, inline: true },
+          { name: t('moderation.caseId', {}, g), value: `#${caseId}`, inline: true },
         ],
         timestamp: true,
       });
@@ -82,7 +83,7 @@ module.exports = {
       await interaction.reply({ embeds: [embed] });
 
       await sendModLog(interaction.guild, 'punishment', {
-        title: t('moderation.muteTitle'),
+        title: t('moderation.muteTitle', {}, g),
         color: 'warning',
         targetUser,
         moderator: interaction.user,
@@ -92,7 +93,7 @@ module.exports = {
       });
     } catch (err) {
       console.error('Mute failed:', err);
-      await interaction.reply({ content: t('moderation.muteFailed', { error: err.message }), flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: t('moderation.muteFailed', { error: err.message }, g), flags: MessageFlags.Ephemeral });
     }
   },
 };

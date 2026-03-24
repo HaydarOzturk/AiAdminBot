@@ -105,7 +105,7 @@ async function handleMessage(message) {
   const limit = checkRateLimit(message.author.id);
   if (!limit.allowed) {
     await message.reply({
-      content: t('aiChat.rateLimited', { seconds: limit.resetIn }),
+      content: t('aiChat.rateLimited', { seconds: limit.resetIn }, message.guild?.id),
     });
     return;
   }
@@ -164,7 +164,7 @@ async function handleMessage(message) {
     }
   } catch (err) {
     console.error('AI chat error:', err.message);
-    await message.reply(t('aiChat.responseError'));
+    await message.reply(t('aiChat.responseError', {}, message.guild?.id));
   }
 }
 

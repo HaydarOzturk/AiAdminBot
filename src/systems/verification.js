@@ -9,7 +9,7 @@ const db = require('../utils/database');
  * Case-insensitive to handle servers where role names were tweaked slightly.
  */
 function findRole(guild, configName, localeKey, englishFallback) {
-  const names = [configName, t(localeKey), englishFallback].filter(Boolean);
+  const names = [configName, t(localeKey, {}, guild.id), englishFallback].filter(Boolean);
   for (const name of names) {
     const role = guild.roles.cache.find(r => r.name.toLowerCase() === name.toLowerCase());
     if (role) return role;
@@ -20,17 +20,18 @@ function findRole(guild, configName, localeKey, englishFallback) {
 /**
  * Send the verification embed with button to a channel
  * @param {import('discord.js').TextChannel} channel
+ * @param {string} [guildId] - Guild ID for per-guild locale lookup
  */
-async function sendVerificationMessage(channel) {
+async function sendVerificationMessage(channel, guildId) {
   const embed = createEmbed({
-    title: t('verification.embedTitle'),
-    description: t('verification.embedDescription'),
+    title: t('verification.embedTitle', {}, guildId),
+    description: t('verification.embedDescription', {}, guildId),
     color: 'primary',
   });
 
   const button = new ButtonBuilder()
     .setCustomId('verify_button')
-    .setLabel(t('verification.buttonLabel'))
+    .setLabel(t('verification.buttonLabel', {}, guildId))
     .setStyle(ButtonStyle.Success);
 
   const row = new ActionRowBuilder().addComponents(button);
@@ -54,7 +55,7 @@ async function handleVerifyButton(interaction) {
 
   if (existing) {
     return interaction.reply({
-      content: t('verification.alreadyVerified'),
+      content: t('verification.alreadyVerified', {}, guild.id),
       flags: MessageFlags.Ephemeral,
     });
   }
@@ -63,8 +64,8 @@ async function handleVerifyButton(interaction) {
   const unverifiedRole = findRole(guild, config.verification?.unverifiedRoleName, 'roles.unverified', 'Unverified');
   const verifiedRole = findRole(guild, config.verification?.verifiedRoleName, 'roles.verified', 'New Member');
 
-  const unverifiedRoleName = unverifiedRole?.name || t('roles.unverified');
-  const verifiedRoleName = verifiedRole?.name || t('roles.verified');
+  const unverifiedRoleName = unverifiedRole?.name || t('roles.unverified', {}, guild.id);
+  const verifiedRoleName = verifiedRole?.name || t('roles.verified', {}, guild.id);
 
   try {
     // Remove unverified role
@@ -87,12 +88,12 @@ async function handleVerifyButton(interaction) {
 
     // Send success response (ephemeral — only the user sees it)
     const embed = createEmbed({
-      title: t('verification.successTitle'),
-      description: t('verification.successDescription', { user: member.user.username }),
+      title: t('verification.successTitle', {}, guild.id),
+      description: t('verification.successDescription', { user: member.user.username }, guild.id),
       color: 'success',
       fields: [
-        { name: t('verification.oldRole'), value: unverifiedRoleName },
-        { name: t('verification.newRole'), value: verifiedRoleName },
+        { name: t('verification.oldRole', {}, guild.id), value: unverifiedRoleName },
+        { name: t('verification.newRole', {}, guild.id), value: verifiedRoleName },
       ],
     });
 
@@ -104,13 +105,13 @@ async function handleVerifyButton(interaction) {
 
     if (logChannel) {
       const logEmbed = createEmbed({
-        title: t('logging.roleChanged'),
+        title: t('logging.roleChanged', {}, guild.id),
         color: 'primary',
         fields: [
-          { name: t('moderation.user'), value: `${member.user.tag}` },
-          { name: t('logging.action'), value: t('logging.verification') },
-          { name: t('logging.removedRole'), value: unverifiedRoleName },
-          { name: t('logging.addedRole'), value: verifiedRoleName },
+          { name: t('moderation.user', {}, guild.id), value: `${member.user.tag}` },
+          { name: t('logging.action', {}, guild.id), value: t('logging.verification', {}, guild.id) },
+          { name: t('logging.removedRole', {}, guild.id), value: unverifiedRoleName },
+          { name: t('logging.addedRole', {}, guild.id), value: verifiedRoleName },
         ],
         timestamp: true,
       });
@@ -122,7 +123,7 @@ async function handleVerifyButton(interaction) {
   } catch (error) {
     console.error(`❌ Verification failed for ${member.user.tag}:`, error);
     await interaction.reply({
-      content: t('general.error'),
+      content: t('general.error', {}, guild.id),
       flags: MessageFlags.Ephemeral,
     });
   }

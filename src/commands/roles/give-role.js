@@ -28,26 +28,27 @@ module.exports = {
     ),
 
   async execute(interaction) {
+    const g = interaction.guild?.id;
     // Permission check
     if (!hasPermission(interaction.member, 'mute')) {
       return interaction.reply({
-        content: t('general.noPermissionDetailed'),
+        content: t('general.noPermissionDetailed', {}, g),
         flags: MessageFlags.Ephemeral,
       });
     }
 
     const targetUser = interaction.options.getMember('user');
     const role = interaction.options.getRole('role');
-    const reason = interaction.options.getString('reason') || t('moderation.noReason');
+    const reason = interaction.options.getString('reason') || t('moderation.noReason', {}, g);
 
     if (!targetUser) {
-      return interaction.reply({ content: t('moderation.userNotFound'), flags: MessageFlags.Ephemeral });
+      return interaction.reply({ content: t('moderation.userNotFound', {}, g), flags: MessageFlags.Ephemeral });
     }
 
     // Prevent giving roles higher than the command user's highest role
     if (role.position >= interaction.member.roles.highest.position) {
       return interaction.reply({
-        content: t('roles.cannotGiveHigherRole'),
+        content: t('roles.cannotGiveHigherRole', {}, g),
         flags: MessageFlags.Ephemeral,
       });
     }
@@ -55,7 +56,7 @@ module.exports = {
     // Check if user already has the role
     if (targetUser.roles.cache.has(role.id)) {
       return interaction.reply({
-        content: t('roles.alreadyHasRole', { user: targetUser.user.username, role: role.name }),
+        content: t('roles.alreadyHasRole', { user: targetUser.user.username, role: role.name }, g),
         flags: MessageFlags.Ephemeral,
       });
     }
@@ -64,13 +65,13 @@ module.exports = {
       await targetUser.roles.add(role, reason);
 
       const embed = createEmbed({
-        title: t('roles.roleGiven'),
+        title: t('roles.roleGiven', {}, g),
         color: 'success',
         fields: [
-          { name: t('moderation.user'), value: `${targetUser.user.tag}` },
-          { name: t('roles.role'), value: `${role.name}` },
-          { name: t('roles.giver'), value: `${interaction.user.tag}` },
-          { name: t('moderation.reason'), value: reason },
+          { name: t('moderation.user', {}, g), value: `${targetUser.user.tag}` },
+          { name: t('roles.role', {}, g), value: `${role.name}` },
+          { name: t('roles.giver', {}, g), value: `${interaction.user.tag}` },
+          { name: t('moderation.reason', {}, g), value: reason },
         ],
         timestamp: true,
       });
@@ -79,7 +80,7 @@ module.exports = {
     } catch (error) {
       console.error('Failed to give role:', error);
       await interaction.reply({
-        content: t('roles.giveRoleFailed'),
+        content: t('roles.giveRoleFailed', {}, g),
         flags: MessageFlags.Ephemeral,
       });
     }

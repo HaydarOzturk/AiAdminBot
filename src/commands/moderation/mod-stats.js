@@ -22,8 +22,9 @@ module.exports = {
     ),
 
   async execute(interaction) {
+    const g = interaction.guild?.id;
     if (!hasPermission(interaction.member, 'warn')) {
-      return interaction.reply({ content: t('general.noPermission'), flags: MessageFlags.Ephemeral });
+      return interaction.reply({ content: t('general.noPermission', {}, g), flags: MessageFlags.Ephemeral });
     }
 
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -60,7 +61,7 @@ module.exports = {
     const typeBreakdown = byType.map(r => {
       const emoji = typeEmoji[r.action_type] || '📌';
       return `${emoji} **${r.action_type}**: ${r.cnt}`;
-    }).join('\n') || t('general.none');
+    }).join('\n') || t('general.none', {}, g);
 
     // Top 5 moderators
     const topMods = db.all(
@@ -70,8 +71,8 @@ module.exports = {
 
     const topModsList = topMods.map((r, i) => {
       const medal = ['🥇', '🥈', '🥉'][i] || `${i + 1}.`;
-      return `${medal} <@${r.moderator_id}> — ${r.cnt} ${t('moderation.actions')}`;
-    }).join('\n') || t('general.none');
+      return `${medal} <@${r.moderator_id}> — ${r.cnt} ${t('moderation.actions', {}, g)}`;
+    }).join('\n') || t('general.none', {}, g);
 
     // Top 5 most warned users
     const topUsers = db.all(
@@ -80,8 +81,8 @@ module.exports = {
     );
 
     const topUsersList = topUsers.map((r, i) => {
-      return `${i + 1}. <@${r.user_id}> — ${r.cnt} ${t('moderation.actions')}`;
-    }).join('\n') || t('general.none');
+      return `${i + 1}. <@${r.user_id}> — ${r.cnt} ${t('moderation.actions', {}, g)}`;
+    }).join('\n') || t('general.none', {}, g);
 
     // AI vs Manual breakdown
     const aiCount = db.get(
@@ -90,19 +91,19 @@ module.exports = {
     );
     const manualCount = totalActions - (aiCount?.cnt || 0);
 
-    const periodLabel = period === 'all' ? t('moderation.allTime') : t('moderation.lastDays', { days: period });
+    const periodLabel = period === 'all' ? t('moderation.allTime', {}, g) : t('moderation.lastDays', { days: period }, g);
 
     const embed = createEmbed({
-      title: t('moderation.modStatsTitle'),
+      title: t('moderation.modStatsTitle', {}, g),
       description: `${periodLabel} • ${interaction.guild.name}`,
       color: 'primary',
       fields: [
-        { name: t('moderation.totalActions'), value: `${totalActions}`, inline: true },
-        { name: t('moderation.manualActions'), value: `${manualCount}`, inline: true },
-        { name: t('moderation.aiActions'), value: `${aiCount?.cnt || 0}`, inline: true },
-        { name: t('moderation.actionBreakdown'), value: typeBreakdown, inline: false },
-        { name: t('moderation.topModerators'), value: topModsList, inline: false },
-        { name: t('moderation.mostWarned'), value: topUsersList, inline: false },
+        { name: t('moderation.totalActions', {}, g), value: `${totalActions}`, inline: true },
+        { name: t('moderation.manualActions', {}, g), value: `${manualCount}`, inline: true },
+        { name: t('moderation.aiActions', {}, g), value: `${aiCount?.cnt || 0}`, inline: true },
+        { name: t('moderation.actionBreakdown', {}, g), value: typeBreakdown, inline: false },
+        { name: t('moderation.topModerators', {}, g), value: topModsList, inline: false },
+        { name: t('moderation.mostWarned', {}, g), value: topUsersList, inline: false },
       ],
       timestamp: true,
     });

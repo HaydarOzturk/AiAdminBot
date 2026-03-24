@@ -19,17 +19,18 @@ module.exports = [
     async execute(channel) {
       if (!channel.guild) return;
 
+      const g = channel.guild?.id;
       const logChannel = getLogChannel(channel.guild);
       if (!logChannel) return;
 
       try {
         const embed = createEmbed({
-          title: t('logging.channelCreated'),
+          title: t('logging.channelCreated', {}, g),
           color: 'success',
           fields: [
-            { name: t('logging.channel'), value: `${channel.name}\n<#${channel.id}>`, inline: true },
-            { name: t('logging.type'), value: channelTypeName(channel.type), inline: true },
-            { name: t('logging.channel'), value: channel.parent?.name || t('general.none'), inline: true },
+            { name: t('logging.channel', {}, g), value: `${channel.name}\n<#${channel.id}>`, inline: true },
+            { name: t('logging.type', {}, g), value: channelTypeName(channel.type, g), inline: true },
+            { name: t('logging.channel', {}, g), value: channel.parent?.name || t('general.none', {}, g), inline: true },
           ],
           timestamp: true,
         });
@@ -45,17 +46,18 @@ module.exports = [
     async execute(channel) {
       if (!channel.guild) return;
 
+      const g = channel.guild?.id;
       const logChannel = getLogChannel(channel.guild);
       if (!logChannel) return;
 
       try {
         const embed = createEmbed({
-          title: t('logging.channelDeleted'),
+          title: t('logging.channelDeleted', {}, g),
           color: 'danger',
           fields: [
-            { name: t('logging.channel'), value: channel.name, inline: true },
-            { name: t('logging.type'), value: channelTypeName(channel.type), inline: true },
-            { name: t('logging.channel'), value: channel.parent?.name || t('general.none'), inline: true },
+            { name: t('logging.channel', {}, g), value: channel.name, inline: true },
+            { name: t('logging.type', {}, g), value: channelTypeName(channel.type, g), inline: true },
+            { name: t('logging.channel', {}, g), value: channel.parent?.name || t('general.none', {}, g), inline: true },
           ],
           timestamp: true,
         });
@@ -71,25 +73,26 @@ module.exports = [
     async execute(oldChannel, newChannel) {
       if (!newChannel.guild) return;
 
+      const g = newChannel.guild?.id;
       const logChannel = getLogChannel(newChannel.guild);
       if (!logChannel) return;
 
       const changes = [];
 
       if (oldChannel.name !== newChannel.name) {
-        changes.push({ name: t('logging.oldName'), value: `${oldChannel.name} → ${newChannel.name}` });
+        changes.push({ name: t('logging.oldName', {}, g), value: `${oldChannel.name} → ${newChannel.name}` });
       }
 
       if (oldChannel.topic !== newChannel.topic) {
-        const oldTopic = oldChannel.topic || t('general.empty');
-        const newTopic = newChannel.topic || t('general.empty');
-        changes.push({ name: t('logging.topic'), value: `${oldTopic} → ${newTopic}` });
+        const oldTopic = oldChannel.topic || t('general.empty', {}, g);
+        const newTopic = newChannel.topic || t('general.empty', {}, g);
+        changes.push({ name: t('logging.topic', {}, g), value: `${oldTopic} → ${newTopic}` });
       }
 
       if (oldChannel.parentId !== newChannel.parentId) {
-        const oldCat = oldChannel.parent?.name || t('general.none');
-        const newCat = newChannel.parent?.name || t('general.none');
-        changes.push({ name: t('logging.channel'), value: `${oldCat} → ${newCat}` });
+        const oldCat = oldChannel.parent?.name || t('general.none', {}, g);
+        const newCat = newChannel.parent?.name || t('general.none', {}, g);
+        changes.push({ name: t('logging.channel', {}, g), value: `${oldCat} → ${newCat}` });
       }
 
       if (oldChannel.nsfw !== newChannel.nsfw) {
@@ -101,12 +104,12 @@ module.exports = [
 
       try {
         const fields = [
-          { name: t('logging.channel'), value: `<#${newChannel.id}>`, inline: true },
+          { name: t('logging.channel', {}, g), value: `<#${newChannel.id}>`, inline: true },
           ...changes.map(c => ({ name: c.name, value: c.value, inline: true })),
         ];
 
         const embed = createEmbed({
-          title: t('logging.channelUpdated'),
+          title: t('logging.channelUpdated', {}, g),
           color: 'info',
           fields,
           timestamp: true,
@@ -120,15 +123,15 @@ module.exports = [
   },
 ];
 
-function channelTypeName(type) {
+function channelTypeName(type, guildId) {
   const { ChannelType } = require('discord.js');
   const names = {
-    [ChannelType.GuildText]: t('channelTypes.text'),
-    [ChannelType.GuildVoice]: t('channelTypes.voice'),
-    [ChannelType.GuildCategory]: t('channelTypes.category'),
-    [ChannelType.GuildAnnouncement]: t('channelTypes.announcement'),
-    [ChannelType.GuildStageVoice]: t('channelTypes.stage'),
-    [ChannelType.GuildForum]: t('channelTypes.forum'),
+    [ChannelType.GuildText]: t('channelTypes.text', {}, guildId),
+    [ChannelType.GuildVoice]: t('channelTypes.voice', {}, guildId),
+    [ChannelType.GuildCategory]: t('channelTypes.category', {}, guildId),
+    [ChannelType.GuildAnnouncement]: t('channelTypes.announcement', {}, guildId),
+    [ChannelType.GuildStageVoice]: t('channelTypes.stage', {}, guildId),
+    [ChannelType.GuildForum]: t('channelTypes.forum', {}, guildId),
   };
-  return names[type] || t('channelTypes.other');
+  return names[type] || t('channelTypes.other', {}, guildId);
 }

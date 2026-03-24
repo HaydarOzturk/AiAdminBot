@@ -16,31 +16,32 @@ module.exports = {
     ),
 
   async execute(interaction) {
+    const g = interaction.guild?.id;
     if (!hasPermission(interaction.member, 'kick')) {
-      return interaction.reply({ content: t('moderation.kickOnlyAdmin'), flags: MessageFlags.Ephemeral });
+      return interaction.reply({ content: t('moderation.kickOnlyAdmin', {}, g), flags: MessageFlags.Ephemeral });
     }
 
     const targetUser = interaction.options.getUser('user');
-    const reason = interaction.options.getString('reason') || t('moderation.noReason');
+    const reason = interaction.options.getString('reason') || t('moderation.noReason', {}, g);
 
     const member = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
 
     if (!member) {
-      return interaction.reply({ content: t('moderation.userNotFound'), flags: MessageFlags.Ephemeral });
+      return interaction.reply({ content: t('moderation.userNotFound', {}, g), flags: MessageFlags.Ephemeral });
     }
 
     if (targetUser.id === interaction.user.id) {
-      return interaction.reply({ content: t('moderation.cannotKickSelf'), flags: MessageFlags.Ephemeral });
+      return interaction.reply({ content: t('moderation.cannotKickSelf', {}, g), flags: MessageFlags.Ephemeral });
     }
 
     if (!member.kickable) {
-      return interaction.reply({ content: t('moderation.cannotKickUser'), flags: MessageFlags.Ephemeral });
+      return interaction.reply({ content: t('moderation.cannotKickUser', {}, g), flags: MessageFlags.Ephemeral });
     }
 
     try {
       // DM the user before kicking
       try {
-        await targetUser.send(t('moderation.kickDmMessage', { server: interaction.guild.name, reason }));
+        await targetUser.send(t('moderation.kickDmMessage', { server: interaction.guild.name, reason }, g));
       } catch {
         // User might have DMs disabled
       }
@@ -50,13 +51,13 @@ module.exports = {
       const caseId = logModAction('kick', targetUser.id, interaction.guild.id, interaction.user.id, reason);
 
       const embed = createEmbed({
-        title: t('moderation.kickTitle'),
+        title: t('moderation.kickTitle', {}, g),
         color: 'danger',
         fields: [
-          { name: t('moderation.user'), value: `${targetUser} (${targetUser.tag})`, inline: true },
-          { name: t('moderation.moderator'), value: `${interaction.user}`, inline: true },
-          { name: t('moderation.reason'), value: reason, inline: false },
-          { name: t('moderation.caseId'), value: `#${caseId}`, inline: true },
+          { name: t('moderation.user', {}, g), value: `${targetUser} (${targetUser.tag})`, inline: true },
+          { name: t('moderation.moderator', {}, g), value: `${interaction.user}`, inline: true },
+          { name: t('moderation.reason', {}, g), value: reason, inline: false },
+          { name: t('moderation.caseId', {}, g), value: `#${caseId}`, inline: true },
         ],
         timestamp: true,
       });
@@ -64,7 +65,7 @@ module.exports = {
       await interaction.reply({ embeds: [embed] });
 
       await sendModLog(interaction.guild, 'punishment', {
-        title: t('moderation.kickTitle'),
+        title: t('moderation.kickTitle', {}, g),
         color: 'danger',
         targetUser,
         moderator: interaction.user,
@@ -73,7 +74,7 @@ module.exports = {
       });
     } catch (err) {
       console.error('Kick failed:', err);
-      await interaction.reply({ content: t('moderation.kickFailed', { error: err.message }), flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: t('moderation.kickFailed', { error: err.message }, g), flags: MessageFlags.Ephemeral });
     }
   },
 };

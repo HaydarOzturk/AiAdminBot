@@ -13,8 +13,9 @@ module.exports = {
     ),
 
   async execute(interaction) {
+    const g = interaction.guild?.id;
     if (!hasPermission(interaction.member, 'warn')) {
-      return interaction.reply({ content: t('general.noPermission'), flags: MessageFlags.Ephemeral });
+      return interaction.reply({ content: t('general.noPermission', {}, g), flags: MessageFlags.Ephemeral });
     }
 
     const caseId = interaction.options.getInteger('id');
@@ -26,7 +27,7 @@ module.exports = {
 
     if (!action) {
       return interaction.reply({
-        content: t('moderation.caseNotFound', { id: caseId }),
+        content: t('moderation.caseNotFound', { id: caseId }, g),
         flags: MessageFlags.Ephemeral,
       });
     }
@@ -37,12 +38,12 @@ module.exports = {
     };
 
     const typeLabel = {
-      warn: t('moderation.actionTypes.warn'),
-      mute: t('moderation.actionTypes.mute'),
-      kick: t('moderation.actionTypes.kick'),
-      ban: t('moderation.actionTypes.ban'),
-      timeout: t('moderation.actionTypes.timeout'),
-      'ai-flag': t('moderation.actionTypes.aiFlag'),
+      warn: t('moderation.actionTypes.warn', {}, g),
+      mute: t('moderation.actionTypes.mute', {}, g),
+      kick: t('moderation.actionTypes.kick', {}, g),
+      ban: t('moderation.actionTypes.ban', {}, g),
+      timeout: t('moderation.actionTypes.timeout', {}, g),
+      'ai-flag': t('moderation.actionTypes.aiFlag', {}, g),
     };
 
     const emoji = typeEmoji[action.action_type] || '📌';
@@ -50,18 +51,18 @@ module.exports = {
     const date = action.created_at ? new Date(action.created_at + 'Z') : null;
 
     const fields = [
-      { name: t('moderation.caseType'), value: `${emoji} ${label}`, inline: true },
-      { name: t('moderation.user'), value: `<@${action.user_id}>`, inline: true },
-      { name: t('moderation.moderator'), value: `<@${action.moderator_id}>`, inline: true },
-      { name: t('moderation.reason'), value: action.reason || t('moderation.noReason'), inline: false },
+      { name: t('moderation.caseType', {}, g), value: `${emoji} ${label}`, inline: true },
+      { name: t('moderation.user', {}, g), value: `<@${action.user_id}>`, inline: true },
+      { name: t('moderation.moderator', {}, g), value: `<@${action.moderator_id}>`, inline: true },
+      { name: t('moderation.reason', {}, g), value: action.reason || t('moderation.noReason', {}, g), inline: false },
     ];
 
     if (action.duration) {
-      fields.push({ name: t('moderation.duration'), value: action.duration, inline: true });
+      fields.push({ name: t('moderation.duration', {}, g), value: action.duration, inline: true });
     }
 
     if (date) {
-      fields.push({ name: t('moderation.date'), value: `<t:${Math.floor(date.getTime() / 1000)}:F>`, inline: true });
+      fields.push({ name: t('moderation.date', {}, g), value: `<t:${Math.floor(date.getTime() / 1000)}:F>`, inline: true });
     }
 
     // Check for related warnings
@@ -76,14 +77,14 @@ module.exports = {
         [action.user_id, interaction.guild.id]
       );
       fields.push({
-        name: t('moderation.activeWarnings'),
+        name: t('moderation.activeWarnings', {}, g),
         value: `${warningCount?.cnt || 0}`,
         inline: true,
       });
     }
 
     const embed = createEmbed({
-      title: `${t('moderation.caseTitle')} #${caseId}`,
+      title: `${t('moderation.caseTitle', {}, g)} #${caseId}`,
       color: action.action_type === 'ban' || action.action_type === 'threat' ? 'danger' : 'orange',
       fields,
       timestamp: true,

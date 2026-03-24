@@ -36,13 +36,14 @@ module.exports = {
     ),
 
   async execute(interaction) {
+    const g = interaction.guild?.id;
     const member = interaction.member;
     const permLevel = getPermissionLevel(member);
 
     // Moderator+ only (level >= 2)
     if (permLevel < 2) {
       return interaction.reply({
-        content: t('general.noPermission'),
+        content: t('general.noPermission', {}, g),
         flags: MessageFlags.Ephemeral,
       });
     }
@@ -55,7 +56,7 @@ module.exports = {
 
       if (word.length < 2) {
         return interaction.reply({
-          content: t('blocklist.tooShort'),
+          content: t('blocklist.tooShort', {}, g),
           flags: MessageFlags.Ephemeral,
         });
       }
@@ -68,7 +69,7 @@ module.exports = {
 
       if (existing) {
         return interaction.reply({
-          content: t('blocklist.alreadyExists', { word }),
+          content: t('blocklist.alreadyExists', { word }, g),
           flags: MessageFlags.Ephemeral,
         });
       }
@@ -82,8 +83,8 @@ module.exports = {
       clearBlocklistCache(guildId);
 
       const embed = createEmbed({
-        title: t('blocklist.addedTitle'),
-        description: t('blocklist.addedDesc', { word }),
+        title: t('blocklist.addedTitle', {}, g),
+        description: t('blocklist.addedDesc', { word }, g),
         color: 'success',
       });
 
@@ -99,7 +100,7 @@ module.exports = {
 
       if (!existing) {
         return interaction.reply({
-          content: t('blocklist.notFound', { word }),
+          content: t('blocklist.notFound', { word }, g),
           flags: MessageFlags.Ephemeral,
         });
       }
@@ -112,8 +113,8 @@ module.exports = {
       clearBlocklistCache(guildId);
 
       const embed = createEmbed({
-        title: t('blocklist.removedTitle'),
-        description: t('blocklist.removedDesc', { word }),
+        title: t('blocklist.removedTitle', {}, g),
+        description: t('blocklist.removedDesc', { word }, g),
         color: 'success',
       });
 
@@ -127,7 +128,7 @@ module.exports = {
 
       if (rows.length === 0) {
         return interaction.reply({
-          content: t('blocklist.empty'),
+          content: t('blocklist.empty', {}, g),
           flags: MessageFlags.Ephemeral,
         });
       }
@@ -135,11 +136,11 @@ module.exports = {
       const wordList = rows.map(r => `\`${r.word}\``).join(', ');
 
       const embed = createEmbed({
-        title: t('blocklist.listTitle'),
-        description: t('blocklist.listDesc2', { count: rows.length }),
+        title: t('blocklist.listTitle', {}, g),
+        description: t('blocklist.listDesc2', { count: rows.length }, g),
         color: 'primary',
         fields: [
-          { name: t('blocklist.wordsField'), value: wordList.length > 1024 ? wordList.slice(0, 1021) + '...' : wordList },
+          { name: t('blocklist.wordsField', {}, g), value: wordList.length > 1024 ? wordList.slice(0, 1021) + '...' : wordList },
         ],
       });
 

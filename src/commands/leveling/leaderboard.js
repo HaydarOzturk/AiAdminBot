@@ -9,6 +9,7 @@ module.exports = {
     .setDescription('View members with the highest levels'),
 
   async execute(interaction) {
+    const g = interaction.guild?.id;
     const topUsers = leveling.getLeaderboard(interaction.guild.id, 10);
 
     if (topUsers.length === 0) {
@@ -35,12 +36,12 @@ module.exports = {
           username = `<@${user.user_id}>`;
         }
 
-        return `${prefix} **${username}** — ${t('leveling.level')} ${user.level}${tierText} • ${user.messages || 0} ${t('leveling.messages')}`;
+        return `${prefix} **${username}** — ${t('leveling.level', {}, g)} ${user.level}${tierText} • ${user.messages || 0} ${t('leveling.messages', {}, g)}`;
       })
     );
 
     const embed = createEmbed({
-      title: t('leveling.leaderboardTitle'),
+      title: t('leveling.leaderboardTitle', {}, g),
       description: lines.join('\n'),
       color: 'primary',
       footer: `Top ${topUsers.length} members`,

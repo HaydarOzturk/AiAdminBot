@@ -21,13 +21,14 @@ let _rulesChannelNames = null;
 
 /**
  * Get all possible rules channel names across all locales
+ * @param {string|null} [guildId=null] - Guild ID for per-guild locale lookup
  * @returns {Set<string>}
  */
-function getRulesChannelNames() {
+function getRulesChannelNames(guildId = null) {
   if (_rulesChannelNames) return _rulesChannelNames;
 
   const names = new Set();
-  names.add(channelName('rules'));
+  names.add(channelName('rules', guildId));
   names.add('rules');
   names.add('kurallar');
 
@@ -56,7 +57,7 @@ function getRulesChannelNames() {
  * @returns {import('discord.js').TextChannel|null}
  */
 function findRulesChannel(guild) {
-  const names = getRulesChannelNames();
+  const names = getRulesChannelNames(guild.id);
   const channel = guild.channels.cache.find(
     c => names.has(c.name) && c.isTextBased()
   ) || null;

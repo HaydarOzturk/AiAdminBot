@@ -19,8 +19,9 @@ module.exports = {
     ),
 
   async execute(interaction) {
+    const g = interaction.guild?.id;
     if (!hasPermission(interaction.member, 'clear')) {
-      return interaction.reply({ content: t('general.noPermission'), flags: MessageFlags.Ephemeral });
+      return interaction.reply({ content: t('general.noPermission', {}, g), flags: MessageFlags.Ephemeral });
     }
 
     const amount = interaction.options.getInteger('amount');
@@ -57,21 +58,21 @@ module.exports = {
       const deleted = await interaction.channel.bulkDelete(toDelete, true);
 
       const response = targetUser
-        ? t('moderation.messagesDeletedByUser', { count: deleted.size, user: targetUser.tag })
-        : t('moderation.messagesDeleted', { count: deleted.size });
+        ? t('moderation.messagesDeletedByUser', { count: deleted.size, user: targetUser.tag }, g)
+        : t('moderation.messagesDeleted', { count: deleted.size }, g);
 
       await interaction.editReply({ content: response });
 
       // If fewer messages were deleted than requested, it's because they're older than 14 days
       if (deleted.size < amount) {
         await interaction.followUp({
-          content: t('moderation.oldMessagesWarning'),
+          content: t('moderation.oldMessagesWarning', {}, g),
           flags: MessageFlags.Ephemeral,
         });
       }
     } catch (err) {
       console.error('Clear failed:', err);
-      await interaction.editReply({ content: t('moderation.clearFailed', { error: err.message }) });
+      await interaction.editReply({ content: t('moderation.clearFailed', { error: err.message }, g) });
     }
   },
 };

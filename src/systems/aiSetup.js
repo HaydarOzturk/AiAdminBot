@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { chat, isConfigured } = require('../utils/openrouter');
 const { createEmbed } = require('../utils/embedBuilder');
-const { t, channelName } = require('../utils/locale');
+const { t, channelName, setGuildLocale, getLocaleStrings } = require('../utils/locale');
 const { projectPath } = require('../utils/paths');
 
 // Active interview sessions: guildId -> { userId, messages[], step, config }
@@ -419,7 +419,12 @@ async function runDefaultSetup(interaction, language) {
   await interaction.deferReply();
 
   try {
-    // Temporarily set LOCALE so channelName() reads the right locale file
+    const guildId = interaction.guild.id;
+
+    // Store this guild's language preference in the database
+    setGuildLocale(guildId, language);
+
+    // Temporarily set LOCALE so buildLocalizedDefaultConfig reads the right locale
     const originalLocale = process.env.LOCALE;
     process.env.LOCALE = language;
 
@@ -454,36 +459,37 @@ async function runDefaultSetup(interaction, language) {
       fs.unlinkSync(tempConfigPath);
     }
 
-    // Restore original locale
+    // Restore original locale (for the global default)
     process.env.LOCALE = originalLocale || 'tr';
     loadLocale();
 
-    // Build summary
+    // Build summary (use guild-specific locale)
     const langNames = {
       tr: 'Türkçe', en: 'English', de: 'Deutsch', es: 'Español',
       fr: 'Français', pt: 'Português', ru: 'Русский', ar: 'العربية',
     };
 
+    const g = guildId;
     const fields = [
-      { name: t('setup.language'), value: langNames[language] || language, inline: true },
-      { name: t('setup.roles'), value: t('setup.created-skipped', { created: result.rolesCreated, skipped: result.rolesSkipped }), inline: false },
-      { name: t('setup.categories'), value: t('setup.created-skipped', { created: result.categoriesCreated, skipped: result.categoriesSkipped }), inline: false },
-      { name: t('setup.channels'), value: t('setup.created-skipped', { created: result.channelsCreated, skipped: result.channelsSkipped }), inline: false },
+      { name: t('setup.language', {}, g), value: langNames[language] || language, inline: true },
+      { name: t('setup.roles', {}, g), value: t('setup.created-skipped', { created: result.rolesCreated, skipped: result.rolesSkipped }, g), inline: false },
+      { name: t('setup.categories', {}, g), value: t('setup.created-skipped', { created: result.categoriesCreated, skipped: result.categoriesSkipped }, g), inline: false },
+      { name: t('setup.channels', {}, g), value: t('setup.created-skipped', { created: result.channelsCreated, skipped: result.channelsSkipped }, g), inline: false },
     ];
 
     if (result.verificationSent) {
-      fields.push({ name: t('setup.verification'), value: t('setup.verificationSent') });
+      fields.push({ name: t('setup.verification', {}, g), value: t('setup.verificationSent', {}, g) });
     }
     if (result.roleMenusSent.length > 0) {
-      fields.push({ name: t('setup.roleMenus'), value: result.roleMenusSent.map(c => `#${c}`).join(', ') });
+      fields.push({ name: t('setup.roleMenus', {}, g), value: result.roleMenusSent.map(c => `#${c}`).join(', ') });
     }
     if (result.errors.length > 0) {
-      fields.push({ name: t('setup.warnings'), value: result.errors.slice(0, 5).join('\n') });
+      fields.push({ name: t('setup.warnings', {}, g), value: result.errors.slice(0, 5).join('\n') });
     }
 
     const embed = createEmbed({
-      title: t('setup.defaultSetupComplete'),
-      description: t('setup.defaultSetupCompleteDesc'),
+      title: t('setup.defaultSetupComplete', {}, g),
+      description: t('setup.defaultSetupCompleteDesc', {}, g),
       color: result.errors.length > 0 ? 'warning' : 'success',
       fields,
       timestamp: true,

@@ -12,6 +12,7 @@ module.exports = {
     ),
 
   async execute(interaction) {
+    const g = interaction.guild?.id;
     const targetUser = interaction.options.getUser('user') || interaction.user;
     const data = leveling.getUserData(targetUser.id, interaction.guild.id);
 
@@ -22,12 +23,12 @@ module.exports = {
     const bar = '█'.repeat(filled) + '░'.repeat(barLength - filled);
 
     const fields = [
-      { name: t('leveling.level'), value: `${data.level}`, inline: true },
-      { name: t('leveling.xp'), value: `${data.xp} / ${data.xpNeeded}`, inline: true },
-      { name: t('leveling.rank'), value: data.rank ? `#${data.rank}` : '-', inline: true },
-      { name: t('leveling.progress'), value: `${bar} ${Math.round(progress * 100)}%`, inline: false },
-      { name: t('leveling.messages'), value: `${data.messages}`, inline: true },
-      { name: t('leveling.tier'), value: data.tier?.name || '-', inline: true },
+      { name: t('leveling.level', {}, g), value: `${data.level}`, inline: true },
+      { name: t('leveling.xp', {}, g), value: `${data.xp} / ${data.xpNeeded}`, inline: true },
+      { name: t('leveling.rank', {}, g), value: data.rank ? `#${data.rank}` : '-', inline: true },
+      { name: t('leveling.progress', {}, g), value: `${bar} ${Math.round(progress * 100)}%`, inline: false },
+      { name: t('leveling.messages', {}, g), value: `${data.messages}`, inline: true },
+      { name: t('leveling.tier', {}, g), value: data.tier?.name || '-', inline: true },
     ];
 
     const embed = createEmbed({

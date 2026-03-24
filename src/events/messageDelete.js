@@ -13,32 +13,34 @@ module.exports = {
     // Partial messages may not have content
     if (message.partial) return;
 
+    const g = message.guild?.id;
+
     try {
-      const logChannelName = config.moderation?.logChannels?.message || channelName('message-log');
+      const logChannelName = config.moderation?.logChannels?.message || channelName('message-log', g);
       const logChannel = message.guild.channels.cache.find(
         c => c.name === logChannelName && c.isTextBased()
       );
 
       if (!logChannel) return;
 
-      const content = message.content || t('general.noContent');
+      const content = message.content || t('general.noContent', {}, g);
       // Truncate long messages
       const displayContent = content.length > 1024 ? content.slice(0, 1021) + '...' : content;
 
       const fields = [
-        { name: t('logging.author'), value: `${message.author.tag}\n<@${message.author.id}>`, inline: true },
-        { name: t('logging.channel'), value: `<#${message.channel.id}>`, inline: true },
-        { name: t('logging.oldContent'), value: displayContent, inline: false },
+        { name: t('logging.author', {}, g), value: `${message.author.tag}\n<@${message.author.id}>`, inline: true },
+        { name: t('logging.channel', {}, g), value: `<#${message.channel.id}>`, inline: true },
+        { name: t('logging.oldContent', {}, g), value: displayContent, inline: false },
       ];
 
       // If the message had attachments, note them
       if (message.attachments.size > 0) {
         const attachmentList = message.attachments.map(a => a.name).join(', ');
-        fields.push({ name: t('general.attachments'), value: attachmentList, inline: false });
+        fields.push({ name: t('general.attachments', {}, g), value: attachmentList, inline: false });
       }
 
       const embed = createEmbed({
-        title: t('logging.messageDeleted'),
+        title: t('logging.messageDeleted', {}, g),
         color: 'danger',
         fields,
         timestamp: true,

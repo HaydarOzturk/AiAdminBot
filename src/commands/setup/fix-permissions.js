@@ -60,10 +60,11 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction) {
+    const g = interaction.guild?.id;
     // Owner-only guard
     if (interaction.user.id !== interaction.guild.ownerId) {
       return interaction.reply({
-        content: t('setup.ownerOnly'),
+        content: t('setup.ownerOnly', {}, g),
         flags: MessageFlags.Ephemeral,
       });
     }
@@ -87,11 +88,11 @@ module.exports = {
         verificationCategory = await guild.channels.create({
           name: channelName('cat-verification'),
           type: ChannelType.GuildCategory,
-          reason: t('fixPerms.reason'),
+          reason: t('fixPerms.reason', {}, g),
         });
-        changes.push(t('fixPerms.createdCategory', { name: verificationCategory.name }));
+        changes.push(t('fixPerms.createdCategory', { name: verificationCategory.name }, g));
       } catch (err) {
-        errors.push(t('fixPerms.failedCategory', { error: err.message }));
+        errors.push(t('fixPerms.failedCategory', { error: err.message }, g));
       }
     }
 
@@ -106,9 +107,9 @@ module.exports = {
           ReadMessageHistory: true,
           SendMessages: false,
         });
-        changes.push(t('fixPerms.fixedChannel', { name: rulesChannel.name }));
+        changes.push(t('fixPerms.fixedChannel', { name: rulesChannel.name }, g));
       } catch (err) {
-        errors.push(t('fixPerms.failedChannel', { name: rulesChannel.name, error: err.message }));
+        errors.push(t('fixPerms.failedChannel', { name: rulesChannel.name, error: err.message }, g));
       }
     } else if (verificationCategory) {
       // Create rules channel
@@ -117,7 +118,7 @@ module.exports = {
           name: channelName('rules'),
           type: ChannelType.GuildText,
           parent: verificationCategory.id,
-          topic: t('setup.rulesTopic'),
+          topic: t('setup.rulesTopic', {}, g),
           permissionOverwrites: [
             {
               id: everyoneRole.id,
@@ -125,11 +126,11 @@ module.exports = {
               deny: [PermissionFlagsBits.SendMessages],
             },
           ],
-          reason: t('fixPerms.reason'),
+          reason: t('fixPerms.reason', {}, g),
         });
-        changes.push(t('fixPerms.createdChannel', { name: rulesChannel.name }));
+        changes.push(t('fixPerms.createdChannel', { name: rulesChannel.name }, g));
       } catch (err) {
-        errors.push(t('fixPerms.failedChannel', { name: channelName('rules'), error: err.message }));
+        errors.push(t('fixPerms.failedChannel', { name: channelName('rules'), error: err.message }, g));
       }
     }
 
@@ -144,9 +145,9 @@ module.exports = {
           ReadMessageHistory: true,
           SendMessages: false,
         });
-        changes.push(t('fixPerms.fixedChannel', { name: verifyChannel.name }));
+        changes.push(t('fixPerms.fixedChannel', { name: verifyChannel.name }, g));
       } catch (err) {
-        errors.push(t('fixPerms.failedChannel', { name: verifyChannel.name, error: err.message }));
+        errors.push(t('fixPerms.failedChannel', { name: verifyChannel.name, error: err.message }, g));
       }
 
       // Hide verification channel from verified members
@@ -155,9 +156,9 @@ module.exports = {
           await verifyChannel.permissionOverwrites.edit(verifiedRole, {
             ViewChannel: false,
           });
-          changes.push(t('fixPerms.hiddenFromVerified', { name: verifyChannel.name }));
+          changes.push(t('fixPerms.hiddenFromVerified', { name: verifyChannel.name }, g));
         } catch (err) {
-          errors.push(t('fixPerms.failedRole', { name: verifyChannel.name, error: err.message }));
+          errors.push(t('fixPerms.failedRole', { name: verifyChannel.name, error: err.message }, g));
         }
       }
     } else if (verificationCategory) {
@@ -182,13 +183,13 @@ module.exports = {
           name: channelName('verification'),
           type: ChannelType.GuildText,
           parent: verificationCategory.id,
-          topic: t('setup.verificationTopic'),
+          topic: t('setup.verificationTopic', {}, g),
           permissionOverwrites: overwrites,
-          reason: t('fixPerms.reason'),
+          reason: t('fixPerms.reason', {}, g),
         });
-        changes.push(t('fixPerms.createdChannel', { name: verifyChannel.name }));
+        changes.push(t('fixPerms.createdChannel', { name: verifyChannel.name }, g));
       } catch (err) {
-        errors.push(t('fixPerms.failedChannel', { name: channelName('verification'), error: err.message }));
+        errors.push(t('fixPerms.failedChannel', { name: channelName('verification'), error: err.message }, g));
       }
     }
 
@@ -200,11 +201,11 @@ module.exports = {
 
         if (botMessages.size === 0) {
           const verification = require('../../systems/verification');
-          await verification.sendVerificationMessage(verifyChannel);
-          changes.push(t('fixPerms.verificationSent', { name: verifyChannel.name }));
+          await verification.sendVerificationMessage(verifyChannel, guild.id);
+          changes.push(t('fixPerms.verificationSent', { name: verifyChannel.name }, g));
         }
       } catch (err) {
-        errors.push(t('fixPerms.failedVerification', { error: err.message }));
+        errors.push(t('fixPerms.failedVerification', { error: err.message }, g));
       }
     }
 
@@ -213,28 +214,28 @@ module.exports = {
 
     if (changes.length > 0) {
       fields.push({
-        name: t('fixPerms.changesTitle'),
+        name: t('fixPerms.changesTitle', {}, g),
         value: changes.map(c => `✅ ${c}`).join('\n'),
       });
     }
 
     if (errors.length > 0) {
       fields.push({
-        name: t('fixPerms.errorsTitle'),
+        name: t('fixPerms.errorsTitle', {}, g),
         value: errors.map(e => `❌ ${e}`).join('\n'),
       });
     }
 
     if (changes.length === 0 && errors.length === 0) {
       fields.push({
-        name: t('fixPerms.noChangesTitle'),
-        value: t('fixPerms.noChangesDesc'),
+        name: t('fixPerms.noChangesTitle', {}, g),
+        value: t('fixPerms.noChangesDesc', {}, g),
       });
     }
 
     const embed = createEmbed({
-      title: t('fixPerms.title'),
-      description: t('fixPerms.description'),
+      title: t('fixPerms.title', {}, g),
+      description: t('fixPerms.description', {}, g),
       color: errors.length > 0 ? 'warning' : 'success',
       fields,
     });

@@ -65,7 +65,7 @@ module.exports = {
         const { syncMembers } = require('../commands/utility/sync');
         for (const guild of client.guilds.cache.values()) {
           try {
-            const result = await syncMembers(guild, false);
+            const result = await syncMembers(guild, false, guild.id);
             if (result.error) continue;
             const fixed = result.assignedUnverified + result.assignedVerified;
             if (fixed > 0) {
