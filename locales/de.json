@@ -20,6 +20,10 @@
     "noText": "*Kein Text*",
     "noPermissionDetailed": "Du hast keine Berechtigung, diesen Befehl zu verwenden. Erforderliche Stufe: {level}"
   },
+  "language": {
+    "changed": "🌐 Sprache Geändert",
+    "changedDesc": "Serversprache auf **{language}** gesetzt. Alle Bot-Nachrichten werden nun in dieser Sprache sein."
+  },
   "roles": {
     "serverOwner": "Serverbesitzer",
     "admin": "Admin",

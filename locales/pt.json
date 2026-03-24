@@ -20,6 +20,10 @@
     "noText": "*Sem texto*",
     "noPermissionDetailed": "Você não tem permissão para usar este comando. Nível requerido: {level}"
   },
+  "language": {
+    "changed": "🌐 Idioma Alterado",
+    "changedDesc": "Idioma do servidor definido como **{language}**. Todas as mensagens do bot serão neste idioma."
+  },
   "roles": {
     "serverOwner": "Dono do Servidor",
     "admin": "Admin",

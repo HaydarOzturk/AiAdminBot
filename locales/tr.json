@@ -20,6 +20,10 @@
     "noText": "*Metin yok*",
     "noPermissionDetailed": "Bu komutu kullanma yetkin yok. Gerekli seviye: {level}"
   },
+  "language": {
+    "changed": "🌐 Dil Değiştirildi",
+    "changedDesc": "Sunucu dili **{language}** olarak ayarlandı. Tüm bot mesajları artık bu dilde olacak."
+  },
   "roles": {
     "serverOwner": "Sunucu Sahibi",
     "admin": "Admin",
@@ -341,7 +345,7 @@
     "modLogs": "📋 Moderasyon Kayıtları",
     "modLogsValue": "`/warnings` — Kullanıcının uyarılarını gör\n`/mod-history` — Tüm moderasyon geçmişini gör",
     "levelingValue": "`/rank` — Seviye ve XP bilgini gör\n`/leaderboard` — En yüksek seviyeli üyeler\n🔊 Sesli kanallarda saatte 1 XP kazan",
-    "setupValue": "`/setup` — Sunucuyu otomatik kur (Owner)\n`/ai-setup` — AI ile sunucu kurulumu\n`/ai-setup-apply` — AI planını uygula\n`/ai-setup-cancel` — AI kurulumu iptal et",
+    "setupValue": "`/setup` — Sunucuyu otomatik kur (Owner)\n`/ai-setup` — AI ile sunucu kurulumu\n`/ai-setup-apply` — AI planını uygula\n`/ai-setup-cancel` — AI kurulumu iptal et\n`/language` — Bot dilini değiştir",
     "aiFeatures": "🤖 AI Özellikleri",
     "aiFeaturesValue": "`/ai-chat status` — AI sohbet durumu\n`/ai-chat reset` — Sohbet geçmişini sıfırla\nAI sohbet kanalında yazarak AI ile konuş",
     "verificationValue": "`/verify-setup` — Doğrulama mesajını kanala gönderir",

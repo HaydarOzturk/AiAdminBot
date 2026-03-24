@@ -33,6 +33,7 @@ module.exports = [
 
   // Setup
   require('./setup/fix-permissions'),
+  require('./setup/language'),
   require('./setup/setup'),
   require('./setup/template-export'),
   require('./setup/template-import'),

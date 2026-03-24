@@ -20,6 +20,10 @@
     "noText": "*No text*",
     "noPermissionDetailed": "You don't have permission to use this command. Required level: {level}"
   },
+  "language": {
+    "changed": "🌐 Language Changed",
+    "changedDesc": "Server language set to **{language}**. All bot messages will now be in this language."
+  },
   "roles": {
     "serverOwner": "Server Owner",
     "admin": "Admin",
@@ -341,7 +345,7 @@
     "modLogs": "📋 Moderation Records",
     "modLogsValue": "`/warnings` — View user's warnings\n`/mod-history` — View full moderation history",
     "levelingValue": "`/rank` — View your level and XP\n`/leaderboard` — Top members by level\n🔊 Earn 1 XP per hour in voice channels",
-    "setupValue": "`/setup` — Auto-setup server (Owner)\n`/ai-setup` — AI-guided server setup\n`/ai-setup-apply` — Apply AI plan\n`/ai-setup-cancel` — Cancel AI setup",
+    "setupValue": "`/setup` — Auto-setup server (Owner)\n`/ai-setup` — AI-guided server setup\n`/ai-setup-apply` — Apply AI plan\n`/ai-setup-cancel` — Cancel AI setup\n`/language` — Change bot language",
     "aiFeatures": "🤖 AI Features",
     "aiFeaturesValue": "`/ai-chat status` — AI chat status\n`/ai-chat reset` — Reset chat history\nChat with AI in the AI chat channel",
     "verificationValue": "`/verify-setup` — Send the verification message to a channel",
