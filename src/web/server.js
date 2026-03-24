@@ -11,25 +11,21 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Auth routes (no auth required)
 app.post('/api/auth/login', login);
 app.get('/api/auth/logout', logout);
+app.post('/api/auth/logout', logout);
 
 // All other API routes require authentication
 app.use('/api/', requireAuth);
 
-// API Routes
+// API Routes — match frontend URL pattern: /api/guilds/:guildId/<section>/...
 app.use('/api/stats', require('./api/stats'));
-app.use('/api/moderation', require('./api/moderation'));
-app.use('/api/config', require('./api/config'));
-app.use('/api/leveling', require('./api/leveling'));
 app.use('/api/logs', require('./api/logs'));
-app.use('/api/roles', require('./api/roles'));
-app.use('/api/templates', require('./api/templates'));
+app.use('/api/guilds', require('./api/guilds'));
 
 // SPA fallback — serve index.html for non-API, non-file routes
 app.get('*', (req, res) => {
   if (req.path.startsWith('/api/')) {
     return res.status(404).json({ error: 'Not Found' });
   }
-  // If the request has a file extension, let Express static handle it (will 404 naturally)
   if (path.extname(req.path)) {
     return res.status(404).send('Not Found');
   }
@@ -51,12 +47,10 @@ app.use((err, req, res, next) => {
 function startWebServer(client) {
   const port = process.env.WEB_PORT;
 
-  // Don't start if WEB_PORT is not set or is '0'
   if (!port || port === '0') {
     return;
   }
 
-  // Store client in app.locals for API routes
   app.locals.client = client;
 
   app.listen(parseInt(port), () => {
