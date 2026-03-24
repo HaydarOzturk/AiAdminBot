@@ -420,7 +420,7 @@
         });
 
         // Update pagination
-        totalPages = data.totalPages || 1;
+        totalPages = data.pagination?.pages || 1;
         updatePagination();
       } catch (error) {
         console.error('Failed to load moderation actions:', error);
