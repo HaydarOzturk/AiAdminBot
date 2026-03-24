@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Logs - Admin Dashboard</title>
+  <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body>
+  <div class="layout">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-header">
+        <h2 class="bot-title">Admin Bot</h2>
+        <select id="guild-selector" class="guild-selector">
+          <option value="">Loading guilds...</option>
+        </select>
+      </div>
+
+      <ul class="sidebar-nav">
+        <li><a href="/"><span class="nav-icon">📊</span> Home</a></li>
+        <li><a href="/moderation.html"><span class="nav-icon">⚔️</span> Moderation</a></li>
+        <li><a href="/roles.html"><span class="nav-icon">👥</span> Roles</a></li>
+        <li><a href="/leveling.html"><span class="nav-icon">📈</span> Leveling</a></li>
+        <li><a href="/config.html"><span class="nav-icon">⚙️</span> Config</a></li>
+        <li><a href="/logs.html" class="active"><span class="nav-icon">📝</span> Logs</a></li>
+      </ul>
+
+      <div class="sidebar-footer">
+        <button class="logout-btn" id="logout-btn">Logout</button>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <div class="content-header">
+        <h1 class="content-title">Application Logs</h1>
+      </div>
+
+      <div class="content-area">
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h2 class="card-title">Log Viewer</h2>
+            <div style="display: flex; gap: 12px; align-items: center;">
+              <label style="display: flex; align-items: center; gap: 8px; color: #b9bbbe; font-size: 13px;">
+                <input type="checkbox" id="auto-refresh-toggle" style="cursor: pointer;">
+                Auto-refresh (5s)
+              </label>
+            </div>
+          </div>
+
+          <div class="filter-bar">
+            <select id="line-count-select">
+              <option value="50">Last 50 lines</option>
+              <option value="100" selected>Last 100 lines</option>
+              <option value="200">Last 200 lines</option>
+              <option value="500">Last 500 lines</option>
+            </select>
+            <select id="log-level-filter">
+              <option value="">All Levels</option>
+              <option value="error">Error</option>
+              <option value="warn">Warning</option>
+              <option value="info">Info</option>
+              <option value="debug">Debug</option>
+            </select>
+            <button class="btn btn-secondary btn-small" onclick="loadLogs()">Refresh</button>
+            <button class="btn btn-secondary btn-small" onclick="downloadLogs()">Download</button>
+          </div>
+
+          <div style="background-color: #202225; border: 1px solid #2a2d31; border-radius: 8px; overflow: hidden;">
+            <pre id="log-viewer" style="
+              background-color: #202225;
+              color: #dcddde;
+              padding: 16px;
+              margin: 0;
+              overflow-x: auto;
+              font-family: 'Courier New', monospace;
+              font-size: 12px;
+              line-height: 1.5;
+              white-space: pre-wrap;
+              word-wrap: break-word;
+              max-height: 600px;
+              overflow-y: auto;
+            ">Loading logs...</pre>
+          </div>
+
+          <div style="margin-top: 12px; color: #b9bbbe; font-size: 12px;">
+            <span id="log-count">0</span> lines loaded
+          </div>
+        </div>
+
+        <!-- Log Levels Legend -->
+        <div class="card">
+          <h2 class="card-title">Log Level Reference</h2>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+            <div>
+              <span class="badge badge-danger">ERROR</span>
+              <p style="color: #b9bbbe; font-size: 12px; margin-top: 6px;">Critical errors that need attention</p>
+            </div>
+            <div>
+              <span class="badge badge-warning">WARN</span>
+              <p style="color: #b9bbbe; font-size: 12px; margin-top: 6px;">Warnings about potential issues</p>
+            </div>
+            <div>
+              <span class="badge badge-info">INFO</span>
+              <p style="color: #b9bbbe; font-size: 12px; margin-top: 6px;">General information messages</p>
+            </div>
+            <div>
+              <span class="badge badge-primary">DEBUG</span>
+              <p style="color: #b9bbbe; font-size: 12px; margin-top: 6px;">Debug information for developers</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/dashboard.js"></script>
+  <script>
+    let autoRefreshInterval = null;
+    let allLogs = [];
+
+    async function loadLogs() {
+      try {
+        const lineCount = document.getElementById('line-count-select').value;
+        const logLevel = document.getElementById('log-level-filter').value;
+
+        const data = await api(`/api/logs?lines=${lineCount}&level=${logLevel}`);
+
+        allLogs = (data.logs || []).split('\n').filter(line => line.trim());
+
+        displayLogs(allLogs);
+      } catch (error) {
+        console.error('Failed to load logs:', error);
+        showToast('Failed to load logs', 'error');
+      }
+    }
+
+    function displayLogs(logs) {
+      const viewer = document.getElementById('log-viewer');
+      const logContent = logs.join('\n');
+
+      // Format log lines with colors
+      const formattedContent = logs.map(line => {
+        if (line.includes('ERROR') || line.includes('error')) {
+          return `<span style="color: #ed4245;">${escapeHtml(line)}</span>`;
+        } else if (line.includes('WARN') || line.includes('warn')) {
+          return `<span style="color: #fee75c;">${escapeHtml(line)}</span>`;
+        } else if (line.includes('DEBUG') || line.includes('debug')) {
+          return `<span style="color: #5865f2;">${escapeHtml(line)}</span>`;
+        } else {
+          return escapeHtml(line);
+        }
+      }).join('\n');
+
+      viewer.innerHTML = formattedContent || 'No logs available';
+      document.getElementById('log-count').textContent = logs.length;
+
+      // Auto-scroll to bottom
+      viewer.scrollTop = viewer.scrollHeight;
+    }
+
+    function downloadLogs() {
+      const content = allLogs.join('\n');
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `bot-logs-${new Date().toISOString().split('T')[0]}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      showToast('Logs downloaded', 'success');
+    }
+
+    // Auto-refresh toggle
+    document.getElementById('auto-refresh-toggle').addEventListener('change', (e) => {
+      if (e.target.checked) {
+        loadLogs();
+        autoRefreshInterval = setInterval(loadLogs, 5000);
+        showToast('Auto-refresh enabled', 'info');
+      } else {
+        if (autoRefreshInterval) {
+          clearInterval(autoRefreshInterval);
+          autoRefreshInterval = null;
+        }
+        showToast('Auto-refresh disabled', 'info');
+      }
+    });
+
+    // Line count and log level filters
+    document.getElementById('line-count-select').addEventListener('change', loadLogs);
+    document.getElementById('log-level-filter').addEventListener('change', loadLogs);
+
+    // Logout handler
+    document.getElementById('logout-btn').addEventListener('click', async () => {
+      try {
+        await api('/api/auth/logout', { method: 'POST' });
+        window.location.href = '/login.html';
+      } catch (error) {
+        window.location.href = '/login.html';
+      }
+    });
+
+    // Cleanup on unload
+    window.addEventListener('beforeunload', () => {
+      if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+      }
+    });
+
+    // Load initial data
+    document.addEventListener('DOMContentLoaded', () => {
+      loadLogs();
+    });
+  </script>
+</body>
+</html>

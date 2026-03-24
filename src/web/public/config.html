@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configuration - Admin Dashboard</title>
+  <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body>
+  <div class="layout">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-header">
+        <h2 class="bot-title">Admin Bot</h2>
+        <select id="guild-selector" class="guild-selector">
+          <option value="">Loading guilds...</option>
+        </select>
+      </div>
+
+      <ul class="sidebar-nav">
+        <li><a href="/"><span class="nav-icon">📊</span> Home</a></li>
+        <li><a href="/moderation.html"><span class="nav-icon">⚔️</span> Moderation</a></li>
+        <li><a href="/roles.html"><span class="nav-icon">👥</span> Roles</a></li>
+        <li><a href="/leveling.html"><span class="nav-icon">📈</span> Leveling</a></li>
+        <li><a href="/config.html" class="active"><span class="nav-icon">⚙️</span> Config</a></li>
+        <li><a href="/logs.html"><span class="nav-icon">📝</span> Logs</a></li>
+      </ul>
+
+      <div class="sidebar-footer">
+        <button class="logout-btn" id="logout-btn">Logout</button>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <div class="content-header">
+        <h1 class="content-title">Configuration</h1>
+      </div>
+
+      <div class="content-area">
+        <!-- JSON Editor -->
+        <div class="card">
+          <h2 class="card-title">Guild Configuration</h2>
+          <p class="card-description">Edit the configuration JSON for this guild</p>
+
+          <div class="form-group" style="margin-top: 16px;">
+            <label for="config-editor">Configuration (JSON)</label>
+            <textarea id="config-editor" class="code-editor" required></textarea>
+          </div>
+
+          <div style="display: flex; gap: 12px;">
+            <button class="btn btn-primary" id="save-config-btn">Save Configuration</button>
+            <button class="btn btn-secondary" id="reset-config-btn">Reset to Saved</button>
+          </div>
+
+          <div style="margin-top: 16px;">
+            <p style="color: #b9bbbe; font-size: 12px;">
+              Last saved: <span id="last-saved">Never</span>
+            </p>
+          </div>
+        </div>
+
+        <!-- Environment Variables (Read-only) -->
+        <div class="card">
+          <h2 class="card-title">Environment Variables</h2>
+          <p class="card-description">System configuration (read-only)</p>
+
+          <div class="table-wrapper" style="margin-top: 16px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Variable</th>
+                  <th>Value</th>
+                </tr>
+              </thead>
+              <tbody id="env-table-body">
+                <tr>
+                  <td colspan="2" style="text-align: center; color: #b9bbbe; padding: 20px;">Loading...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Configuration Help -->
+        <div class="card">
+          <h2 class="card-title">Configuration Help</h2>
+
+          <div style="color: #b9bbbe; font-size: 13px; line-height: 1.8;">
+            <h3 style="color: #dcddde; font-size: 14px; margin-bottom: 8px;">Common Settings:</h3>
+
+            <p><strong>prefix</strong> - Command prefix (e.g., "!")</p>
+            <p><strong>logging</strong> - Logging channels and settings</p>
+            <p><strong>moderation</strong> - Moderation module configuration</p>
+            <p><strong>leveling</strong> - Experience and leveling settings</p>
+            <p><strong>roles</strong> - Role management configuration</p>
+            <p><strong>automod</strong> - Auto-moderation rules</p>
+
+            <h3 style="color: #dcddde; font-size: 14px; margin-top: 16px; margin-bottom: 8px;">Tips:</h3>
+            <ul style="margin-left: 16px;">
+              <li>Ensure your JSON is valid before saving</li>
+              <li>Changes take effect immediately</li>
+              <li>You can reset to the last saved version anytime</li>
+              <li>Some settings may require a bot restart</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/dashboard.js"></script>
+  <script>
+    let originalConfig = '';
+
+    async function loadConfig() {
+      try {
+        const guildId = getCurrentGuild();
+        if (!guildId) {
+          showToast('Please select a guild', 'warning');
+          return;
+        }
+
+        const data = await api(`/api/guilds/${guildId}/config`);
+
+        // Format JSON nicely
+        const editor = document.getElementById('config-editor');
+        originalConfig = JSON.stringify(data.config || {}, null, 2);
+        editor.value = originalConfig;
+
+        // Update last saved timestamp
+        const lastSaved = data.lastSaved ? formatDate(data.lastSaved) : 'Never';
+        document.getElementById('last-saved').textContent = lastSaved;
+
+        // Load environment variables
+        loadEnvironmentVariables(data.environment);
+      } catch (error) {
+        console.error('Failed to load config:', error);
+        showToast('Failed to load configuration', 'error');
+      }
+    }
+
+    function loadEnvironmentVariables(envVars) {
+      const tbody = document.getElementById('env-table-body');
+      tbody.innerHTML = '';
+
+      if (!envVars || Object.keys(envVars).length === 0) {
+        tbody.innerHTML = '<tr><td colspan="2" style="text-align: center; color: #b9bbbe; padding: 20px;">No environment variables</td></tr>';
+        return;
+      }
+
+      // Only show safe variables (not secrets)
+      const safeVars = ['NODE_ENV', 'LOG_LEVEL', 'BOT_VERSION', 'DATABASE_URL', 'API_HOST'];
+
+      Object.entries(envVars).forEach(([key, value]) => {
+        // Skip sensitive variables
+        if (key.includes('TOKEN') || key.includes('SECRET') || key.includes('PASSWORD')) {
+          return;
+        }
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td><strong>${escapeHtml(key)}</strong></td>
+          <td><code style="background-color: #202225; padding: 4px 8px; border-radius: 4px; font-size: 12px;">${escapeHtml(String(value))}</code></td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    // Save configuration
+    document.getElementById('save-config-btn').addEventListener('click', async () => {
+      try {
+        const guildId = getCurrentGuild();
+        if (!guildId) {
+          showToast('Please select a guild', 'warning');
+          return;
+        }
+
+        const editor = document.getElementById('config-editor');
+        const configText = editor.value.trim();
+
+        // Validate JSON
+        let configObj;
+        try {
+          configObj = JSON.parse(configText);
+        } catch (e) {
+          showToast('Invalid JSON: ' + e.message, 'error');
+          return;
+        }
+
+        // Save
+        await api(`/api/guilds/${guildId}/config`, {
+          method: 'PUT',
+          body: JSON.stringify({ config: configObj }),
+        });
+
+        showToast('Configuration saved successfully', 'success');
+        originalConfig = configText;
+
+        // Reload config to get updated timestamp
+        loadConfig();
+      } catch (error) {
+        console.error('Failed to save config:', error);
+        showToast('Failed to save configuration', 'error');
+      }
+    });
+
+    // Reset configuration
+    document.getElementById('reset-config-btn').addEventListener('click', () => {
+      const editor = document.getElementById('config-editor');
+      editor.value = originalConfig;
+      showToast('Configuration reset to last saved version', 'info');
+    });
+
+    // Logout handler
+    document.getElementById('logout-btn').addEventListener('click', async () => {
+      try {
+        await api('/api/auth/logout', { method: 'POST' });
+        window.location.href = '/login.html';
+      } catch (error) {
+        window.location.href = '/login.html';
+      }
+    });
+
+    // Load initial data
+    document.addEventListener('DOMContentLoaded', () => {
+      loadConfig();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Admin Bot</title>
+  <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body>
+  <div class="layout">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-header">
+        <h2 class="bot-title">Admin Bot</h2>
+        <select id="guild-selector" class="guild-selector">
+          <option value="">Loading guilds...</option>
+        </select>
+      </div>
+
+      <ul class="sidebar-nav">
+        <li><a href="/" class="active"><span class="nav-icon">📊</span> Home</a></li>
+        <li><a href="/moderation.html"><span class="nav-icon">⚔️</span> Moderation</a></li>
+        <li><a href="/roles.html"><span class="nav-icon">👥</span> Roles</a></li>
+        <li><a href="/leveling.html"><span class="nav-icon">📈</span> Leveling</a></li>
+        <li><a href="/config.html"><span class="nav-icon">⚙️</span> Config</a></li>
+        <li><a href="/logs.html"><span class="nav-icon">📝</span> Logs</a></li>
+      </ul>
+
+      <div class="sidebar-footer">
+        <button class="logout-btn" id="logout-btn">Logout</button>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <div class="content-header">
+        <h1 class="content-title">Dashboard</h1>
+      </div>
+
+      <div class="content-area">
+        <!-- Overall Stats -->
+        <div class="stats-grid" id="overall-stats">
+          <div class="stat-card">
+            <div class="stat-label">Total Servers</div>
+            <div class="stat-value" id="stat-servers">-</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Total Members</div>
+            <div class="stat-value" id="stat-members">-</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Bot Uptime</div>
+            <div class="stat-value" id="stat-uptime">-</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Version</div>
+            <div class="stat-value" id="stat-version">-</div>
+          </div>
+        </div>
+
+        <!-- Current Guild Stats -->
+        <div class="card" id="guild-stats-container" style="display: none;">
+          <h2 class="card-title">Guild Overview</h2>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-label">Members</div>
+              <div class="stat-value" id="guild-members">-</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Channels</div>
+              <div class="stat-value" id="guild-channels">-</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Roles</div>
+              <div class="stat-value" id="guild-roles">-</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Boost Level</div>
+              <div class="stat-value" id="guild-boost">-</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card">
+          <h2 class="card-title">Quick Actions</h2>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+            <button class="btn btn-primary" onclick="window.location.href='/moderation.html'">
+              View Moderation Log
+            </button>
+            <button class="btn btn-primary" onclick="window.location.href='/leveling.html'">
+              View Leaderboard
+            </button>
+            <button class="btn btn-primary" onclick="window.location.href='/roles.html'">
+              Manage Roles
+            </button>
+            <button class="btn btn-primary" onclick="window.location.href='/config.html'">
+              Edit Configuration
+            </button>
+          </div>
+        </div>
+
+        <!-- Bot Info -->
+        <div class="card">
+          <h2 class="card-title">Bot Information</h2>
+          <table>
+            <tbody>
+              <tr>
+                <td><strong>Status</strong></td>
+                <td><span class="badge badge-success">Online</span></td>
+              </tr>
+              <tr>
+                <td><strong>Prefix</strong></td>
+                <td id="bot-prefix">-</td>
+              </tr>
+              <tr>
+                <td><strong>Owner</strong></td>
+                <td id="bot-owner">-</td>
+              </tr>
+              <tr>
+                <td><strong>Created At</strong></td>
+                <td id="bot-created">-</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/dashboard.js"></script>
+  <script>
+    async function loadStats() {
+      try {
+        const data = await api('/api/stats');
+
+        // Overall stats
+        document.getElementById('stat-servers').textContent = formatNumber(data.totalGuilds || 0);
+        document.getElementById('stat-members').textContent = formatNumber(data.totalMembers || 0);
+        document.getElementById('stat-uptime').textContent = formatDuration(data.uptime || 0);
+        document.getElementById('stat-version').textContent = data.version || 'N/A';
+
+        // Bot info
+        document.getElementById('bot-prefix').textContent = data.prefix || '!';
+        document.getElementById('bot-owner').textContent = data.owner || 'Unknown';
+        document.getElementById('bot-created').textContent = formatDate(data.createdAt);
+
+        // Guild-specific stats
+        const currentGuild = getCurrentGuild();
+        if (currentGuild && data.guildStats) {
+          const guildData = data.guildStats[currentGuild];
+          if (guildData) {
+            document.getElementById('guild-stats-container').style.display = 'block';
+            document.getElementById('guild-members').textContent = formatNumber(guildData.memberCount || 0);
+            document.getElementById('guild-channels').textContent = formatNumber(guildData.channelCount || 0);
+            document.getElementById('guild-roles').textContent = formatNumber(guildData.roleCount || 0);
+            document.getElementById('guild-boost').textContent = guildData.boostLevel || 'Level 0';
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load stats:', error);
+        showToast('Failed to load statistics', 'error');
+      }
+    }
+
+    // Logout handler
+    document.getElementById('logout-btn').addEventListener('click', async () => {
+      try {
+        await api('/api/auth/logout', { method: 'POST' });
+        window.location.href = '/login.html';
+      } catch (error) {
+        console.error('Logout error:', error);
+        // Force redirect anyway
+        window.location.href = '/login.html';
+      }
+    });
+
+    // Load stats on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      loadStats();
+      // Refresh stats every 30 seconds
+      setInterval(loadStats, 30000);
+    });
+  </script>
+</body>
+</html>

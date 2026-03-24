@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - Login</title>
+  <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-card">
+      <div class="login-header">
+        <h1>Discord Admin Bot</h1>
+        <p>Dashboard Login</p>
+      </div>
+
+      <div class="login-error" id="error-message"></div>
+
+      <form class="login-form" id="login-form">
+        <div class="form-group">
+          <label for="password">Admin Password</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            placeholder="Enter password"
+            required
+            autocomplete="current-password"
+          >
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">
+          Login
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script src="/js/dashboard.js"></script>
+  <script>
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const password = document.getElementById('password').value;
+      const errorDiv = document.getElementById('error-message');
+
+      // Clear previous errors
+      errorDiv.textContent = '';
+      errorDiv.classList.remove('show');
+
+      try {
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ password }),
+        });
+
+        if (response.ok) {
+          // Success - redirect to dashboard
+          window.location.href = '/';
+        } else if (response.status === 401) {
+          // Invalid password
+          errorDiv.textContent = 'Invalid password. Please try again.';
+          errorDiv.classList.add('show');
+        } else {
+          // Other error
+          const data = await response.json();
+          errorDiv.textContent = data.message || 'Login failed. Please try again.';
+          errorDiv.classList.add('show');
+        }
+      } catch (error) {
+        console.error('Login error:', error);
+        errorDiv.textContent = 'An error occurred. Please try again.';
+        errorDiv.classList.add('show');
+      }
+    });
+  </script>
+</body>
+</html>

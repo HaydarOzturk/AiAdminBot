@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roles - Admin Dashboard</title>
+  <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body>
+  <div class="layout">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-header">
+        <h2 class="bot-title">Admin Bot</h2>
+        <select id="guild-selector" class="guild-selector">
+          <option value="">Loading guilds...</option>
+        </select>
+      </div>
+
+      <ul class="sidebar-nav">
+        <li><a href="/"><span class="nav-icon">📊</span> Home</a></li>
+        <li><a href="/moderation.html"><span class="nav-icon">⚔️</span> Moderation</a></li>
+        <li><a href="/roles.html" class="active"><span class="nav-icon">👥</span> Roles</a></li>
+        <li><a href="/leveling.html"><span class="nav-icon">📈</span> Leveling</a></li>
+        <li><a href="/config.html"><span class="nav-icon">⚙️</span> Config</a></li>
+        <li><a href="/logs.html"><span class="nav-icon">📝</span> Logs</a></li>
+      </ul>
+
+      <div class="sidebar-footer">
+        <button class="logout-btn" id="logout-btn">Logout</button>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <div class="content-header">
+        <h1 class="content-title">Role Management</h1>
+      </div>
+
+      <div class="content-area">
+        <!-- Roles List -->
+        <div class="card">
+          <h2 class="card-title">Server Roles</h2>
+
+          <div class="filter-bar">
+            <input type="text" id="role-search" placeholder="Search roles..." style="flex: 1;">
+            <button class="btn btn-secondary btn-small" onclick="loadRoles()">Refresh</button>
+          </div>
+
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Color</th>
+                  <th>Members</th>
+                  <th>Position</th>
+                  <th>Permissions</th>
+                </tr>
+              </thead>
+              <tbody id="roles-table-body">
+                <tr>
+                  <td colspan="5" style="text-align: center; color: #b9bbbe; padding: 20px;">Loading...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Give/Remove Role Section -->
+        <div class="card" style="max-width: 600px;">
+          <h2 class="card-title">Manage User Roles</h2>
+
+          <div class="tabs">
+            <button class="tab active" onclick="switchRoleTab('give')">Give Role</button>
+            <button class="tab" onclick="switchRoleTab('remove')">Remove Role</button>
+          </div>
+
+          <!-- Give Role Tab -->
+          <div id="give-tab" class="tab-content active">
+            <form id="give-role-form">
+              <div class="form-group">
+                <label for="give-user-id">User ID</label>
+                <input type="text" id="give-user-id" name="userId" required placeholder="Discord user ID">
+              </div>
+
+              <div class="form-group">
+                <label for="give-role">Role</label>
+                <select id="give-role" name="roleId" required>
+                  <option value="">Select a role...</option>
+                </select>
+              </div>
+
+              <button type="submit" class="btn btn-success">Give Role</button>
+            </form>
+          </div>
+
+          <!-- Remove Role Tab -->
+          <div id="remove-tab" class="tab-content">
+            <form id="remove-role-form">
+              <div class="form-group">
+                <label for="remove-user-id">User ID</label>
+                <input type="text" id="remove-user-id" name="userId" required placeholder="Discord user ID">
+              </div>
+
+              <div class="form-group">
+                <label for="remove-role">Role</label>
+                <select id="remove-role" name="roleId" required>
+                  <option value="">Select a role...</option>
+                </select>
+              </div>
+
+              <button type="submit" class="btn btn-danger">Remove Role</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/dashboard.js"></script>
+  <script>
+    let allRoles = [];
+
+    function switchRoleTab(tabName) {
+      document.querySelectorAll('[id$="-tab"]').forEach(el => {
+        el.classList.remove('active');
+      });
+      document.querySelectorAll('.tab').forEach(el => {
+        el.classList.remove('active');
+      });
+
+      document.getElementById(tabName + '-tab').classList.add('active');
+      event.target.classList.add('active');
+    }
+
+    async function loadRoles() {
+      try {
+        const guildId = getCurrentGuild();
+        if (!guildId) {
+          showToast('Please select a guild', 'warning');
+          return;
+        }
+
+        const search = document.getElementById('role-search')?.value.toLowerCase() || '';
+
+        const data = await api(`/api/guilds/${guildId}/roles`);
+
+        allRoles = data.roles || [];
+
+        // Filter roles
+        const filtered = search
+          ? allRoles.filter(r => r.name.toLowerCase().includes(search))
+          : allRoles;
+
+        // Update table
+        const tbody = document.getElementById('roles-table-body');
+        tbody.innerHTML = '';
+
+        if (filtered.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #b9bbbe; padding: 20px;">No roles found</td></tr>';
+          return;
+        }
+
+        filtered.forEach(role => {
+          const row = document.createElement('tr');
+          const colorStyle = role.color ? `background-color: ${role.color}; color: white;` : '';
+          row.innerHTML = `
+            <td><strong>${escapeHtml(role.name)}</strong></td>
+            <td>
+              ${role.color ? `<div style="width: 20px; height: 20px; border-radius: 4px; ${colorStyle}"></div>` : 'No color'}
+            </td>
+            <td>${formatNumber(role.memberCount || 0)}</td>
+            <td>${role.position || 0}</td>
+            <td>
+              ${role.permissions && role.permissions.length > 0
+                ? `<span class="badge badge-info">${role.permissions.length} perms</span>`
+                : 'None'}
+            </td>
+          `;
+          tbody.appendChild(row);
+        });
+
+        // Update role selectors
+        updateRoleSelectors();
+      } catch (error) {
+        console.error('Failed to load roles:', error);
+        showToast('Failed to load roles', 'error');
+      }
+    }
+
+    function updateRoleSelectors() {
+      const giveSelect = document.getElementById('give-role');
+      const removeSelect = document.getElementById('remove-role');
+
+      [giveSelect, removeSelect].forEach(select => {
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">Select a role...</option>';
+
+        allRoles.forEach(role => {
+          const option = document.createElement('option');
+          option.value = role.id;
+          option.textContent = role.name;
+          select.appendChild(option);
+        });
+
+        select.value = currentValue;
+      });
+    }
+
+    // Give role form
+    document.getElementById('give-role-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      try {
+        const guildId = getCurrentGuild();
+        if (!guildId) {
+          showToast('Please select a guild', 'warning');
+          return;
+        }
+
+        const userId = document.getElementById('give-user-id').value;
+        const roleId = document.getElementById('give-role').value;
+
+        await api(`/api/guilds/${guildId}/roles/${roleId}/members/${userId}`, {
+          method: 'POST',
+        });
+
+        showToast('Role given successfully', 'success');
+        document.getElementById('give-role-form').reset();
+        loadRoles();
+      } catch (error) {
+        console.error('Failed to give role:', error);
+        showToast('Failed to give role', 'error');
+      }
+    });
+
+    // Remove role form
+    document.getElementById('remove-role-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      try {
+        const guildId = getCurrentGuild();
+        if (!guildId) {
+          showToast('Please select a guild', 'warning');
+          return;
+        }
+
+        const userId = document.getElementById('remove-user-id').value;
+        const roleId = document.getElementById('remove-role').value;
+
+        await api(`/api/guilds/${guildId}/roles/${roleId}/members/${userId}`, {
+          method: 'DELETE',
+        });
+
+        showToast('Role removed successfully', 'success');
+        document.getElementById('remove-role-form').reset();
+        loadRoles();
+      } catch (error) {
+        console.error('Failed to remove role:', error);
+        showToast('Failed to remove role', 'error');
+      }
+    });
+
+    // Logout handler
+    document.getElementById('logout-btn').addEventListener('click', async () => {
+      try {
+        await api('/api/auth/logout', { method: 'POST' });
+        window.location.href = '/login.html';
+      } catch (error) {
+        window.location.href = '/login.html';
+      }
+    });
+
+    // Load initial data
+    document.addEventListener('DOMContentLoaded', () => {
+      loadRoles();
+    });
+  </script>
+</body>
+</html>

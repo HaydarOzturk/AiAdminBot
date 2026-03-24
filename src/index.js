@@ -69,6 +69,10 @@ const { initDatabase } = require('./utils/database');
 
     console.log('🔧 Logging in...');
     await client.login(process.env.DISCORD_TOKEN);
+
+    // Start web dashboard (optional — only if WEB_PORT is set)
+    const { startWebServer } = require('./web/server');
+    startWebServer(client);
   } catch (error) {
     console.error('❌ Failed to start:', error.message);
     console.error('   Check your DISCORD_TOKEN in .env');

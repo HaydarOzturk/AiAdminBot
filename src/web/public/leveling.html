@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leveling - Admin Dashboard</title>
+  <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body>
+  <div class="layout">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-header">
+        <h2 class="bot-title">Admin Bot</h2>
+        <select id="guild-selector" class="guild-selector">
+          <option value="">Loading guilds...</option>
+        </select>
+      </div>
+
+      <ul class="sidebar-nav">
+        <li><a href="/"><span class="nav-icon">📊</span> Home</a></li>
+        <li><a href="/moderation.html"><span class="nav-icon">⚔️</span> Moderation</a></li>
+        <li><a href="/roles.html"><span class="nav-icon">👥</span> Roles</a></li>
+        <li><a href="/leveling.html" class="active"><span class="nav-icon">📈</span> Leveling</a></li>
+        <li><a href="/config.html"><span class="nav-icon">⚙️</span> Config</a></li>
+        <li><a href="/logs.html"><span class="nav-icon">📝</span> Logs</a></li>
+      </ul>
+
+      <div class="sidebar-footer">
+        <button class="logout-btn" id="logout-btn">Logout</button>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <div class="content-header">
+        <h1 class="content-title">Leveling System</h1>
+      </div>
+
+      <div class="content-area">
+        <!-- Leaderboard -->
+        <div class="card">
+          <h2 class="card-title">Leaderboard</h2>
+
+          <div class="filter-bar">
+            <input type="text" id="leaderboard-search" placeholder="Search by username..." style="flex: 1;">
+            <button class="btn btn-secondary btn-small" onclick="loadLeaderboard()">Search</button>
+          </div>
+
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>User</th>
+                  <th>Level</th>
+                  <th>XP</th>
+                  <th>Messages</th>
+                  <th>Voice Time</th>
+                  <th>Tier</th>
+                </tr>
+              </thead>
+              <tbody id="leaderboard-body">
+                <tr>
+                  <td colspan="7" style="text-align: center; color: #b9bbbe; padding: 20px;">Loading...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Award XP Section -->
+        <div class="card" style="max-width: 500px;">
+          <h2 class="card-title">Award Experience Points</h2>
+
+          <form id="award-xp-form">
+            <div class="form-group">
+              <label for="xp-user-id">User ID</label>
+              <input type="text" id="xp-user-id" name="userId" required placeholder="Discord user ID">
+            </div>
+
+            <div class="form-group">
+              <label for="xp-amount">
+                XP Amount
+                <span style="color: #b9bbbe; font-weight: normal;"> (Max: 30)</span>
+              </label>
+              <input
+                type="number"
+                id="xp-amount"
+                name="amount"
+                required
+                min="1"
+                max="30"
+                placeholder="XP to award"
+              >
+            </div>
+
+            <div class="form-group">
+              <label for="xp-reason">Reason (Optional)</label>
+              <textarea id="xp-reason" name="reason" placeholder="Why is this user receiving XP?"></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-success">Award XP</button>
+          </form>
+        </div>
+
+        <!-- Leveling Stats -->
+        <div class="card">
+          <h2 class="card-title">System Statistics</h2>
+
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-label">Total XP Earned</div>
+              <div class="stat-value" id="stat-total-xp">-</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Active Users</div>
+              <div class="stat-value" id="stat-active-users">-</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Average Level</div>
+              <div class="stat-value" id="stat-avg-level">-</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Top Tier Members</div>
+              <div class="stat-value" id="stat-top-tier">-</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/dashboard.js"></script>
+  <script>
+    async function loadLeaderboard() {
+      try {
+        const guildId = getCurrentGuild();
+        if (!guildId) {
+          showToast('Please select a guild', 'warning');
+          return;
+        }
+
+        const search = document.getElementById('leaderboard-search')?.value || '';
+
+        const data = await api(`/api/guilds/${guildId}/leveling/leaderboard?search=${search}`);
+
+        const tbody = document.getElementById('leaderboard-body');
+        tbody.innerHTML = '';
+
+        if (!data.users || data.users.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #b9bbbe; padding: 20px;">No users found</td></tr>';
+          return;
+        }
+
+        data.users.forEach((user, idx) => {
+          const row = document.createElement('tr');
+          const tierBadge = getTierBadge(user.tier);
+
+          row.innerHTML = `
+            <td><strong>#${idx + 1}</strong></td>
+            <td>${escapeHtml(user.username)}</td>
+            <td><strong>${user.level || 1}</strong></td>
+            <td>${formatNumber(user.xp || 0)}</td>
+            <td>${formatNumber(user.messageCount || 0)}</td>
+            <td>${formatDuration(user.voiceTime || 0)}</td>
+            <td>${tierBadge}</td>
+          `;
+          tbody.appendChild(row);
+        });
+
+        // Load stats
+        loadLevelingStats();
+      } catch (error) {
+        console.error('Failed to load leaderboard:', error);
+        showToast('Failed to load leaderboard', 'error');
+      }
+    }
+
+    function getTierBadge(tier) {
+      if (!tier) return '<span class="badge badge-secondary">Unranked</span>';
+
+      const tierColors = {
+        'bronze': 'warning',
+        'silver': 'info',
+        'gold': 'warning',
+        'platinum': 'primary',
+        'diamond': 'success',
+      };
+
+      const color = tierColors[tier.toLowerCase()] || 'secondary';
+      return `<span class="badge badge-${color}">${escapeHtml(tier)}</span>`;
+    }
+
+    async function loadLevelingStats() {
+      try {
+        const guildId = getCurrentGuild();
+        if (!guildId) return;
+
+        const data = await api(`/api/guilds/${guildId}/leveling/stats`);
+
+        document.getElementById('stat-total-xp').textContent = formatNumber(data.totalXp || 0);
+        document.getElementById('stat-active-users').textContent = formatNumber(data.activeUsers || 0);
+        document.getElementById('stat-avg-level').textContent = (data.averageLevel || 0).toFixed(1);
+        document.getElementById('stat-top-tier').textContent = formatNumber(data.topTierMembers || 0);
+      } catch (error) {
+        console.error('Failed to load leveling stats:', error);
+      }
+    }
+
+    // Award XP form
+    document.getElementById('award-xp-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      try {
+        const guildId = getCurrentGuild();
+        if (!guildId) {
+          showToast('Please select a guild', 'warning');
+          return;
+        }
+
+        const userId = document.getElementById('xp-user-id').value;
+        const amount = parseInt(document.getElementById('xp-amount').value);
+        const reason = document.getElementById('xp-reason').value || null;
+
+        // Validate amount
+        if (amount < 1 || amount > 30) {
+          showToast('XP amount must be between 1 and 30', 'warning');
+          return;
+        }
+
+        await api(`/api/guilds/${guildId}/leveling/xp`, {
+          method: 'POST',
+          body: JSON.stringify({ userId, amount, reason }),
+        });
+
+        showToast(`Awarded ${amount} XP to user`, 'success');
+        document.getElementById('award-xp-form').reset();
+        loadLeaderboard();
+      } catch (error) {
+        console.error('Failed to award XP:', error);
+        showToast('Failed to award XP', 'error');
+      }
+    });
+
+    // Logout handler
+    document.getElementById('logout-btn').addEventListener('click', async () => {
+      try {
+        await api('/api/auth/logout', { method: 'POST' });
+        window.location.href = '/login.html';
+      } catch (error) {
+        window.location.href = '/login.html';
+      }
+    });
+
+    // Load initial data
+    document.addEventListener('DOMContentLoaded', () => {
+      loadLeaderboard();
+    });
+  </script>
+</body>
+</html>
