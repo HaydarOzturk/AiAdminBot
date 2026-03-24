@@ -237,11 +237,26 @@ function initVoiceTracking(client) {
   }
 }
 
+/**
+ * Get the current live voice session minutes for a user.
+ * This returns the time spent in the CURRENT session (not yet saved to DB).
+ * @param {string} guildId
+ * @param {string} userId
+ * @returns {number} Minutes in current voice session (0 if not in voice)
+ */
+function getLiveVoiceMinutes(guildId, userId) {
+  const key = `${guildId}-${userId}`;
+  const joinTime = voiceJoinTimes.get(key);
+  if (!joinTime) return 0;
+  return Math.floor((Date.now() - joinTime) / 60000);
+}
+
 module.exports = {
   trackJoin,
   trackLeave,
   startVoiceXpTimer,
   stopVoiceXpTimer,
   initVoiceTracking,
+  getLiveVoiceMinutes,
   voiceUsers,
 };

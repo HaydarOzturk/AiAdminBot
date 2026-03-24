@@ -2,6 +2,7 @@ const { SlashCommandBuilder } = require('discord.js');
 const { createEmbed } = require('../../utils/embedBuilder');
 const { t } = require('../../utils/locale');
 const leveling = require('../../systems/leveling');
+const { getLiveVoiceMinutes } = require('../../systems/voiceXp');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -22,8 +23,9 @@ module.exports = {
     const filled = Math.round(progress * barLength);
     const bar = '█'.repeat(filled) + '░'.repeat(barLength - filled);
 
-    // Format voice time nicely
-    const voiceMinutes = data.voiceMinutes || 0;
+    // Format voice time nicely (DB stored + current live session)
+    const liveMinutes = getLiveVoiceMinutes(interaction.guild.id, targetUser.id);
+    const voiceMinutes = (data.voiceMinutes || 0) + liveMinutes;
     let voiceTimeStr;
     if (voiceMinutes < 60) {
       voiceTimeStr = `${voiceMinutes}m`;
