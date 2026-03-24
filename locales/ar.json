@@ -240,6 +240,24 @@
     "tier": "المرتبة",
     "leaderboardTitle": "🏆 ترتيب نقاط الخبرة"
   },
+  "award": {
+    "ownerOnly": "❌ فقط مالك السيرفر يمكنه استخدام هذا الأمر.",
+    "title": "🎁 مكافأة XP لـ {user}",
+    "xpAwarded": "XP الممنوح"
+  },
+  "resetXp": {
+    "ownerOnly": "❌ فقط مالك السيرفر يمكنه استخدام هذا الأمر.",
+    "userResetTitle": "🔄 تم إعادة تعيين XP",
+    "userResetDesc": "تم إعادة تعيين جميع بيانات XP لـ **{user}**.",
+    "serverConfirmTitle": "⚠️ إعادة تعيين XP السيرفر",
+    "serverConfirmDesc": "سيؤدي هذا إلى حذف بيانات XP والمستوى والرتبة **لجميع الأعضاء** بشكل دائم. هل أنت متأكد؟",
+    "confirmButton": "نعم، إعادة تعيين",
+    "cancelButton": "إلغاء",
+    "serverResetTitle": "🔄 تم إعادة تعيين XP السيرفر",
+    "serverResetDesc": "تم إعادة تعيين بيانات XP لجميع الأعضاء بنجاح.",
+    "cancelled": "❌ تم إلغاء العملية.",
+    "timeout": "⏰ انتهت المهلة، تم إلغاء العملية."
+  },
   "ai": {
     "chatStatus": "🤖 حالة الدردشة الذكية",
     "apiConnected": "✅ متصل",

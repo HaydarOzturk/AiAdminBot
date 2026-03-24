@@ -29,7 +29,6 @@
   },
   "leveling": {
     "enabled": true,
-    "xpPerMessage": { "min": 15, "max": 25 },
     "xpCooldown": 60000,
     "levelUpChannelName": null,
     "tiers": [

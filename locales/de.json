@@ -240,6 +240,24 @@
     "tier": "Stufe",
     "leaderboardTitle": "🏆 XP-Rangliste"
   },
+  "award": {
+    "ownerOnly": "❌ Nur der Serverbesitzer kann diesen Befehl verwenden.",
+    "title": "🎁 XP-Belohnung für {user}",
+    "xpAwarded": "Vergebene XP"
+  },
+  "resetXp": {
+    "ownerOnly": "❌ Nur der Serverbesitzer kann diesen Befehl verwenden.",
+    "userResetTitle": "🔄 XP Zurückgesetzt",
+    "userResetDesc": "Alle XP-Daten von **{user}** wurden zurückgesetzt.",
+    "serverConfirmTitle": "⚠️ Server-XP-Reset",
+    "serverConfirmDesc": "Dies löscht dauerhaft die XP-, Level- und Rangdaten **aller Mitglieder**. Bist du sicher?",
+    "confirmButton": "Ja, Zurücksetzen",
+    "cancelButton": "Abbrechen",
+    "serverResetTitle": "🔄 Server-XP Zurückgesetzt",
+    "serverResetDesc": "Alle Mitglieder-XP-Daten wurden erfolgreich zurückgesetzt.",
+    "cancelled": "❌ Vorgang abgebrochen.",
+    "timeout": "⏰ Zeit abgelaufen, Vorgang abgebrochen."
+  },
   "ai": {
     "chatStatus": "🤖 KI-Chat-Status",
     "apiConnected": "✅ Verbunden",

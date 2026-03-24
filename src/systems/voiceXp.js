@@ -16,8 +16,8 @@ const levelingConfig = config.leveling || {};
 
 // How often to award voice XP (ms) — default 1 hour
 const VOICE_XP_INTERVAL = parseInt(process.env.VOICE_XP_INTERVAL) || 3600000;
-// How much XP to award per interval
-const VOICE_XP_AMOUNT = parseInt(process.env.VOICE_XP_AMOUNT) || 1;
+// How much XP to award per interval — 3 XP per hour
+const VOICE_XP_AMOUNT = parseInt(process.env.VOICE_XP_AMOUNT) || 3;
 
 // Track users currently in voice: Map<guildId, Set<userId>>
 const voiceUsers = new Map();
@@ -101,9 +101,19 @@ function xpForLevel(level) {
 async function awardVoiceXp(client) {
   if (!levelingConfig.enabled) return;
 
+  const leveling = require('./leveling');
+  const date = new Date().toISOString().slice(0, 10);
+
   for (const [guildId, users] of voiceUsers) {
     for (const userId of users) {
       try {
+        // Check daily voice XP cap
+        const remaining = leveling.remainingVoiceXp(userId, guildId);
+        if (remaining <= 0) continue;
+
+        // Cap XP to remaining daily allowance
+        const xpToAward = Math.min(VOICE_XP_AMOUNT, remaining);
+
         // Get or create user record
         let userData = db.get(
           'SELECT * FROM levels WHERE user_id = ? AND guild_id = ?',
@@ -112,14 +122,14 @@ async function awardVoiceXp(client) {
 
         if (!userData) {
           db.run(
-            'INSERT INTO levels (user_id, guild_id, xp, level, messages, last_xp_at) VALUES (?, ?, 0, 0, 0, ?)',
+            'INSERT INTO levels (user_id, guild_id, xp, level, messages, voice_minutes, last_xp_at) VALUES (?, ?, 0, 0, 0, 0, ?)',
             [userId, guildId, new Date().toISOString()]
           );
           userData = { xp: 0, level: 0, messages: 0 };
         }
 
         const oldLevel = userData.level;
-        let currentXp = userData.xp + VOICE_XP_AMOUNT;
+        let currentXp = userData.xp + xpToAward;
         let currentLevel = userData.level;
 
         // Check for level ups
@@ -135,6 +145,24 @@ async function awardVoiceXp(client) {
           'UPDATE levels SET xp = ?, level = ?, voice_minutes = voice_minutes + ?, last_xp_at = ? WHERE user_id = ? AND guild_id = ?',
           [currentXp, currentLevel, intervalMinutes, new Date().toISOString(), userId, guildId]
         );
+
+        // Update daily voice XP counter
+        // Ensure daily_xp row exists
+        const dailyRow = db.get(
+          'SELECT * FROM daily_xp WHERE user_id = ? AND guild_id = ? AND date = ?',
+          [userId, guildId, date]
+        );
+        if (!dailyRow) {
+          db.run(
+            'INSERT INTO daily_xp (user_id, guild_id, date, message_xp, voice_xp) VALUES (?, ?, ?, 0, ?)',
+            [userId, guildId, date, xpToAward]
+          );
+        } else {
+          db.run(
+            'UPDATE daily_xp SET voice_xp = voice_xp + ? WHERE user_id = ? AND guild_id = ? AND date = ?',
+            [xpToAward, userId, guildId, date]
+          );
+        }
 
         // Level up notification
         if (currentLevel > oldLevel && client) {

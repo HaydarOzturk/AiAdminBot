@@ -252,6 +252,24 @@
     "tier": "Tier",
     "leaderboardTitle": "🏆 XP Leaderboard"
   },
+  "award": {
+    "ownerOnly": "❌ Only the server owner can use this command.",
+    "title": "🎁 XP Award for {user}",
+    "xpAwarded": "XP Awarded"
+  },
+  "resetXp": {
+    "ownerOnly": "❌ Only the server owner can use this command.",
+    "userResetTitle": "🔄 XP Reset",
+    "userResetDesc": "All XP data for **{user}** has been reset.",
+    "serverConfirmTitle": "⚠️ Server XP Reset",
+    "serverConfirmDesc": "This will permanently delete **all members'** XP, level, and tier data. Are you sure?",
+    "confirmButton": "Yes, Reset",
+    "cancelButton": "Cancel",
+    "serverResetTitle": "🔄 Server XP Reset",
+    "serverResetDesc": "All member XP data has been successfully reset.",
+    "cancelled": "❌ Operation cancelled.",
+    "timeout": "⏰ Timed out, operation cancelled."
+  },
   "ai": {
     "chatStatus": "🤖 AI Chat Status",
     "apiConnected": "✅ Connected",

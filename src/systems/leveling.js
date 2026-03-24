@@ -8,13 +8,63 @@ const { loadConfig } = require('../utils/paths');
 const config = loadConfig('config.json');
 
 const levelingConfig = config.leveling || {};
-const xpMin = levelingConfig.xpPerMessage?.min || 15;
-const xpMax = levelingConfig.xpPerMessage?.max || 25;
-const cooldownMs = levelingConfig.xpCooldown || 60000;
 const tiers = levelingConfig.tiers || [];
 
-// In-memory cooldown tracker (userId -> lastXpTimestamp)
+// ── XP Settings ───────────────────────────────────────────────────────────
+// Message XP: 0.1 – 0.3 per message, daily cap 20
+const MSG_XP_MIN = 0.1;
+const MSG_XP_MAX = 0.3;
+const MSG_XP_DAILY_CAP = 20;
+
+// Voice XP: 3 per hour (handled in voiceXp.js), daily cap 50
+const VOICE_XP_DAILY_CAP = 50;
+
+const cooldownMs = levelingConfig.xpCooldown || 60000;
+
+// In-memory cooldown tracker (userId-guildId -> lastXpTimestamp)
 const cooldowns = new Map();
+
+/**
+ * Get today's date string in YYYY-MM-DD format (UTC)
+ */
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/**
+ * Get or create the daily XP record for a user
+ */
+function getDailyXp(userId, guildId) {
+  const date = todayStr();
+  let row = db.get(
+    'SELECT * FROM daily_xp WHERE user_id = ? AND guild_id = ? AND date = ?',
+    [userId, guildId, date]
+  );
+  if (!row) {
+    db.run(
+      'INSERT INTO daily_xp (user_id, guild_id, date, message_xp, voice_xp) VALUES (?, ?, ?, 0, 0)',
+      [userId, guildId, date]
+    );
+    row = { user_id: userId, guild_id: guildId, date, message_xp: 0, voice_xp: 0 };
+  }
+  return row;
+}
+
+/**
+ * Check how much message XP the user can still earn today
+ */
+function remainingMessageXp(userId, guildId) {
+  const daily = getDailyXp(userId, guildId);
+  return Math.max(0, MSG_XP_DAILY_CAP - (daily.message_xp || 0));
+}
+
+/**
+ * Check how much voice XP the user can still earn today
+ */
+function remainingVoiceXp(userId, guildId) {
+  const daily = getDailyXp(userId, guildId);
+  return Math.max(0, VOICE_XP_DAILY_CAP - (daily.voice_xp || 0));
+}
 
 /**
  * Calculate XP required to reach a given level.
@@ -51,6 +101,8 @@ function getTierForLevel(level) {
 
 /**
  * Process XP gain for a message. Returns level-up info if the user leveled up.
+ * XP per message: 0.1 – 0.3 (fractional, accumulated in DB as REAL)
+ * Daily cap: 20 XP from messages
  * @param {import('discord.js').Message} message
  * @returns {object|null} { oldLevel, newLevel, xp, totalXp, tier } or null
  */
@@ -67,8 +119,14 @@ async function processMessage(message) {
 
   if (now - lastXp < cooldownMs) return null;
 
-  // Random XP
-  const xpGain = Math.floor(Math.random() * (xpMax - xpMin + 1)) + xpMin;
+  // Check daily cap
+  const remaining = remainingMessageXp(userId, guildId);
+  if (remaining <= 0) return null;
+
+  // Random XP (fractional: 0.1 – 0.3)
+  const rawXpGain = MSG_XP_MIN + Math.random() * (MSG_XP_MAX - MSG_XP_MIN);
+  // Cap to remaining daily allowance
+  const xpGain = Math.min(rawXpGain, remaining);
 
   // Get or create user record
   let userData = db.get(
@@ -78,7 +136,7 @@ async function processMessage(message) {
 
   if (!userData) {
     db.run(
-      'INSERT INTO levels (user_id, guild_id, xp, level, messages, last_xp_at) VALUES (?, ?, 0, 0, 0, ?)',
+      'INSERT INTO levels (user_id, guild_id, xp, level, messages, voice_minutes, last_xp_at) VALUES (?, ?, 0, 0, 0, 0, ?)',
       [userId, guildId, new Date().toISOString()]
     );
     userData = { xp: 0, level: 0, messages: 0 };
@@ -95,10 +153,17 @@ async function processMessage(message) {
     currentLevel++;
   }
 
-  // Save
+  // Save (xp stored as REAL for fractional accumulation)
   db.run(
     'UPDATE levels SET xp = ?, level = ?, messages = ?, last_xp_at = ? WHERE user_id = ? AND guild_id = ?',
     [currentXp, currentLevel, messages, new Date().toISOString(), userId, guildId]
+  );
+
+  // Update daily message XP counter
+  const date = todayStr();
+  db.run(
+    'UPDATE daily_xp SET message_xp = message_xp + ? WHERE user_id = ? AND guild_id = ? AND date = ?',
+    [xpGain, userId, guildId, date]
   );
 
   // Set cooldown
@@ -121,6 +186,54 @@ async function processMessage(message) {
   }
 
   return null;
+}
+
+/**
+ * Award XP directly (used by /award command). Bypasses daily caps.
+ * @param {string} userId
+ * @param {string} guildId
+ * @param {number} amount - XP to award
+ * @returns {object} { oldLevel, newLevel, xp, tier, tierChanged }
+ */
+function awardXp(userId, guildId, amount) {
+  let userData = db.get(
+    'SELECT * FROM levels WHERE user_id = ? AND guild_id = ?',
+    [userId, guildId]
+  );
+
+  if (!userData) {
+    db.run(
+      'INSERT INTO levels (user_id, guild_id, xp, level, messages, voice_minutes, last_xp_at) VALUES (?, ?, 0, 0, 0, 0, ?)',
+      [userId, guildId, new Date().toISOString()]
+    );
+    userData = { xp: 0, level: 0, messages: 0 };
+  }
+
+  const oldLevel = userData.level;
+  let currentXp = userData.xp + amount;
+  let currentLevel = userData.level;
+
+  while (currentXp >= xpForLevel(currentLevel)) {
+    currentXp -= xpForLevel(currentLevel);
+    currentLevel++;
+  }
+
+  db.run(
+    'UPDATE levels SET xp = ?, level = ?, last_xp_at = ? WHERE user_id = ? AND guild_id = ?',
+    [currentXp, currentLevel, new Date().toISOString(), userId, guildId]
+  );
+
+  const tier = getTierForLevel(currentLevel);
+  const oldTier = getTierForLevel(oldLevel);
+
+  return {
+    oldLevel,
+    newLevel: currentLevel,
+    xp: currentXp,
+    tier,
+    oldTier,
+    tierChanged: tier?.name !== oldTier?.name,
+  };
 }
 
 /**
@@ -193,7 +306,7 @@ function getUserData(userId, guildId) {
   );
 
   return {
-    xp: data.xp,
+    xp: Math.round(data.xp * 10) / 10,
     level: data.level,
     messages: data.messages || 0,
     voiceMinutes: data.voice_minutes || 0,
@@ -218,10 +331,13 @@ function getLeaderboard(guildId, limit = 10) {
 
 module.exports = {
   processMessage,
+  awardXp,
   updateTierRole,
   getUserData,
   getLeaderboard,
   xpForLevel,
   totalXpForLevel,
   getTierForLevel,
+  remainingVoiceXp,
+  VOICE_XP_DAILY_CAP,
 };

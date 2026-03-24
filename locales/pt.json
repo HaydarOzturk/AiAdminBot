@@ -240,6 +240,24 @@
     "tier": "Classificação",
     "leaderboardTitle": "🏆 Classificação de XP"
   },
+  "award": {
+    "ownerOnly": "❌ Apenas o proprietário do servidor pode usar este comando.",
+    "title": "🎁 Prêmio XP para {user}",
+    "xpAwarded": "XP Concedido"
+  },
+  "resetXp": {
+    "ownerOnly": "❌ Apenas o proprietário do servidor pode usar este comando.",
+    "userResetTitle": "🔄 XP Redefinido",
+    "userResetDesc": "Todos os dados de XP de **{user}** foram redefinidos.",
+    "serverConfirmTitle": "⚠️ Redefinição de XP do Servidor",
+    "serverConfirmDesc": "Isso excluirá permanentemente os dados de XP, nível e classificação de **todos os membros**. Tem certeza?",
+    "confirmButton": "Sim, Redefinir",
+    "cancelButton": "Cancelar",
+    "serverResetTitle": "🔄 XP do Servidor Redefinido",
+    "serverResetDesc": "Os dados de XP de todos os membros foram redefinidos com sucesso.",
+    "cancelled": "❌ Operação cancelada.",
+    "timeout": "⏰ Tempo esgotado, operação cancelada."
+  },
   "ai": {
     "chatStatus": "🤖 Status do Bate-papo IA",
     "apiConnected": "✅ Conectado",

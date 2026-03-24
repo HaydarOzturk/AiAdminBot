@@ -240,6 +240,24 @@
     "tier": "Rang",
     "leaderboardTitle": "🏆 Classement XP"
   },
+  "award": {
+    "ownerOnly": "❌ Seul le propriétaire du serveur peut utiliser cette commande.",
+    "title": "🎁 Récompense XP pour {user}",
+    "xpAwarded": "XP Attribué"
+  },
+  "resetXp": {
+    "ownerOnly": "❌ Seul le propriétaire du serveur peut utiliser cette commande.",
+    "userResetTitle": "🔄 XP Réinitialisé",
+    "userResetDesc": "Toutes les données XP de **{user}** ont été réinitialisées.",
+    "serverConfirmTitle": "⚠️ Réinitialisation XP du Serveur",
+    "serverConfirmDesc": "Cela supprimera définitivement les données d'XP, de niveau et de rang de **tous les membres**. Êtes-vous sûr ?",
+    "confirmButton": "Oui, Réinitialiser",
+    "cancelButton": "Annuler",
+    "serverResetTitle": "🔄 XP du Serveur Réinitialisé",
+    "serverResetDesc": "Les données XP de tous les membres ont été réinitialisées avec succès.",
+    "cancelled": "❌ Opération annulée.",
+    "timeout": "⏰ Délai expiré, opération annulée."
+  },
   "ai": {
     "chatStatus": "🤖 Statut du Chat IA",
     "apiConnected": "✅ Connecté",

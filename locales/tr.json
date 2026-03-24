@@ -252,6 +252,24 @@
     "tier": "Rütbe",
     "leaderboardTitle": "🏆 XP Sıralaması"
   },
+  "award": {
+    "ownerOnly": "❌ Bu komutu sadece sunucu sahibi kullanabilir.",
+    "title": "🎁 {user} için XP Ödülü",
+    "xpAwarded": "Verilen XP"
+  },
+  "resetXp": {
+    "ownerOnly": "❌ Bu komutu sadece sunucu sahibi kullanabilir.",
+    "userResetTitle": "🔄 XP Sıfırlandı",
+    "userResetDesc": "**{user}** kullanıcısının tüm XP verileri sıfırlandı.",
+    "serverConfirmTitle": "⚠️ Sunucu XP Sıfırlama",
+    "serverConfirmDesc": "Bu işlem sunucudaki **tüm üyelerin** XP, seviye ve rütbe verilerini kalıcı olarak silecek. Emin misiniz?",
+    "confirmButton": "Evet, Sıfırla",
+    "cancelButton": "İptal",
+    "serverResetTitle": "🔄 Sunucu XP Sıfırlandı",
+    "serverResetDesc": "Tüm üyelerin XP verileri başarıyla sıfırlandı.",
+    "cancelled": "❌ İşlem iptal edildi.",
+    "timeout": "⏰ Süre doldu, işlem iptal edildi."
+  },
   "ai": {
     "chatStatus": "🤖 AI Sohbet Durumu",
     "apiConnected": "✅ Bağlı",

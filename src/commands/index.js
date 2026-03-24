@@ -10,8 +10,10 @@ module.exports = [
   require('./ai/ai-setup-cancel'),
 
   // Leveling
+  require('./leveling/award'),
   require('./leveling/leaderboard'),
   require('./leveling/rank'),
+  require('./leveling/reset-xp'),
 
   // Moderation
   require('./moderation/ban'),

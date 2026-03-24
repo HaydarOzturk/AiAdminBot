@@ -89,6 +89,17 @@ async function initDatabase() {
     )
   `);
 
+  db.run(`
+    CREATE TABLE IF NOT EXISTS daily_xp (
+      user_id TEXT NOT NULL,
+      guild_id TEXT NOT NULL,
+      date TEXT NOT NULL,
+      message_xp REAL DEFAULT 0,
+      voice_xp INTEGER DEFAULT 0,
+      PRIMARY KEY (user_id, guild_id, date)
+    )
+  `);
+
   // Migration: add voice_minutes column to levels if missing
   try {
     const cols = db.exec('PRAGMA table_info(levels)');

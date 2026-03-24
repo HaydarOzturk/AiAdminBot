@@ -240,6 +240,24 @@
     "tier": "Ранг",
     "leaderboardTitle": "🏆 Рейтинг XP"
   },
+  "award": {
+    "ownerOnly": "❌ Только владелец сервера может использовать эту команду.",
+    "title": "🎁 XP Награда для {user}",
+    "xpAwarded": "Выдано XP"
+  },
+  "resetXp": {
+    "ownerOnly": "❌ Только владелец сервера может использовать эту команду.",
+    "userResetTitle": "🔄 XP Сброшен",
+    "userResetDesc": "Все данные XP пользователя **{user}** были сброшены.",
+    "serverConfirmTitle": "⚠️ Сброс XP Сервера",
+    "serverConfirmDesc": "Это навсегда удалит данные XP, уровня и ранга **всех участников**. Вы уверены?",
+    "confirmButton": "Да, Сбросить",
+    "cancelButton": "Отмена",
+    "serverResetTitle": "🔄 XP Сервера Сброшен",
+    "serverResetDesc": "Данные XP всех участников были успешно сброшены.",
+    "cancelled": "❌ Операция отменена.",
+    "timeout": "⏰ Время истекло, операция отменена."
+  },
   "ai": {
     "chatStatus": "🤖 Статус ИИ Чата",
     "apiConnected": "✅ Подключено",
