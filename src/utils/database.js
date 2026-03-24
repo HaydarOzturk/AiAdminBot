@@ -10,7 +10,15 @@ let db = null;
  * Initialize the database (must be called once at startup)
  */
 async function initDatabase() {
-  const SQL = await initSqlJs();
+  // When running as pkg exe, point sql.js to the extracted WASM file
+  const sqlOpts = {};
+  if (process.pkg) {
+    const wasmPath = path.join(path.dirname(process.execPath), 'sql-wasm.wasm');
+    if (fs.existsSync(wasmPath)) {
+      sqlOpts.locateFile = () => wasmPath;
+    }
+  }
+  const SQL = await initSqlJs(sqlOpts);
 
   // Load existing database file if it exists
   if (fs.existsSync(dbPath)) {

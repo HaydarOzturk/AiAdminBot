@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Channels - Admin Dashboard</title>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <style>
+    /* Channel-specific styles */
+    .channel-tree { list-style: none; padding: 0; margin: 0; }
+    .channel-tree .category-item {
+      margin-bottom: 4px;
+    }
+    .category-header {
+      display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+      background: var(--bg-tertiary); border-radius: 6px; cursor: pointer;
+      font-size: 12px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.5px; color: var(--text-secondary);
+      transition: background 0.15s;
+    }
+    .category-header:hover { background: #2a2d31; }
+    .category-header .arrow { transition: transform 0.2s; font-size: 10px; }
+    .category-header .arrow.collapsed { transform: rotate(-90deg); }
+    .category-header .cat-actions { margin-left: auto; display: flex; gap: 6px; }
+
+    .category-children { list-style: none; padding: 0 0 0 12px; margin: 2px 0 8px 0; }
+    .category-children.collapsed { display: none; }
+
+    .channel-item {
+      display: flex; align-items: center; gap: 10px; padding: 7px 12px;
+      border-radius: 4px; cursor: pointer; transition: background 0.15s;
+      font-size: 14px; color: var(--text-secondary);
+    }
+    .channel-item:hover { background: rgba(255,255,255,0.04); color: var(--text-primary); }
+    .channel-item.selected { background: rgba(88,101,242,0.15); color: var(--text-primary); }
+    .channel-icon { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
+    .channel-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .channel-type-badge {
+      font-size: 10px; padding: 2px 6px; border-radius: 3px;
+      background: rgba(255,255,255,0.06); color: var(--text-muted);
+    }
+    .channel-actions { display: flex; gap: 4px; opacity: 0; transition: opacity 0.15s; }
+    .channel-item:hover .channel-actions,
+    .category-header:hover .cat-actions { opacity: 1; }
+    .channel-actions button, .cat-actions button {
+      background: none; border: none; color: var(--text-muted); cursor: pointer;
+      font-size: 14px; padding: 2px 4px; border-radius: 3px;
+    }
+    .channel-actions button:hover, .cat-actions button:hover {
+      background: rgba(255,255,255,0.1); color: var(--text-primary);
+    }
+
+    /* No channels in category */
+    .empty-category {
+      padding: 6px 12px; color: var(--text-muted); font-size: 12px; font-style: italic;
+    }
+
+    /* Permission editor */
+    .perm-editor { margin-top: 20px; }
+    .perm-role-row {
+      background: var(--bg-tertiary); border-radius: 6px; padding: 12px 16px;
+      margin-bottom: 8px;
+    }
+    .perm-role-header {
+      display: flex; align-items: center; gap: 10px; cursor: pointer;
+      font-weight: 600; font-size: 14px;
+    }
+    .perm-role-header .role-color-dot {
+      width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
+    }
+    .perm-role-header .expand-icon { margin-left: auto; font-size: 12px; transition: transform 0.2s; }
+    .perm-role-header .expand-icon.expanded { transform: rotate(90deg); }
+    .perm-role-body { display: none; margin-top: 12px; }
+    .perm-role-body.expanded { display: block; }
+
+    .perm-group-title {
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+      color: var(--text-muted); margin: 12px 0 6px 0; padding-bottom: 4px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .perm-group-title:first-child { margin-top: 0; }
+
+    .perm-row {
+      display: flex; align-items: center; gap: 10px; padding: 5px 0;
+      font-size: 13px; color: var(--text-secondary);
+    }
+    .perm-row .perm-icon { width: 20px; text-align: center; }
+    .perm-row .perm-label { flex: 1; }
+    .perm-toggle-group { display: flex; gap: 2px; }
+    .perm-toggle {
+      border: none; padding: 4px 10px; border-radius: 3px; cursor: pointer;
+      font-size: 11px; font-weight: 600; transition: all 0.15s;
+    }
+    .perm-toggle.allow { background: rgba(87,242,135,0.1); color: var(--text-muted); }
+    .perm-toggle.allow.active { background: rgba(87,242,135,0.3); color: var(--accent-success); }
+    .perm-toggle.inherit { background: rgba(255,255,255,0.04); color: var(--text-muted); }
+    .perm-toggle.inherit.active { background: rgba(255,255,255,0.1); color: var(--text-secondary); }
+    .perm-toggle.deny { background: rgba(237,66,69,0.1); color: var(--text-muted); }
+    .perm-toggle.deny.active { background: rgba(237,66,69,0.3); color: var(--accent-danger); }
+
+    .perm-summary {
+      display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px;
+    }
+    .perm-chip {
+      font-size: 10px; padding: 2px 6px; border-radius: 3px;
+    }
+    .perm-chip.allow { background: rgba(87,242,135,0.15); color: var(--accent-success); }
+    .perm-chip.deny  { background: rgba(237,66,69,0.15); color: var(--accent-danger); }
+
+    /* Detail panel */
+    .detail-panel {
+      background: var(--bg-card); border: 1px solid var(--border-color);
+      border-radius: 8px; padding: 20px;
+    }
+    .detail-header {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
+      padding-bottom: 12px; border-bottom: 1px solid var(--border-color);
+    }
+    .detail-header h2 { font-size: 18px; margin: 0; }
+    .detail-header .channel-type { font-size: 12px; color: var(--text-muted); }
+    .detail-meta { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 16px; font-size: 13px; color: var(--text-secondary); }
+    .detail-meta span { display: flex; align-items: center; gap: 4px; }
+
+    /* Split layout */
+    .channels-layout { display: grid; grid-template-columns: 300px 1fr; gap: 16px; min-height: 600px; }
+    @media (max-width: 900px) { .channels-layout { grid-template-columns: 1fr; } }
+
+    /* Add role button */
+    .add-role-row {
+      display: flex; gap: 8px; align-items: center; margin-top: 12px;
+      padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .add-role-row select { flex: 1; }
+
+    /* Remove overwrite button */
+    .remove-ow-btn {
+      background: none; border: none; color: var(--accent-danger); cursor: pointer;
+      font-size: 12px; padding: 2px 8px; border-radius: 3px; margin-left: 8px;
+    }
+    .remove-ow-btn:hover { background: rgba(237,66,69,0.15); }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-header">
+        <h2 class="bot-title">Admin Bot</h2>
+        <select id="guild-selector" class="guild-selector">
+          <option value="">Loading guilds...</option>
+        </select>
+      </div>
+
+      <ul class="sidebar-nav">
+        <li><a href="/"><span class="nav-icon">📊</span> Home</a></li>
+        <li><a href="/moderation.html"><span class="nav-icon">⚔️</span> Moderation</a></li>
+        <li><a href="/roles.html"><span class="nav-icon">👥</span> Roles</a></li>
+        <li><a href="/channels.html" class="active"><span class="nav-icon">📁</span> Channels</a></li>
+        <li><a href="/leveling.html"><span class="nav-icon">📈</span> Leveling</a></li>
+        <li><a href="/config.html"><span class="nav-icon">⚙️</span> Config</a></li>
+        <li><a href="/logs.html"><span class="nav-icon">📝</span> Logs</a></li>
+      </ul>
+
+      <div class="sidebar-footer">
+        <button class="logout-btn" id="logout-btn">Logout</button>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <div class="content-header">
+        <h1 class="content-title">Channel Management</h1>
+        <button class="btn btn-primary" onclick="showCreateChannelModal()">+ New Channel</button>
+      </div>
+
+      <div class="content-area">
+        <div class="channels-layout">
+
+          <!-- Left: Channel Tree -->
+          <div>
+            <div class="card" style="padding: 8px; overflow-y: auto; max-height: calc(100vh - 140px);">
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 8px 12px 8px;">
+                <h3 style="font-size: 14px; color: var(--text-primary); margin: 0;">Channels</h3>
+                <button class="btn btn-secondary btn-small" onclick="loadChannels()">Refresh</button>
+              </div>
+              <ul class="channel-tree" id="channel-tree">
+                <li style="padding: 20px; text-align: center; color: var(--text-muted);">Loading...</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Right: Detail / Permission Panel -->
+          <div>
+            <!-- Placeholder when nothing selected -->
+            <div id="no-selection" class="detail-panel" style="text-align: center; padding: 60px 20px;">
+              <div style="font-size: 48px; margin-bottom: 16px;">📁</div>
+              <h2 style="color: var(--text-primary); margin-bottom: 8px;">Select a Channel</h2>
+              <p style="color: var(--text-muted); font-size: 13px;">
+                Click on any channel in the list to view and edit its permissions.
+                <br>Permissions shown here override the server-level role permissions.
+              </p>
+            </div>
+
+            <!-- Channel Detail -->
+            <div id="channel-detail" class="detail-panel" style="display: none;">
+              <div class="detail-header">
+                <span id="detail-icon" style="font-size: 24px;"></span>
+                <div>
+                  <h2 id="detail-name"></h2>
+                  <span id="detail-type" class="channel-type"></span>
+                </div>
+                <div style="margin-left: auto; display: flex; gap: 8px;">
+                  <button class="btn btn-secondary btn-small" onclick="editChannelInfo()">Edit Info</button>
+                  <button class="btn btn-danger btn-small" onclick="deleteSelectedChannel()">Delete</button>
+                </div>
+              </div>
+
+              <div class="detail-meta">
+                <span id="detail-category"></span>
+                <span id="detail-topic"></span>
+              </div>
+
+              <!-- Permission Section -->
+              <h3 style="font-size: 14px; margin-bottom: 4px;">Who can access this channel?</h3>
+              <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">
+                For each role, set permissions to <strong style="color: var(--accent-success);">Allow</strong>,
+                <strong style="color: var(--text-secondary);">Inherit</strong> (use server default), or
+                <strong style="color: var(--accent-danger);">Deny</strong>.
+              </p>
+
+              <div id="perm-editor" class="perm-editor"></div>
+
+              <!-- Add role overwrite -->
+              <div class="add-role-row">
+                <select id="add-role-select" class="guild-selector" style="font-size: 13px;">
+                  <option value="">Add a role...</option>
+                </select>
+                <button class="btn btn-primary btn-small" onclick="addRoleOverwrite()">Add</button>
+              </div>
+
+              <!-- Save button -->
+              <div style="margin-top: 20px; display: flex; gap: 12px;">
+                <button class="btn btn-success" id="save-perms-btn" onclick="savePermissions()">Save Permissions</button>
+                <button class="btn btn-secondary" onclick="loadChannelPermissions(selectedChannelId)">Discard Changes</button>
+              </div>
+            </div>
+
+            <!-- Create Channel Form -->
+            <div id="create-channel-panel" class="detail-panel" style="display: none;">
+              <div class="detail-header">
+                <span style="font-size: 24px;">➕</span>
+                <div>
+                  <h2>Create New Channel</h2>
+                  <span class="channel-type">Add a channel to your server</span>
+                </div>
+                <button class="btn btn-secondary btn-small" style="margin-left: auto;" onclick="hideCreateChannelModal()">Cancel</button>
+              </div>
+
+              <form id="create-channel-form">
+                <div class="form-group">
+                  <label for="new-ch-type">Channel Type</label>
+                  <select id="new-ch-type" required>
+                    <option value="text">💬 Text Channel</option>
+                    <option value="voice">🔊 Voice Channel</option>
+                    <option value="category">📁 Category</option>
+                    <option value="announcement">📢 Announcement Channel</option>
+                    <option value="forum">💭 Forum Channel</option>
+                    <option value="stage">🎤 Stage Channel</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="new-ch-name">Channel Name</label>
+                  <input type="text" id="new-ch-name" required placeholder="e.g. general-chat" maxlength="100">
+                </div>
+
+                <div class="form-group" id="new-ch-category-group">
+                  <label for="new-ch-category">Category (optional)</label>
+                  <select id="new-ch-category">
+                    <option value="">No category</option>
+                  </select>
+                </div>
+
+                <div class="form-group" id="new-ch-topic-group">
+                  <label for="new-ch-topic">Topic (optional)</label>
+                  <input type="text" id="new-ch-topic" placeholder="What's this channel about?" maxlength="1024">
+                </div>
+
+                <div class="form-group" id="new-ch-nsfw-group" style="display: flex; align-items: center; gap: 8px;">
+                  <input type="checkbox" id="new-ch-nsfw">
+                  <label for="new-ch-nsfw" style="margin: 0; cursor: pointer;">NSFW Channel</label>
+                </div>
+
+                <!-- Quick permission setup -->
+                <div class="form-group">
+                  <label>Quick Permission Setup</label>
+                  <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 4px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: var(--text-secondary);">
+                      <input type="radio" name="quick-perm" value="default" checked> Everyone can see (default)
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: var(--text-secondary);">
+                      <input type="radio" name="quick-perm" value="private"> Private — only selected roles
+                    </label>
+                  </div>
+                </div>
+
+                <div id="private-roles-section" style="display: none;">
+                  <div class="form-group">
+                    <label>Which roles can access?</label>
+                    <div id="private-roles-list" style="max-height: 200px; overflow-y: auto; background: var(--bg-tertiary); border-radius: 4px; padding: 8px;"></div>
+                  </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Create Channel</button>
+              </form>
+            </div>
+
+            <!-- Edit Channel Info Form -->
+            <div id="edit-channel-panel" class="detail-panel" style="display: none;">
+              <div class="detail-header">
+                <span style="font-size: 24px;">✏️</span>
+                <div>
+                  <h2>Edit Channel</h2>
+                  <span class="channel-type" id="edit-ch-current-name"></span>
+                </div>
+                <button class="btn btn-secondary btn-small" style="margin-left: auto;" onclick="hideEditPanel()">Cancel</button>
+              </div>
+
+              <form id="edit-channel-form">
+                <div class="form-group">
+                  <label for="edit-ch-name">Channel Name</label>
+                  <input type="text" id="edit-ch-name" required maxlength="100">
+                </div>
+
+                <div class="form-group" id="edit-ch-category-group">
+                  <label for="edit-ch-category">Category</label>
+                  <select id="edit-ch-category">
+                    <option value="">No category</option>
+                  </select>
+                </div>
+
+                <div class="form-group" id="edit-ch-topic-group">
+                  <label for="edit-ch-topic">Topic</label>
+                  <input type="text" id="edit-ch-topic" maxlength="1024">
+                </div>
+
+                <div class="form-group" id="edit-ch-nsfw-group" style="display: flex; align-items: center; gap: 8px;">
+                  <input type="checkbox" id="edit-ch-nsfw">
+                  <label for="edit-ch-nsfw" style="margin: 0; cursor: pointer;">NSFW Channel</label>
+                </div>
+
+                <button type="submit" class="btn btn-success">Save Changes</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/dashboard.js"></script>
+  <script>
+    let allChannels = [];
+    let allRoles = [];
+    let permLabels = {};
+    let selectedChannelId = null;
+    let currentOverwrites = []; // Working copy of permission overwrites
+
+    const CHANNEL_ICONS = { 0: '#', 2: '🔊', 4: '📁', 5: '📢', 13: '🎤', 15: '💭' };
+
+    // ── Load Channels ─────────────────────────────────────────────────────
+    async function loadChannels() {
+      try {
+        const guildId = getCurrentGuild();
+        if (!guildId) { showToast('Please select a guild', 'warning'); return; }
+
+        const data = await api(`/api/guilds/${guildId}/channels?detail=true`);
+        allChannels = data.channels || [];
+        if (data.permissionLabels) permLabels = data.permissionLabels;
+
+        renderChannelTree();
+
+        // Also load roles for the permission editor
+        const rolesData = await api(`/api/guilds/${guildId}/roles`);
+        allRoles = rolesData.roles || [];
+      } catch (err) {
+        console.error('Failed to load channels:', err);
+        showToast('Failed to load channels', 'error');
+      }
+    }
+
+    // ── Render Channel Tree ───────────────────────────────────────────────
+    function renderChannelTree() {
+      const tree = document.getElementById('channel-tree');
+      tree.innerHTML = '';
+
+      // Separate categories and non-category channels
+      const categories = allChannels.filter(c => c.type === 4);
+      const uncategorized = allChannels.filter(c => c.type !== 4 && !c.parent);
+      const childMap = {};
+      allChannels.filter(c => c.type !== 4 && c.parent).forEach(c => {
+        if (!childMap[c.parent]) childMap[c.parent] = [];
+        childMap[c.parent].push(c);
+      });
+
+      // Render uncategorized channels first
+      if (uncategorized.length > 0) {
+        uncategorized.forEach(ch => {
+          tree.appendChild(createChannelItem(ch));
+        });
+      }
+
+      // Render categories with children
+      categories.forEach(cat => {
+        const li = document.createElement('li');
+        li.className = 'category-item';
+
+        const header = document.createElement('div');
+        header.className = 'category-header';
+        header.innerHTML = `
+          <span class="arrow">▼</span>
+          <span>${escapeHtml(cat.name).toUpperCase()}</span>
+          <span style="color: var(--text-muted); font-weight: 400; font-size: 11px;">
+            ${(childMap[cat.id] || []).length} channels
+          </span>
+          <div class="cat-actions">
+            <button onclick="event.stopPropagation(); selectChannel('${cat.id}')" title="Edit permissions">🔑</button>
+            <button onclick="event.stopPropagation(); confirmDeleteChannel('${cat.id}', '${escapeHtml(cat.name)}')" title="Delete category">🗑️</button>
+          </div>
+        `;
+        header.addEventListener('click', () => {
+          const children = li.querySelector('.category-children');
+          const arrow = header.querySelector('.arrow');
+          children.classList.toggle('collapsed');
+          arrow.classList.toggle('collapsed');
+        });
+
+        const childrenUl = document.createElement('ul');
+        childrenUl.className = 'category-children';
+
+        const children = childMap[cat.id] || [];
+        if (children.length === 0) {
+          const empty = document.createElement('li');
+          empty.className = 'empty-category';
+          empty.textContent = 'No channels';
+          childrenUl.appendChild(empty);
+        } else {
+          children.forEach(ch => childrenUl.appendChild(createChannelItem(ch)));
+        }
+
+        li.appendChild(header);
+        li.appendChild(childrenUl);
+        tree.appendChild(li);
+      });
+
+      if (allChannels.length === 0) {
+        tree.innerHTML = '<li style="padding: 20px; text-align: center; color: var(--text-muted);">No channels found</li>';
+      }
+    }
+
+    function createChannelItem(ch) {
+      const li = document.createElement('li');
+      const icon = CHANNEL_ICONS[ch.type] || '#';
+      const isText = icon === '#';
+
+      li.className = 'channel-item' + (selectedChannelId === ch.id ? ' selected' : '');
+      li.innerHTML = `
+        <span class="channel-icon" ${isText ? 'style="font-size:18px;font-weight:700;color:var(--text-muted);"' : ''}>${icon}</span>
+        <span class="channel-name">${escapeHtml(ch.name)}</span>
+        <span class="channel-type-badge">${escapeHtml(ch.typeName)}</span>
+        <div class="channel-actions">
+          <button onclick="event.stopPropagation(); confirmDeleteChannel('${ch.id}', '${escapeHtml(ch.name)}')" title="Delete">🗑️</button>
+        </div>
+      `;
+      li.addEventListener('click', () => selectChannel(ch.id));
+      return li;
+    }
+
+    // ── Select Channel ────────────────────────────────────────────────────
+    function selectChannel(channelId) {
+      selectedChannelId = channelId;
+
+      // Highlight in tree
+      document.querySelectorAll('.channel-item').forEach(el => el.classList.remove('selected'));
+      // Re-render selection
+      renderChannelTree();
+
+      // Hide other panels
+      document.getElementById('no-selection').style.display = 'none';
+      document.getElementById('create-channel-panel').style.display = 'none';
+      document.getElementById('edit-channel-panel').style.display = 'none';
+      document.getElementById('channel-detail').style.display = 'block';
+
+      loadChannelPermissions(channelId);
+    }
+
+    // ── Load Channel Permissions ──────────────────────────────────────────
+    async function loadChannelPermissions(channelId) {
+      try {
+        const guildId = getCurrentGuild();
+        const data = await api(`/api/guilds/${guildId}/channels/${channelId}/permissions`);
+
+        const ch = allChannels.find(c => c.id === channelId);
+        const icon = CHANNEL_ICONS[data.channelType] || '#';
+        const isText = icon === '#';
+
+        document.getElementById('detail-icon').innerHTML = isText
+          ? `<span style="font-size:28px;font-weight:700;color:var(--text-muted);">#</span>`
+          : icon;
+        document.getElementById('detail-name').textContent = data.channelName;
+        document.getElementById('detail-type').textContent = ch ? ch.typeName : '';
+        document.getElementById('detail-category').innerHTML = ch && ch.parentName
+          ? `📁 ${escapeHtml(ch.parentName)}`
+          : '📁 No category';
+        document.getElementById('detail-topic').innerHTML = ch && ch.topic
+          ? `📝 ${escapeHtml(ch.topic)}`
+          : '';
+
+        currentOverwrites = data.overwrites || [];
+        permLabels = data.permissionLabels || permLabels;
+
+        // Populate "add role" dropdown — exclude roles already having overwrites
+        const existingIds = new Set(currentOverwrites.map(ow => ow.id));
+        const addSelect = document.getElementById('add-role-select');
+        addSelect.innerHTML = '<option value="">Add a role...</option>';
+        (data.roles || []).forEach(r => {
+          if (!existingIds.has(r.id)) {
+            const opt = document.createElement('option');
+            opt.value = r.id;
+            opt.textContent = r.name;
+            addSelect.appendChild(opt);
+          }
+        });
+
+        renderPermissionEditor();
+      } catch (err) {
+        console.error('Failed to load permissions:', err);
+        showToast('Failed to load channel permissions', 'error');
+      }
+    }
+
+    // ── Render Permission Editor ──────────────────────────────────────────
+    function renderPermissionEditor() {
+      const editor = document.getElementById('perm-editor');
+      editor.innerHTML = '';
+
+      if (currentOverwrites.length === 0) {
+        editor.innerHTML = `
+          <div style="text-align: center; padding: 20px; color: var(--text-muted);">
+            <p>No permission overwrites set.</p>
+            <p style="font-size: 12px;">This channel inherits all permissions from server roles.</p>
+          </div>
+        `;
+        return;
+      }
+
+      currentOverwrites.forEach((ow, owIdx) => {
+        const row = document.createElement('div');
+        row.className = 'perm-role-row';
+
+        // Group permissions by category
+        const permKeys = Object.keys(permLabels);
+        const groups = {};
+        permKeys.forEach(key => {
+          const cat = permLabels[key].category;
+          if (!groups[cat]) groups[cat] = [];
+          groups[cat].push(key);
+        });
+
+        // Build summary chips
+        const allowCount = ow.allow ? ow.allow.length : 0;
+        const denyCount = ow.deny ? ow.deny.length : 0;
+        const summaryHtml = `
+          ${allowCount > 0 ? `<span class="perm-chip allow">${allowCount} allowed</span>` : ''}
+          ${denyCount > 0 ? `<span class="perm-chip deny">${denyCount} denied</span>` : ''}
+          ${allowCount === 0 && denyCount === 0 ? '<span style="font-size:11px;color:var(--text-muted);">All inherited</span>' : ''}
+        `;
+
+        row.innerHTML = `
+          <div class="perm-role-header" onclick="togglePermBody(this)">
+            <span class="role-color-dot" style="background: ${ow.color || '#99aab5'}"></span>
+            <span>${escapeHtml(ow.name)}</span>
+            <span class="perm-summary">${summaryHtml}</span>
+            <button class="remove-ow-btn" onclick="event.stopPropagation(); removeOverwrite(${owIdx})" title="Remove overwrite">✕</button>
+            <span class="expand-icon">▶</span>
+          </div>
+          <div class="perm-role-body" data-ow-idx="${owIdx}"></div>
+        `;
+
+        const body = row.querySelector('.perm-role-body');
+
+        // Render permission groups
+        Object.entries(groups).forEach(([groupName, keys]) => {
+          const groupTitle = document.createElement('div');
+          groupTitle.className = 'perm-group-title';
+          groupTitle.textContent = groupName;
+          body.appendChild(groupTitle);
+
+          keys.forEach(permKey => {
+            const info = permLabels[permKey];
+            const isAllowed = ow.allow && ow.allow.includes(permKey);
+            const isDenied = ow.deny && ow.deny.includes(permKey);
+
+            const permRow = document.createElement('div');
+            permRow.className = 'perm-row';
+            permRow.innerHTML = `
+              <span class="perm-icon">${info.icon}</span>
+              <span class="perm-label">${info.label}</span>
+              <div class="perm-toggle-group">
+                <button class="perm-toggle allow ${isAllowed ? 'active' : ''}"
+                  onclick="setPermission(${owIdx}, '${permKey}', 'allow', this)">✓</button>
+                <button class="perm-toggle inherit ${!isAllowed && !isDenied ? 'active' : ''}"
+                  onclick="setPermission(${owIdx}, '${permKey}', 'inherit', this)">—</button>
+                <button class="perm-toggle deny ${isDenied ? 'active' : ''}"
+                  onclick="setPermission(${owIdx}, '${permKey}', 'deny', this)">✕</button>
+              </div>
+            `;
+            body.appendChild(permRow);
+          });
+        });
+
+        editor.appendChild(row);
+      });
+    }
+
+    function togglePermBody(header) {
+      const body = header.nextElementSibling;
+      const icon = header.querySelector('.expand-icon');
+      body.classList.toggle('expanded');
+      icon.classList.toggle('expanded');
+    }
+
+    // ── Set Permission ────────────────────────────────────────────────────
+    function setPermission(owIdx, permKey, state, btn) {
+      const ow = currentOverwrites[owIdx];
+      if (!ow) return;
+
+      // Update arrays
+      if (!ow.allow) ow.allow = [];
+      if (!ow.deny) ow.deny = [];
+
+      ow.allow = ow.allow.filter(p => p !== permKey);
+      ow.deny  = ow.deny.filter(p => p !== permKey);
+
+      if (state === 'allow') ow.allow.push(permKey);
+      else if (state === 'deny') ow.deny.push(permKey);
+
+      // Update button states in the same row
+      const group = btn.parentElement;
+      group.querySelectorAll('.perm-toggle').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      // Update summary chips in the header
+      const roleRow = btn.closest('.perm-role-row');
+      const summary = roleRow.querySelector('.perm-summary');
+      const allowCount = ow.allow.length;
+      const denyCount = ow.deny.length;
+      summary.innerHTML = `
+        ${allowCount > 0 ? `<span class="perm-chip allow">${allowCount} allowed</span>` : ''}
+        ${denyCount > 0 ? `<span class="perm-chip deny">${denyCount} denied</span>` : ''}
+        ${allowCount === 0 && denyCount === 0 ? '<span style="font-size:11px;color:var(--text-muted);">All inherited</span>' : ''}
+      `;
+    }
+
+    // ── Add / Remove Overwrites ───────────────────────────────────────────
+    function addRoleOverwrite() {
+      const select = document.getElementById('add-role-select');
+      const roleId = select.value;
+      if (!roleId) { showToast('Select a role first', 'warning'); return; }
+
+      const role = allRoles.find(r => r.id === roleId);
+      currentOverwrites.push({
+        id: roleId,
+        type: 'role',
+        name: role ? role.name : roleId,
+        color: role ? role.color : null,
+        allow: [],
+        deny: [],
+      });
+
+      renderPermissionEditor();
+      // Remove from dropdown
+      select.querySelector(`option[value="${roleId}"]`)?.remove();
+      select.value = '';
+      showToast(`Added ${role ? role.name : 'role'} to permissions`, 'info');
+    }
+
+    function removeOverwrite(owIdx) {
+      const ow = currentOverwrites[owIdx];
+      if (!confirm(`Remove all permission overwrites for ${ow.name}?`)) return;
+      currentOverwrites.splice(owIdx, 1);
+      renderPermissionEditor();
+    }
+
+    // ── Save Permissions ──────────────────────────────────────────────────
+    async function savePermissions() {
+      if (!selectedChannelId) return;
+
+      try {
+        const guildId = getCurrentGuild();
+
+        const payload = currentOverwrites.map(ow => ({
+          id: ow.id,
+          type: ow.type,
+          allow: ow.allow || [],
+          deny: ow.deny || [],
+        }));
+
+        await api(`/api/guilds/${guildId}/channels/${selectedChannelId}/permissions`, {
+          method: 'PUT',
+          body: JSON.stringify({ overwrites: payload }),
+        });
+
+        showToast('Permissions saved successfully', 'success');
+
+        // Reload to confirm
+        loadChannelPermissions(selectedChannelId);
+      } catch (err) {
+        console.error('Failed to save permissions:', err);
+        showToast('Failed to save permissions', 'error');
+      }
+    }
+
+    // ── Delete Channel ────────────────────────────────────────────────────
+    async function confirmDeleteChannel(channelId, channelName) {
+      if (!confirm(`Delete #${channelName}? This cannot be undone.`)) return;
+
+      try {
+        const guildId = getCurrentGuild();
+        await api(`/api/guilds/${guildId}/channels/${channelId}`, { method: 'DELETE' });
+
+        showToast(`#${channelName} deleted`, 'success');
+
+        if (selectedChannelId === channelId) {
+          selectedChannelId = null;
+          document.getElementById('channel-detail').style.display = 'none';
+          document.getElementById('no-selection').style.display = 'block';
+        }
+        loadChannels();
+      } catch (err) {
+        console.error('Failed to delete channel:', err);
+        showToast('Failed to delete channel', 'error');
+      }
+    }
+
+    function deleteSelectedChannel() {
+      if (!selectedChannelId) return;
+      const ch = allChannels.find(c => c.id === selectedChannelId);
+      confirmDeleteChannel(selectedChannelId, ch ? ch.name : selectedChannelId);
+    }
+
+    // ── Create Channel ────────────────────────────────────────────────────
+    function showCreateChannelModal() {
+      document.getElementById('no-selection').style.display = 'none';
+      document.getElementById('channel-detail').style.display = 'none';
+      document.getElementById('edit-channel-panel').style.display = 'none';
+      document.getElementById('create-channel-panel').style.display = 'block';
+
+      // Populate category dropdown
+      const catSelect = document.getElementById('new-ch-category');
+      catSelect.innerHTML = '<option value="">No category</option>';
+      allChannels.filter(c => c.type === 4).forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat.id;
+        opt.textContent = cat.name;
+        catSelect.appendChild(opt);
+      });
+
+      // Populate private roles checkboxes
+      const rolesList = document.getElementById('private-roles-list');
+      rolesList.innerHTML = '';
+      allRoles.filter(r => r.name !== '@everyone').forEach(r => {
+        const label = document.createElement('label');
+        label.style.cssText = 'display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; font-size: 13px; color: var(--text-secondary);';
+        label.innerHTML = `
+          <input type="checkbox" value="${r.id}" class="private-role-checkbox">
+          <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: ${r.color || '#99aab5'};"></span>
+          ${escapeHtml(r.name)}
+        `;
+        rolesList.appendChild(label);
+      });
+    }
+
+    function hideCreateChannelModal() {
+      document.getElementById('create-channel-panel').style.display = 'none';
+      if (selectedChannelId) {
+        document.getElementById('channel-detail').style.display = 'block';
+      } else {
+        document.getElementById('no-selection').style.display = 'block';
+      }
+    }
+
+    // Toggle type-specific fields
+    document.getElementById('new-ch-type').addEventListener('change', (e) => {
+      const isCategory = e.target.value === 'category';
+      const isText = e.target.value === 'text' || e.target.value === 'announcement' || e.target.value === 'forum';
+      document.getElementById('new-ch-category-group').style.display = isCategory ? 'none' : 'block';
+      document.getElementById('new-ch-topic-group').style.display = isText ? 'block' : 'none';
+      document.getElementById('new-ch-nsfw-group').style.display = isText ? 'flex' : 'none';
+    });
+
+    // Toggle private roles section
+    document.querySelectorAll('input[name="quick-perm"]').forEach(radio => {
+      radio.addEventListener('change', () => {
+        document.getElementById('private-roles-section').style.display =
+          document.querySelector('input[name="quick-perm"]:checked').value === 'private' ? 'block' : 'none';
+      });
+    });
+
+    document.getElementById('create-channel-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      try {
+        const guildId = getCurrentGuild();
+        if (!guildId) { showToast('Please select a guild', 'warning'); return; }
+
+        const type = document.getElementById('new-ch-type').value;
+        const name = document.getElementById('new-ch-name').value;
+        const parent = document.getElementById('new-ch-category').value || undefined;
+        const topic = document.getElementById('new-ch-topic').value || undefined;
+        const nsfw = document.getElementById('new-ch-nsfw').checked;
+        const quickPerm = document.querySelector('input[name="quick-perm"]:checked').value;
+
+        const body = { name, type, parent, topic, nsfw };
+
+        // Build permission overwrites for private channels
+        if (quickPerm === 'private') {
+          const everyoneRole = allRoles.find(r => r.name === '@everyone') ||
+                               { id: guildId }; // @everyone role ID = guild ID
+
+          const overwrites = [
+            { id: everyoneRole.id || guildId, allow: [], deny: ['ViewChannel'] }
+          ];
+
+          document.querySelectorAll('.private-role-checkbox:checked').forEach(cb => {
+            overwrites.push({ id: cb.value, allow: ['ViewChannel'], deny: [] });
+          });
+
+          body.permissionOverwrites = overwrites;
+        }
+
+        await api(`/api/guilds/${guildId}/channels`, {
+          method: 'POST',
+          body: JSON.stringify(body),
+        });
+
+        showToast(`#${name} created`, 'success');
+        document.getElementById('create-channel-form').reset();
+        hideCreateChannelModal();
+        loadChannels();
+      } catch (err) {
+        console.error('Failed to create channel:', err);
+        showToast('Failed to create channel', 'error');
+      }
+    });
+
+    // ── Edit Channel Info ─────────────────────────────────────────────────
+    function editChannelInfo() {
+      if (!selectedChannelId) return;
+      const ch = allChannels.find(c => c.id === selectedChannelId);
+      if (!ch) return;
+
+      document.getElementById('channel-detail').style.display = 'none';
+      document.getElementById('edit-channel-panel').style.display = 'block';
+
+      document.getElementById('edit-ch-current-name').textContent = `Editing #${ch.name}`;
+      document.getElementById('edit-ch-name').value = ch.name;
+      document.getElementById('edit-ch-topic').value = ch.topic || '';
+      document.getElementById('edit-ch-nsfw').checked = ch.nsfw || false;
+
+      // Show/hide fields based on type
+      const isText = ch.type === 0 || ch.type === 5 || ch.type === 15;
+      document.getElementById('edit-ch-topic-group').style.display = isText ? 'block' : 'none';
+      document.getElementById('edit-ch-nsfw-group').style.display = isText ? 'flex' : 'none';
+      document.getElementById('edit-ch-category-group').style.display = ch.type === 4 ? 'none' : 'block';
+
+      // Populate category dropdown
+      const catSelect = document.getElementById('edit-ch-category');
+      catSelect.innerHTML = '<option value="">No category</option>';
+      allChannels.filter(c => c.type === 4).forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat.id;
+        opt.textContent = cat.name;
+        if (ch.parent === cat.id) opt.selected = true;
+        catSelect.appendChild(opt);
+      });
+    }
+
+    function hideEditPanel() {
+      document.getElementById('edit-channel-panel').style.display = 'none';
+      document.getElementById('channel-detail').style.display = 'block';
+    }
+
+    document.getElementById('edit-channel-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      try {
+        const guildId = getCurrentGuild();
+        if (!guildId) return;
+
+        const body = {
+          name: document.getElementById('edit-ch-name').value,
+          topic: document.getElementById('edit-ch-topic').value,
+          nsfw: document.getElementById('edit-ch-nsfw').checked,
+          parent: document.getElementById('edit-ch-category').value || null,
+        };
+
+        await api(`/api/guilds/${guildId}/channels/${selectedChannelId}`, {
+          method: 'PUT',
+          body: JSON.stringify(body),
+        });
+
+        showToast('Channel updated', 'success');
+        hideEditPanel();
+        loadChannels();
+        setTimeout(() => selectChannel(selectedChannelId), 300);
+      } catch (err) {
+        console.error('Failed to update channel:', err);
+        showToast('Failed to update channel', 'error');
+      }
+    });
+
+    // ── Logout ────────────────────────────────────────────────────────────
+    document.getElementById('logout-btn').addEventListener('click', async () => {
+      try {
+        await api('/api/auth/logout', { method: 'POST' });
+        window.location.href = '/login.html';
+      } catch { window.location.href = '/login.html'; }
+    });
+
+    // ── Init ──────────────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+      loadChannels();
+    });
+  </script>
+</body>
+</html>

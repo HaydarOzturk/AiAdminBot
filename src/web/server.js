@@ -6,7 +6,10 @@ const app = express();
 
 // Middleware
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+
+// Static files: use extracted real directory for pkg exe, or bundled path for dev
+const publicDir = process.env.__WEB_PUBLIC_DIR || path.join(__dirname, 'public');
+app.use(express.static(publicDir));
 
 // Auth routes (no auth required)
 app.post('/api/auth/login', login);
@@ -29,7 +32,7 @@ app.get('*', (req, res) => {
   if (path.extname(req.path)) {
     return res.status(404).send('Not Found');
   }
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(publicDir, 'index.html'));
 });
 
 // Error handling

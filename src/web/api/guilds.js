@@ -58,31 +58,287 @@ router.get('/:guildId/members', async (req, res) => {
   }
 });
 
+// ── Friendly permission names ────────────────────────────────────────────
+const PERM_LABELS = {
+  ViewChannel:          { label: 'View Channel',      category: 'General',  icon: '👁️'  },
+  SendMessages:         { label: 'Send Messages',     category: 'Text',     icon: '💬' },
+  SendMessagesInThreads:{ label: 'Send in Threads',   category: 'Text',     icon: '🧵' },
+  EmbedLinks:           { label: 'Embed Links',       category: 'Text',     icon: '🔗' },
+  AttachFiles:          { label: 'Attach Files',      category: 'Text',     icon: '📎' },
+  AddReactions:         { label: 'Add Reactions',     category: 'Text',     icon: '😀' },
+  ReadMessageHistory:   { label: 'Read History',      category: 'Text',     icon: '📜' },
+  ManageMessages:       { label: 'Manage Messages',   category: 'Text',     icon: '🗑️'  },
+  MentionEveryone:      { label: 'Mention @everyone', category: 'Text',     icon: '📢' },
+  UseExternalEmojis:    { label: 'External Emojis',   category: 'Text',     icon: '🎭' },
+  Connect:              { label: 'Connect',           category: 'Voice',    icon: '🔊' },
+  Speak:                { label: 'Speak',             category: 'Voice',    icon: '🎙️'  },
+  Stream:               { label: 'Video / Screen',    category: 'Voice',    icon: '📺' },
+  UseVAD:               { label: 'Voice Activity',    category: 'Voice',    icon: '🎚️'  },
+  MuteMembers:          { label: 'Mute Members',      category: 'Voice',    icon: '🔇' },
+  DeafenMembers:        { label: 'Deafen Members',    category: 'Voice',    icon: '🔈' },
+  MoveMembers:          { label: 'Move Members',      category: 'Voice',    icon: '↔️'  },
+  ManageChannels:       { label: 'Manage Channel',    category: 'Admin',    icon: '⚙️'  },
+  ManageRoles:          { label: 'Manage Permissions',category: 'Admin',    icon: '🔑' },
+  ManageWebhooks:       { label: 'Manage Webhooks',   category: 'Admin',    icon: '🪝' },
+  CreateInstantInvite:  { label: 'Create Invite',     category: 'General',  icon: '✉️'  },
+};
+
+const CHANNEL_TYPE_NAMES = { 0: 'Text', 2: 'Voice', 4: 'Category', 5: 'Announcement', 13: 'Stage', 15: 'Forum' };
+
+function serializeOverwrites(channel, guild) {
+  const overwrites = [];
+  channel.permissionOverwrites.cache.forEach(ow => {
+    const target = ow.type === 0
+      ? guild.roles.cache.get(ow.id)
+      : guild.members.cache.get(ow.id);
+
+    const allow = ow.allow.toArray();
+    const deny  = ow.deny.toArray();
+
+    overwrites.push({
+      id:        ow.id,
+      type:      ow.type === 0 ? 'role' : 'member',
+      name:      target ? (ow.type === 0 ? target.name : target.user.username) : ow.id,
+      color:     ow.type === 0 && target ? target.hexColor : null,
+      allow,
+      deny,
+    });
+  });
+  return overwrites;
+}
+
 /**
  * GET /api/guilds/:guildId/channels
- * Query: type (text, voice, category, all)
+ * Query: type (text, voice, category, all), detail (true = include permissions)
  */
 router.get('/:guildId/channels', (req, res) => {
   try {
     const guild = getGuild(req);
     if (!guild) return res.status(404).json({ error: 'Guild not found' });
 
-    const { type = 'all' } = req.query;
+    const { type = 'all', detail = 'false' } = req.query;
     const typeMap = { text: [0], voice: [2], category: [4], all: null };
     const allowedTypes = typeMap[type] || null;
+    const includeDetail = detail === 'true';
 
     const channels = guild.channels.cache
       .filter(c => !allowedTypes || allowedTypes.includes(c.type))
-      .sort((a, b) => a.position - b.position)
-      .map(c => ({
-        id: c.id,
-        name: c.name,
-        type: c.type,
-        parent: c.parentId,
-      }));
+      .sort((a, b) => {
+        // Sort categories first, then by position
+        if (a.type === 4 && b.type !== 4) return -1;
+        if (a.type !== 4 && b.type === 4) return 1;
+        if (a.parentId === b.parentId) return a.position - b.position;
+        const aParent = a.parentId ? (guild.channels.cache.get(a.parentId)?.position ?? 999) : -1;
+        const bParent = b.parentId ? (guild.channels.cache.get(b.parentId)?.position ?? 999) : -1;
+        return aParent - bParent || a.position - b.position;
+      })
+      .map(c => {
+        const base = {
+          id: c.id,
+          name: c.name,
+          type: c.type,
+          typeName: CHANNEL_TYPE_NAMES[c.type] || 'Unknown',
+          parent: c.parentId,
+          parentName: c.parentId ? guild.channels.cache.get(c.parentId)?.name || null : null,
+          position: c.position,
+          topic: c.topic || null,
+          nsfw: c.nsfw || false,
+        };
 
-    res.json({ channels });
+        if (includeDetail) {
+          base.overwrites = serializeOverwrites(c, guild);
+        }
+
+        return base;
+      });
+
+    const response = { channels };
+    if (includeDetail) {
+      response.permissionLabels = PERM_LABELS;
+    }
+
+    res.json(response);
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /api/guilds/:guildId/channels
+ * Body: { name, type, parent, topic, nsfw, permissionOverwrites }
+ * type: 'text' | 'voice' | 'category' | 'announcement' | 'stage' | 'forum'
+ * permissionOverwrites: [ { id: roleId, allow: ['ViewChannel'], deny: ['SendMessages'] } ]
+ */
+router.post('/:guildId/channels', async (req, res) => {
+  try {
+    const guild = getGuild(req);
+    if (!guild) return res.status(404).json({ error: 'Guild not found' });
+
+    const { name, type = 'text', parent, topic, nsfw = false, permissionOverwrites } = req.body;
+    if (!name) return res.status(400).json({ error: 'name is required' });
+
+    const typeMap = { text: 0, voice: 2, category: 4, announcement: 5, stage: 13, forum: 15 };
+    const channelType = typeMap[type];
+    if (channelType === undefined) return res.status(400).json({ error: `Invalid type. Use: ${Object.keys(typeMap).join(', ')}` });
+
+    const opts = {
+      name,
+      type: channelType,
+      reason: 'Created via Dashboard',
+    };
+
+    if (parent) opts.parent = parent;
+    if (topic && channelType === 0) opts.topic = topic;
+    if (nsfw) opts.nsfw = true;
+
+    // Build permission overwrites
+    if (Array.isArray(permissionOverwrites) && permissionOverwrites.length > 0) {
+      opts.permissionOverwrites = permissionOverwrites.map(ow => ({
+        id: ow.id,
+        allow: ow.allow || [],
+        deny:  ow.deny  || [],
+      }));
+    }
+
+    const channel = await guild.channels.create(opts);
+
+    res.json({
+      success: true,
+      channel: { id: channel.id, name: channel.name, type: channel.type },
+    });
+  } catch (err) {
+    console.error('API create channel error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * DELETE /api/guilds/:guildId/channels/:channelId
+ */
+router.delete('/:guildId/channels/:channelId', async (req, res) => {
+  try {
+    const guild = getGuild(req);
+    if (!guild) return res.status(404).json({ error: 'Guild not found' });
+
+    const channel = guild.channels.cache.get(req.params.channelId);
+    if (!channel) return res.status(404).json({ error: 'Channel not found' });
+
+    const name = channel.name;
+    await channel.delete('Deleted via Dashboard');
+
+    res.json({ success: true, deleted: name });
+  } catch (err) {
+    console.error('API delete channel error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * GET /api/guilds/:guildId/channels/:channelId/permissions
+ * Returns detailed permission overwrites for one channel
+ */
+router.get('/:guildId/channels/:channelId/permissions', (req, res) => {
+  try {
+    const guild = getGuild(req);
+    if (!guild) return res.status(404).json({ error: 'Guild not found' });
+
+    const channel = guild.channels.cache.get(req.params.channelId);
+    if (!channel) return res.status(404).json({ error: 'Channel not found' });
+
+    const overwrites = serializeOverwrites(channel, guild);
+
+    // Get all roles for the "add role" dropdown
+    const roles = guild.roles.cache
+      .sort((a, b) => b.position - a.position)
+      .map(r => ({ id: r.id, name: r.name, color: r.hexColor }));
+
+    res.json({
+      channelId: channel.id,
+      channelName: channel.name,
+      channelType: channel.type,
+      overwrites,
+      roles,
+      permissionLabels: PERM_LABELS,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * PUT /api/guilds/:guildId/channels/:channelId/permissions
+ * Body: { overwrites: [ { id, type, allow: [...], deny: [...] } ] }
+ * Replaces ALL permission overwrites for the channel
+ */
+router.put('/:guildId/channels/:channelId/permissions', async (req, res) => {
+  try {
+    const guild = getGuild(req);
+    if (!guild) return res.status(404).json({ error: 'Guild not found' });
+
+    const channel = guild.channels.cache.get(req.params.channelId);
+    if (!channel) return res.status(404).json({ error: 'Channel not found' });
+
+    const { overwrites } = req.body;
+    if (!Array.isArray(overwrites)) return res.status(400).json({ error: 'overwrites array is required' });
+
+    // Clear existing overwrites and set new ones
+    // First remove all current overwrites
+    const existing = [...channel.permissionOverwrites.cache.keys()];
+    for (const id of existing) {
+      await channel.permissionOverwrites.delete(id, 'Updated via Dashboard');
+    }
+
+    // Apply new overwrites
+    for (const ow of overwrites) {
+      if (!ow.id) continue;
+      await channel.permissionOverwrites.create(ow.id, {}, { reason: 'Updated via Dashboard' });
+      // Now set the actual permissions
+      const allowPerms = {};
+      const denyPerms = {};
+      if (Array.isArray(ow.allow)) ow.allow.forEach(p => { allowPerms[p] = true; });
+      if (Array.isArray(ow.deny))  ow.deny.forEach(p =>  { denyPerms[p] = true; });
+
+      // Merge: allowed = true, denied = false, inherit = null
+      const merged = {};
+      Object.keys(PERM_LABELS).forEach(perm => {
+        if (allowPerms[perm]) merged[perm] = true;
+        else if (denyPerms[perm]) merged[perm] = false;
+        else merged[perm] = null;
+      });
+
+      await channel.permissionOverwrites.edit(ow.id, merged, { reason: 'Updated via Dashboard' });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('API update permissions error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * PUT /api/guilds/:guildId/channels/:channelId
+ * Body: { name, topic, nsfw, parent }
+ */
+router.put('/:guildId/channels/:channelId', async (req, res) => {
+  try {
+    const guild = getGuild(req);
+    if (!guild) return res.status(404).json({ error: 'Guild not found' });
+
+    const channel = guild.channels.cache.get(req.params.channelId);
+    if (!channel) return res.status(404).json({ error: 'Channel not found' });
+
+    const updates = {};
+    if (req.body.name !== undefined)  updates.name = req.body.name;
+    if (req.body.topic !== undefined) updates.topic = req.body.topic;
+    if (req.body.nsfw !== undefined)  updates.nsfw = !!req.body.nsfw;
+    if (req.body.parent !== undefined) updates.parent = req.body.parent || null;
+
+    await channel.edit({ ...updates, reason: 'Edited via Dashboard' });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('API edit channel error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
