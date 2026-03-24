@@ -415,7 +415,24 @@
     "cat-welcome": "👋 ДОБРО ПОЖАЛОВАТЬ",
     "cat-voice": "🔊 ГОЛОСОВЫЕ КАНАЛЫ",
     "cat-logs": "📝 ЖУРНАЛЫ",
-    "cat-staff": "🔒 ТОЛЬКО ПЕРСОНАЛ"
+    "cat-staff": "🔒 ТОЛЬКО ПЕРСОНАЛ",
+    "afk": "АФК",
+    "cat-afk": "💤 АФК",
+    "stream-announcements": "анонсы-стримов",
+    "stream-chat": "чат-стримов",
+    "cat-streaming": "🎬 СТРИМ"
+  },
+  "afk": {
+    "movedToAfk": "💤 Вы были перемещены в AFK-канал после {minutes} минут бездействия.",
+    "channelTopic": "Неактивные участники автоматически перемещаются сюда"
+  },
+  "streaming": {
+    "announcementsTopic": "Объявления о прямых трансляциях",
+    "chatTopic": "Чат во время прямых трансляций",
+    "liveTitle": "🔴 {user} В ЭФИРЕ!",
+    "liveDescription": "**{user}** только что начал трансляцию на **{platform}**!\n\n🎮 **{game}**\n📺 **{title}**",
+    "watchNow": "Смотреть",
+    "liveEnded": "Трансляция завершена. Спасибо за просмотр!"
   },
   "aiChat": {
     "statusTitle": "🤖 Статус ИИ Чата",

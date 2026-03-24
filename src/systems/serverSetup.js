@@ -203,6 +203,39 @@ function buildLocalizedDefaultConfig() {
           { name: cn('staff-voice'), type: 'voice' },
         ],
       },
+      {
+        name: cn('cat-streaming'),
+        channels: [
+          {
+            name: cn('stream-announcements'), type: 'text',
+            topic: t('streaming.announcementsTopic'),
+            permissions: {
+              everyone: { deny: ['SendMessages'], allow: ['ViewChannel', 'ReadMessageHistory'] },
+            },
+          },
+          {
+            name: cn('stream-chat'), type: 'text',
+            topic: t('streaming.chatTopic'),
+            permissions: {
+              everyone: { deny: ['ViewChannel'] },
+              [unverifiedRole]: { deny: ['ViewChannel'] },
+              [verifiedRole]: { allow: ['ViewChannel', 'SendMessages', 'ReadMessageHistory'] },
+            },
+          },
+        ],
+      },
+      {
+        name: cn('cat-afk'),
+        channels: [
+          {
+            name: cn('afk'), type: 'voice',
+            afkChannel: true,
+            permissions: {
+              everyone: { allow: ['ViewChannel', 'Connect'], deny: ['Speak'] },
+            },
+          },
+        ],
+      },
     ],
   };
 }
@@ -266,6 +299,7 @@ async function runSetup(guild) {
     channelsSkipped: 0,
     verificationSent: false,
     roleMenusSent: [],
+    afkChannelSet: false,
     errors: [],
   };
 
@@ -374,6 +408,18 @@ async function runSetup(guild) {
         console.log(`    ⏭️  Channel already exists: ${chCfg.name}`);
         result.channelsSkipped++;
 
+        // Ensure AFK channel is still set on the guild even if channel existed
+        if (chCfg.afkChannel && existingCh.type === ChannelType.GuildVoice && guild.afkChannelId !== existingCh.id) {
+          try {
+            await guild.setAFKChannel(existingCh, 'Server setup by AdminBot');
+            await guild.setAFKTimeout(600);
+            result.afkChannelSet = true;
+            console.log(`    ✅ Set existing channel as AFK: ${chCfg.name}`);
+          } catch (err) {
+            result.errors.push(`AFK channel setup: ${err.message}`);
+          }
+        }
+
         // Still queue auto-setup even for existing channels
         if (chCfg.autoSetup) {
           autoSetupQueue.push({ channel: existingCh, autoSetup: chCfg.autoSetup });
@@ -435,6 +481,20 @@ async function runSetup(guild) {
 
         console.log(`    ✅ Created channel: ${chCfg.name}`);
         result.channelsCreated++;
+
+        // Set as guild AFK channel if flagged
+        if (chCfg.afkChannel && newChannel.type === ChannelType.GuildVoice) {
+          try {
+            await guild.setAFKChannel(newChannel, 'Server setup by AdminBot');
+            await guild.setAFKTimeout(600); // 10 minutes
+            result.afkChannelSet = true;
+            console.log(`    ✅ Set AFK channel: ${chCfg.name} (timeout: 10 min)`);
+          } catch (err) {
+            const afkMsg = `AFK channel setup: ${err.message}`;
+            console.error(`    ❌ ${afkMsg}`);
+            result.errors.push(afkMsg);
+          }
+        }
 
         // Queue auto-setup
         if (chCfg.autoSetup) {

@@ -13,4 +13,5 @@ module.exports = [
   require('./guildMemberUpdate'),
   require('./channelEvents'),
   require('./voiceStateUpdate'),
+  require('./presenceUpdate'),
 ];

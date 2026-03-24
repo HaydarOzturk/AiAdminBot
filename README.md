@@ -40,6 +40,25 @@ A full admin panel accessible at `http://your-server:PORT` with password authent
 
 **Logs** — Real-time log viewer with level filtering (Error, Warn, Info, Debug), auto-refresh mode, line count selector, download logs
 
+### Live Stream Announcements
+
+- Automatically detects when the **guild owner** starts streaming (Twitch, YouTube, Kick)
+- Posts a rich embed in the `stream-announcements` channel with stream title, game, platform, and a "Watch Now" link button
+- When the stream ends, edits the announcement to "Stream ended"
+- 30-second debounce to prevent flicker from unstable presence updates
+- Streaming category (`stream-announcements` + `stream-chat`) created during server setup
+- All channel names and messages are multi-language (locale keys)
+
+### AFK Channel
+
+- Auto-created during server setup with localized name
+- Speaking is denied for everyone (including server owner)
+- Guild AFK timeout set to 10 minutes via Discord's native setting
+- Bot-side AFK tracker: checks every 60 seconds for idle voice users
+- Activity detection: channel switches, unmute, undeafen, streaming, video
+- Idle users are automatically moved to the AFK channel
+- Configurable via `AFK_TIMEOUT_MINUTES` env variable (default: 10)
+
 ### XP Economy
 
 - Voice XP: 3 XP per hour, daily max 50 XP
@@ -103,6 +122,9 @@ OPENROUTER_API_KEY=your_key      # OpenRouter
 # AI Features
 AI_CHAT_ENABLED=false
 AI_MODERATION_ENABLED=false
+
+# AFK Channel
+AFK_TIMEOUT_MINUTES=10              # Minutes before idle users are moved (default: 10)
 
 # Web Dashboard
 WEB_PORT=3000                    # Set to enable dashboard

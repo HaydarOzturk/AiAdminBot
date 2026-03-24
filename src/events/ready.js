@@ -57,6 +57,11 @@ module.exports = {
     voiceXp.initVoiceTracking(client);
     voiceXp.startVoiceXpTimer(client);
 
+    // Start AFK idle tracking
+    const afkManager = require('../systems/afkManager');
+    afkManager.initAfkTracking(client);
+    afkManager.startAfkTimer(client);
+
     // Auto-sync roles on startup if enabled
     const { loadConfig } = require('../utils/paths');
     try {

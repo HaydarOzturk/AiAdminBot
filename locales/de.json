@@ -415,7 +415,24 @@
     "cat-welcome": "👋 WILLKOMMEN",
     "cat-voice": "🔊 SPRACHKANÄLE",
     "cat-logs": "📝 PROTOKOLLE",
-    "cat-staff": "🔒 NUR STAFF"
+    "cat-staff": "🔒 NUR STAFF",
+    "afk": "AFK",
+    "cat-afk": "💤 AFK",
+    "stream-announcements": "stream-ankündigungen",
+    "stream-chat": "stream-chat",
+    "cat-streaming": "🎬 STREAMING"
+  },
+  "afk": {
+    "movedToAfk": "💤 Du wurdest nach {minutes} Minuten Inaktivität in den AFK-Kanal verschoben.",
+    "channelTopic": "Inaktive Mitglieder werden automatisch hierher verschoben"
+  },
+  "streaming": {
+    "announcementsTopic": "Live-Stream-Ankündigungen",
+    "chatTopic": "Chat während Live-Streams",
+    "liveTitle": "🔴 {user} ist LIVE!",
+    "liveDescription": "**{user}** ist gerade live auf **{platform}**!\n\n🎮 **{game}**\n📺 **{title}**",
+    "watchNow": "Jetzt ansehen",
+    "liveEnded": "Stream beendet. Danke fürs Zuschauen!"
   },
   "aiChat": {
     "statusTitle": "🤖 KI-Chat-Status",

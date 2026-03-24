@@ -427,7 +427,24 @@
     "cat-welcome": "👋 GİRİŞ-ÇIKIŞ",
     "cat-voice": "🔊 SES KANALLARI",
     "cat-logs": "📝 LOGLAR",
-    "cat-staff": "🔒 STAFF ONLY"
+    "cat-staff": "🔒 STAFF ONLY",
+    "afk": "AFK",
+    "cat-afk": "💤 AFK",
+    "stream-announcements": "yayın-duyuru",
+    "stream-chat": "yayın-sohbet",
+    "cat-streaming": "🎬 YAYIN"
+  },
+  "afk": {
+    "movedToAfk": "💤 {minutes} dakika boşta kaldığınız için AFK kanalına taşındınız.",
+    "channelTopic": "Boşta kalan üyeler otomatik olarak buraya taşınır"
+  },
+  "streaming": {
+    "announcementsTopic": "Canlı yayın duyuruları",
+    "chatTopic": "Canlı yayın sohbeti",
+    "liveTitle": "🔴 {user} YAYINDA!",
+    "liveDescription": "**{user}** şu anda **{platform}** üzerinde canlı yayında!\n\n🎮 **{game}**\n📺 **{title}**",
+    "watchNow": "İzle",
+    "liveEnded": "Yayın sona erdi. İzlediğiniz için teşekkürler!"
   },
   "aiChat": {
     "statusTitle": "🤖 AI Sohbet Durumu",

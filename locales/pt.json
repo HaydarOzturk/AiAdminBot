@@ -415,7 +415,24 @@
     "cat-welcome": "👋 BOAS-VINDAS",
     "cat-voice": "🔊 CANAIS DE VOZ",
     "cat-logs": "📝 REGISTROS",
-    "cat-staff": "🔒 APENAS EQUIPE"
+    "cat-staff": "🔒 APENAS EQUIPE",
+    "afk": "AFK",
+    "cat-afk": "💤 AFK",
+    "stream-announcements": "anuncios-stream",
+    "stream-chat": "chat-stream",
+    "cat-streaming": "🎬 TRANSMISSÃO"
+  },
+  "afk": {
+    "movedToAfk": "💤 Você foi movido para o canal AFK após ficar inativo por {minutes} minutos.",
+    "channelTopic": "Membros inativos são movidos para cá automaticamente"
+  },
+  "streaming": {
+    "announcementsTopic": "Anúncios de transmissões ao vivo",
+    "chatTopic": "Chat durante transmissões ao vivo",
+    "liveTitle": "🔴 {user} está AO VIVO!",
+    "liveDescription": "**{user}** acabou de iniciar uma transmissão em **{platform}**!\n\n🎮 **{game}**\n📺 **{title}**",
+    "watchNow": "Assistir agora",
+    "liveEnded": "A transmissão terminou. Obrigado por assistir!"
   },
   "aiChat": {
     "statusTitle": "🤖 Status do Bate-papo IA",

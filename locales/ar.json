@@ -415,7 +415,24 @@
     "cat-welcome": "👋 أهلا",
     "cat-voice": "🔊 قنوات صوتية",
     "cat-logs": "📝 السجلات",
-    "cat-staff": "🔒 الموظفين فقط"
+    "cat-staff": "🔒 الموظفين فقط",
+    "afk": "غائب",
+    "cat-afk": "💤 غائب",
+    "stream-announcements": "اعلانات-البث",
+    "stream-chat": "دردشة-البث",
+    "cat-streaming": "🎬 البث المباشر"
+  },
+  "afk": {
+    "movedToAfk": "💤 تم نقلك إلى قناة الغائبين بعد {minutes} دقائق من عدم النشاط.",
+    "channelTopic": "يتم نقل الأعضاء غير النشطين هنا تلقائياً"
+  },
+  "streaming": {
+    "announcementsTopic": "إعلانات البث المباشر",
+    "chatTopic": "الدردشة أثناء البث المباشر",
+    "liveTitle": "🔴 {user} مباشر الآن!",
+    "liveDescription": "**{user}** بدأ البث المباشر على **{platform}**!\n\n🎮 **{game}**\n📺 **{title}**",
+    "watchNow": "شاهد الآن",
+    "liveEnded": "انتهى البث. شكراً للمشاهدة!"
   },
   "aiChat": {
     "statusTitle": "🤖 حالة الدردشة الذكية",

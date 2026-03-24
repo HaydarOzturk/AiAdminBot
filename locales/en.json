@@ -427,7 +427,24 @@
     "cat-welcome": "👋 WELCOME",
     "cat-voice": "🔊 VOICE CHANNELS",
     "cat-logs": "📝 LOGS",
-    "cat-staff": "🔒 STAFF ONLY"
+    "cat-staff": "🔒 STAFF ONLY",
+    "afk": "AFK",
+    "cat-afk": "💤 AFK",
+    "stream-announcements": "stream-announcements",
+    "stream-chat": "stream-chat",
+    "cat-streaming": "🎬 STREAMING"
+  },
+  "afk": {
+    "movedToAfk": "💤 You were moved to the AFK channel after being idle for {minutes} minutes.",
+    "channelTopic": "Idle members are moved here automatically"
+  },
+  "streaming": {
+    "announcementsTopic": "Live stream announcements",
+    "chatTopic": "Chat during live streams",
+    "liveTitle": "🔴 {user} is LIVE!",
+    "liveDescription": "**{user}** just went live on **{platform}**!\n\n🎮 **{game}**\n📺 **{title}**",
+    "watchNow": "Watch Now",
+    "liveEnded": "Stream ended. Thanks for watching!"
   },
   "aiChat": {
     "statusTitle": "🤖 AI Chat Status",
