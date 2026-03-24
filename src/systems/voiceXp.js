@@ -22,6 +22,9 @@ const VOICE_XP_AMOUNT = parseInt(process.env.VOICE_XP_AMOUNT) || 1;
 // Track users currently in voice: Map<guildId, Set<userId>>
 const voiceUsers = new Map();
 
+// Track when users joined voice: Map<"guildId-userId", timestamp>
+const voiceJoinTimes = new Map();
+
 // Reference to the interval timer
 let _xpInterval = null;
 
@@ -37,6 +40,7 @@ function trackJoin(guildId, userId) {
     voiceUsers.set(guildId, new Set());
   }
   voiceUsers.get(guildId).add(userId);
+  voiceJoinTimes.set(`${guildId}-${userId}`, Date.now());
 }
 
 /**
@@ -49,6 +53,36 @@ function trackLeave(guildId, userId) {
   if (guildSet) {
     guildSet.delete(userId);
     if (guildSet.size === 0) voiceUsers.delete(guildId);
+  }
+
+  // Save accumulated voice time to DB
+  const key = `${guildId}-${userId}`;
+  const joinTime = voiceJoinTimes.get(key);
+  if (joinTime) {
+    const minutesSpent = Math.floor((Date.now() - joinTime) / 60000);
+    if (minutesSpent > 0) {
+      try {
+        // Ensure user row exists
+        const existing = db.get(
+          'SELECT voice_minutes FROM levels WHERE user_id = ? AND guild_id = ?',
+          [userId, guildId]
+        );
+        if (existing) {
+          db.run(
+            'UPDATE levels SET voice_minutes = voice_minutes + ? WHERE user_id = ? AND guild_id = ?',
+            [minutesSpent, userId, guildId]
+          );
+        } else {
+          db.run(
+            'INSERT INTO levels (user_id, guild_id, xp, level, messages, voice_minutes, last_xp_at) VALUES (?, ?, 0, 0, 0, ?, ?)',
+            [userId, guildId, minutesSpent, new Date().toISOString()]
+          );
+        }
+      } catch (err) {
+        console.error(`Failed to save voice minutes for ${userId}:`, err.message);
+      }
+    }
+    voiceJoinTimes.delete(key);
   }
 }
 
@@ -95,9 +129,11 @@ async function awardVoiceXp(client) {
         }
 
         // Save — messages count stays the same (voice XP doesn't count as message)
+        // Also add the interval minutes to voice_minutes
+        const intervalMinutes = Math.round(VOICE_XP_INTERVAL / 60000);
         db.run(
-          'UPDATE levels SET xp = ?, level = ?, last_xp_at = ? WHERE user_id = ? AND guild_id = ?',
-          [currentXp, currentLevel, new Date().toISOString(), userId, guildId]
+          'UPDATE levels SET xp = ?, level = ?, voice_minutes = voice_minutes + ?, last_xp_at = ? WHERE user_id = ? AND guild_id = ?',
+          [currentXp, currentLevel, intervalMinutes, new Date().toISOString(), userId, guildId]
         );
 
         // Level up notification

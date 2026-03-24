@@ -22,12 +22,24 @@ module.exports = {
     const filled = Math.round(progress * barLength);
     const bar = '█'.repeat(filled) + '░'.repeat(barLength - filled);
 
+    // Format voice time nicely
+    const voiceMinutes = data.voiceMinutes || 0;
+    let voiceTimeStr;
+    if (voiceMinutes < 60) {
+      voiceTimeStr = `${voiceMinutes}m`;
+    } else {
+      const hours = Math.floor(voiceMinutes / 60);
+      const mins = voiceMinutes % 60;
+      voiceTimeStr = mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+    }
+
     const fields = [
       { name: t('leveling.level', {}, g), value: `${data.level}`, inline: true },
       { name: t('leveling.xp', {}, g), value: `${data.xp} / ${data.xpNeeded}`, inline: true },
       { name: t('leveling.rank', {}, g), value: data.rank ? `#${data.rank}` : '-', inline: true },
       { name: t('leveling.progress', {}, g), value: `${bar} ${Math.round(progress * 100)}%`, inline: false },
       { name: t('leveling.messages', {}, g), value: `${data.messages}`, inline: true },
+      { name: t('leveling.voiceTime', {}, g), value: `🔊 ${voiceTimeStr}`, inline: true },
       { name: t('leveling.tier', {}, g), value: data.tier?.name || '-', inline: true },
     ];
 

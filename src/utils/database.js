@@ -42,6 +42,7 @@ async function initDatabase() {
       xp INTEGER DEFAULT 0,
       level INTEGER DEFAULT 0,
       messages INTEGER DEFAULT 0,
+      voice_minutes INTEGER DEFAULT 0,
       last_xp_at DATETIME,
       PRIMARY KEY (user_id, guild_id)
     )
@@ -87,6 +88,18 @@ async function initDatabase() {
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  // Migration: add voice_minutes column to levels if missing
+  try {
+    const cols = db.exec('PRAGMA table_info(levels)');
+    const hasVoiceMinutes = cols[0]?.values?.some(row => row[1] === 'voice_minutes');
+    if (!hasVoiceMinutes) {
+      db.run('ALTER TABLE levels ADD COLUMN voice_minutes INTEGER DEFAULT 0');
+      console.log('🔄 Migration: added voice_minutes column to levels table');
+    }
+  } catch {
+    // Table might not exist yet or column already exists — safe to ignore
+  }
 
   // Save to disk after creating tables
   saveDatabase();

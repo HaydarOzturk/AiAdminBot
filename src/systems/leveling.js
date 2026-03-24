@@ -183,7 +183,7 @@ function getUserData(userId, guildId) {
   );
 
   if (!data) {
-    return { xp: 0, level: 0, messages: 0, xpNeeded: xpForLevel(0), rank: null };
+    return { xp: 0, level: 0, messages: 0, voiceMinutes: 0, xpNeeded: xpForLevel(0), rank: null };
   }
 
   // Get rank
@@ -196,6 +196,7 @@ function getUserData(userId, guildId) {
     xp: data.xp,
     level: data.level,
     messages: data.messages || 0,
+    voiceMinutes: data.voice_minutes || 0,
     xpNeeded: xpForLevel(data.level),
     rank: rankRow ? rankRow.rank + 1 : 1,
     tier: getTierForLevel(data.level),
