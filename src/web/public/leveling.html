@@ -58,11 +58,12 @@
                   <th>Messages</th>
                   <th>Voice Time</th>
                   <th>Tier</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody id="leaderboard-body">
                 <tr>
-                  <td colspan="7" style="text-align: center; color: #b9bbbe; padding: 20px;">Loading...</td>
+                  <td colspan="8" style="text-align: center; color: #b9bbbe; padding: 20px;">Loading...</td>
                 </tr>
               </tbody>
             </table>
@@ -104,6 +105,30 @@
           </form>
         </div>
 
+        <!-- Reset User XP Section -->
+        <div class="card" style="max-width: 500px;">
+          <h2 class="card-title">Reset User XP</h2>
+
+          <form id="reset-user-xp-form">
+            <div class="form-group">
+              <label for="reset-user-id">User ID</label>
+              <input type="text" id="reset-user-id" name="userId" required placeholder="Discord user ID">
+            </div>
+
+            <button type="submit" class="btn btn-danger">Reset User XP</button>
+          </form>
+        </div>
+
+        <!-- Reset All Server XP Section -->
+        <div class="card" style="max-width: 500px; border-left: 3px solid #f04747;">
+          <h2 class="card-title">Reset All Server XP</h2>
+          <p style="color: #b9bbbe; margin-bottom: 15px;">
+            <strong>Warning:</strong> This will permanently reset XP for all users in this server. This action cannot be undone.
+          </p>
+
+          <button type="button" class="btn btn-danger" id="reset-all-xp-btn">Reset All Server XP</button>
+        </div>
+
         <!-- Leveling Stats -->
         <div class="card">
           <h2 class="card-title">System Statistics</h2>
@@ -122,8 +147,12 @@
               <div class="stat-value" id="stat-avg-level">-</div>
             </div>
             <div class="stat-card">
-              <div class="stat-label">Top Tier Members</div>
-              <div class="stat-value" id="stat-top-tier">-</div>
+              <div class="stat-label">Top Level</div>
+              <div class="stat-value" id="stat-top-level">-</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Total Messages</div>
+              <div class="stat-value" id="stat-total-messages">-</div>
             </div>
           </div>
         </div>
@@ -149,13 +178,14 @@
         tbody.innerHTML = '';
 
         if (!data.users || data.users.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #b9bbbe; padding: 20px;">No users found</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: #b9bbbe; padding: 20px;">No users found</td></tr>';
           return;
         }
 
         data.users.forEach((user, idx) => {
           const row = document.createElement('tr');
           const tierBadge = getTierBadge(user.tier);
+          const voiceTimeFormatted = formatVoiceTime(user.voiceMinutes || 0);
 
           row.innerHTML = `
             <td><strong>#${idx + 1}</strong></td>
@@ -163,8 +193,9 @@
             <td><strong>${user.level || 1}</strong></td>
             <td>${formatNumber(user.xp || 0)}</td>
             <td>${formatNumber(user.messageCount || 0)}</td>
-            <td>${formatDuration(user.voiceTime || 0)}</td>
+            <td>${voiceTimeFormatted}</td>
             <td>${tierBadge}</td>
+            <td><button class="btn btn-danger btn-small" onclick="quickResetUser('${escapeHtml(user.userId)}', '${escapeHtml(user.username)}')">Reset</button></td>
           `;
           tbody.appendChild(row);
         });
@@ -175,6 +206,13 @@
         console.error('Failed to load leaderboard:', error);
         showToast('Failed to load leaderboard', 'error');
       }
+    }
+
+    function formatVoiceTime(minutes) {
+      if (!minutes || minutes === 0) return '0h 0m';
+      const hours = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+      return `${hours}h ${mins}m`;
     }
 
     function getTierBadge(tier) {
@@ -202,7 +240,8 @@
         document.getElementById('stat-total-xp').textContent = formatNumber(data.totalXp || 0);
         document.getElementById('stat-active-users').textContent = formatNumber(data.activeUsers || 0);
         document.getElementById('stat-avg-level').textContent = (data.averageLevel || 0).toFixed(1);
-        document.getElementById('stat-top-tier').textContent = formatNumber(data.topTierMembers || 0);
+        document.getElementById('stat-top-level').textContent = formatNumber(data.topLevel || 0);
+        document.getElementById('stat-total-messages').textContent = formatNumber(data.totalMessages || 0);
       } catch (error) {
         console.error('Failed to load leveling stats:', error);
       }
@@ -240,6 +279,94 @@
       } catch (error) {
         console.error('Failed to award XP:', error);
         showToast('Failed to award XP', 'error');
+      }
+    });
+
+    // Reset User XP form
+    document.getElementById('reset-user-xp-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      try {
+        const guildId = getCurrentGuild();
+        if (!guildId) {
+          showToast('Please select a guild', 'warning');
+          return;
+        }
+
+        const userId = document.getElementById('reset-user-id').value;
+
+        if (!confirm(`Are you sure you want to reset XP for user ${userId}? This cannot be undone.`)) {
+          return;
+        }
+
+        await api(`/api/guilds/${guildId}/leveling/reset`, {
+          method: 'POST',
+          body: JSON.stringify({ userId }),
+        });
+
+        showToast('User XP reset successfully', 'success');
+        document.getElementById('reset-user-xp-form').reset();
+        loadLeaderboard();
+      } catch (error) {
+        console.error('Failed to reset user XP:', error);
+        showToast('Failed to reset user XP', 'error');
+      }
+    });
+
+    // Quick reset button on leaderboard
+    async function quickResetUser(userId, username) {
+      if (!confirm(`Are you sure you want to reset XP for ${username}? This cannot be undone.`)) {
+        return;
+      }
+
+      try {
+        const guildId = getCurrentGuild();
+        if (!guildId) {
+          showToast('Please select a guild', 'warning');
+          return;
+        }
+
+        await api(`/api/guilds/${guildId}/leveling/reset`, {
+          method: 'POST',
+          body: JSON.stringify({ userId }),
+        });
+
+        showToast(`Reset XP for ${username}`, 'success');
+        loadLeaderboard();
+      } catch (error) {
+        console.error('Failed to reset user XP:', error);
+        showToast('Failed to reset user XP', 'error');
+      }
+    }
+
+    // Reset All Server XP button
+    document.getElementById('reset-all-xp-btn').addEventListener('click', async () => {
+      if (!confirm('This will reset XP for ALL users in this server. This cannot be undone. Type "RESET" to confirm.')) {
+        return;
+      }
+
+      const confirmText = prompt('Type "RESET" to confirm:');
+      if (confirmText !== 'RESET') {
+        showToast('Confirmation failed. Reset cancelled.', 'warning');
+        return;
+      }
+
+      try {
+        const guildId = getCurrentGuild();
+        if (!guildId) {
+          showToast('Please select a guild', 'warning');
+          return;
+        }
+
+        await api(`/api/guilds/${guildId}/leveling/reset-all`, {
+          method: 'POST',
+        });
+
+        showToast('All server XP reset successfully', 'success');
+        loadLeaderboard();
+      } catch (error) {
+        console.error('Failed to reset all server XP:', error);
+        showToast('Failed to reset all server XP', 'error');
       }
     });
 

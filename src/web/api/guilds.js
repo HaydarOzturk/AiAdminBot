@@ -14,6 +14,79 @@ function getGuild(req) {
   return client.guilds.cache.get(req.params.guildId) || null;
 }
 
+function getClient(req) {
+  return req.app.locals.client || null;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// MEMBERS & CHANNELS  (shared helpers for dropdowns)
+// ══════════════════════════════════════════════════════════════════════════
+
+/**
+ * GET /api/guilds/:guildId/members
+ * Query: search (name/id fragment), limit (default 25)
+ */
+router.get('/:guildId/members', async (req, res) => {
+  try {
+    const guild = getGuild(req);
+    if (!guild) return res.status(404).json({ error: 'Guild not found' });
+
+    const { search = '', limit = 25 } = req.query;
+    let members;
+
+    if (search) {
+      members = await guild.members.fetch({ query: search, limit: parseInt(limit) });
+    } else {
+      // Return cached members (fetching all is expensive)
+      members = guild.members.cache;
+    }
+
+    const list = [...members.values()]
+      .slice(0, parseInt(limit))
+      .map(m => ({
+        id: m.id,
+        username: m.user.username,
+        displayName: m.displayName,
+        avatar: m.user.displayAvatarURL({ size: 32 }),
+        bot: m.user.bot,
+      }));
+
+    res.json({ members: list });
+  } catch (err) {
+    console.error('API members error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * GET /api/guilds/:guildId/channels
+ * Query: type (text, voice, category, all)
+ */
+router.get('/:guildId/channels', (req, res) => {
+  try {
+    const guild = getGuild(req);
+    if (!guild) return res.status(404).json({ error: 'Guild not found' });
+
+    const { type = 'all' } = req.query;
+    const typeMap = { text: [0], voice: [2], category: [4], all: null };
+    const allowedTypes = typeMap[type] || null;
+
+    const channels = guild.channels.cache
+      .filter(c => !allowedTypes || allowedTypes.includes(c.type))
+      .sort((a, b) => a.position - b.position)
+      .map(c => ({
+        id: c.id,
+        name: c.name,
+        type: c.type,
+        parent: c.parentId,
+      }));
+
+    res.json({ channels });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ══════════════════════════════════════════════════════════════════════════
 // MODERATION
 // ══════════════════════════════════════════════════════════════════════════
@@ -50,7 +123,15 @@ router.get('/:guildId/moderation/actions', (req, res) => {
     const actions = db.all(query, params);
 
     res.json({
-      actions,
+      actions: actions.map(a => ({
+        id: a.id,
+        type: a.action_type,
+        user: a.user_id,
+        moderator: a.moderator_id,
+        reason: a.reason,
+        duration: a.duration,
+        date: a.created_at,
+      })),
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -84,7 +165,17 @@ router.get('/:guildId/moderation/warnings', (req, res) => {
     query += ' ORDER BY created_at DESC LIMIT 50';
     const warnings = db.all(query, params);
 
-    res.json({ warnings });
+    // Group by user
+    const grouped = {};
+    warnings.forEach(w => {
+      if (!grouped[w.user_id]) {
+        grouped[w.user_id] = { userId: w.user_id, user: w.user_id, count: 0, latestDate: w.created_at, latestReason: w.reason, warnings: [] };
+      }
+      grouped[w.user_id].count++;
+      grouped[w.user_id].warnings.push(w);
+    });
+
+    res.json({ warnings: Object.values(grouped) });
   } catch (err) {
     console.error('API moderation/warnings error:', err.message);
     res.status(500).json({ error: err.message });
@@ -107,7 +198,7 @@ router.post('/:guildId/moderation/warnings', async (req, res) => {
     const guild = getGuild(req);
     if (!guild) return res.status(404).json({ error: 'Guild not found' });
 
-    const client = req.app.locals.client;
+    const client = getClient(req);
 
     db.run(
       'INSERT INTO warnings (guild_id, user_id, moderator_id, reason) VALUES (?, ?, ?, ?)',
@@ -169,7 +260,208 @@ router.get('/:guildId/moderation/stats', (req, res) => {
       [guildId]
     );
 
-    res.json({ totalActions, totalWarnings, typeBreakdown, topModerators });
+    // Build breakdown object
+    const breakdown = {};
+    typeBreakdown.forEach(t => { breakdown[t.type] = t.count; });
+
+    res.json({
+      total: totalActions,
+      warnings: totalWarnings,
+      mutes: breakdown.mute || 0,
+      kicks: breakdown.kick || 0,
+      bans: breakdown.ban || 0,
+      timeouts: breakdown.timeout || 0,
+      typeBreakdown,
+      topModerators: topModerators.map(m => ({
+        name: m.moderator_id,
+        actions: m.actions,
+      })),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /api/guilds/:guildId/moderation/ban
+ * Body: { userId, reason, deleteMessageDays }
+ */
+router.post('/:guildId/moderation/ban', async (req, res) => {
+  try {
+    const guild = getGuild(req);
+    if (!guild) return res.status(404).json({ error: 'Guild not found' });
+
+    const { userId, reason, deleteMessageDays = 0 } = req.body;
+    if (!userId) return res.status(400).json({ error: 'userId is required' });
+
+    const client = getClient(req);
+
+    // Try DM before ban
+    try {
+      const user = await client.users.fetch(userId);
+      await user.send(`You have been **banned** from **${guild.name}**${reason ? ` for: ${reason}` : ''}`);
+    } catch { /* DM failed */ }
+
+    await guild.members.ban(userId, {
+      reason: reason || 'No reason provided (Dashboard)',
+      deleteMessageSeconds: Math.min(parseInt(deleteMessageDays) || 0, 7) * 86400,
+    });
+
+    db.run(
+      'INSERT INTO mod_actions (action_type, guild_id, user_id, moderator_id, reason) VALUES (?, ?, ?, ?, ?)',
+      ['ban', guild.id, userId, client.user.id, reason || 'Dashboard action']
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('API ban error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /api/guilds/:guildId/moderation/kick
+ * Body: { userId, reason }
+ */
+router.post('/:guildId/moderation/kick', async (req, res) => {
+  try {
+    const guild = getGuild(req);
+    if (!guild) return res.status(404).json({ error: 'Guild not found' });
+
+    const { userId, reason } = req.body;
+    if (!userId) return res.status(400).json({ error: 'userId is required' });
+
+    const client = getClient(req);
+
+    const member = await guild.members.fetch(userId).catch(() => null);
+    if (!member) return res.status(404).json({ error: 'Member not found in server' });
+
+    // Try DM before kick
+    try {
+      await member.send(`You have been **kicked** from **${guild.name}**${reason ? ` for: ${reason}` : ''}`);
+    } catch { /* DM failed */ }
+
+    await member.kick(reason || 'No reason provided (Dashboard)');
+
+    db.run(
+      'INSERT INTO mod_actions (action_type, guild_id, user_id, moderator_id, reason) VALUES (?, ?, ?, ?, ?)',
+      ['kick', guild.id, userId, client.user.id, reason || 'Dashboard action']
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('API kick error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /api/guilds/:guildId/moderation/timeout
+ * Body: { userId, reason, duration } (duration in minutes)
+ */
+router.post('/:guildId/moderation/timeout', async (req, res) => {
+  try {
+    const guild = getGuild(req);
+    if (!guild) return res.status(404).json({ error: 'Guild not found' });
+
+    const { userId, reason, duration = 60 } = req.body;
+    if (!userId) return res.status(400).json({ error: 'userId is required' });
+
+    const client = getClient(req);
+
+    const member = await guild.members.fetch(userId).catch(() => null);
+    if (!member) return res.status(404).json({ error: 'Member not found in server' });
+
+    const ms = Math.min(parseInt(duration), 40320) * 60 * 1000; // max 28 days
+    await member.timeout(ms, reason || 'No reason provided (Dashboard)');
+
+    db.run(
+      'INSERT INTO mod_actions (action_type, guild_id, user_id, moderator_id, reason, duration) VALUES (?, ?, ?, ?, ?, ?)',
+      ['timeout', guild.id, userId, client.user.id, reason || 'Dashboard action', `${duration}m`]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('API timeout error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /api/guilds/:guildId/moderation/clear
+ * Body: { channelId, amount }
+ */
+router.post('/:guildId/moderation/clear', async (req, res) => {
+  try {
+    const guild = getGuild(req);
+    if (!guild) return res.status(404).json({ error: 'Guild not found' });
+
+    const { channelId, amount = 10 } = req.body;
+    if (!channelId) return res.status(400).json({ error: 'channelId is required' });
+
+    const channel = guild.channels.cache.get(channelId);
+    if (!channel) return res.status(404).json({ error: 'Channel not found' });
+    if (!channel.isTextBased()) return res.status(400).json({ error: 'Not a text channel' });
+
+    const count = Math.min(parseInt(amount), 100);
+    const deleted = await channel.bulkDelete(count, true);
+
+    const client = getClient(req);
+    db.run(
+      'INSERT INTO mod_actions (action_type, guild_id, user_id, moderator_id, reason) VALUES (?, ?, ?, ?, ?)',
+      ['clear', guild.id, channelId, client.user.id, `Cleared ${deleted.size} messages in #${channel.name}`]
+    );
+
+    res.json({ success: true, deleted: deleted.size });
+  } catch (err) {
+    console.error('API clear error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * GET /api/guilds/:guildId/moderation/blocklist
+ */
+router.get('/:guildId/moderation/blocklist', (req, res) => {
+  try {
+    const { guildId } = req.params;
+    const words = db.all('SELECT * FROM blocked_words WHERE guild_id = ? ORDER BY added_at DESC', [guildId]);
+    res.json({ words });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /api/guilds/:guildId/moderation/blocklist
+ * Body: { word }
+ */
+router.post('/:guildId/moderation/blocklist', (req, res) => {
+  try {
+    const { guildId } = req.params;
+    const { word } = req.body;
+    if (!word) return res.status(400).json({ error: 'word is required' });
+
+    const client = getClient(req);
+    db.run(
+      'INSERT OR IGNORE INTO blocked_words (guild_id, word, added_by) VALUES (?, ?, ?)',
+      [guildId, word.toLowerCase().trim(), client.user.id]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * DELETE /api/guilds/:guildId/moderation/blocklist/:wordId
+ */
+router.delete('/:guildId/moderation/blocklist/:wordId', (req, res) => {
+  try {
+    const { guildId, wordId } = req.params;
+    db.run('DELETE FROM blocked_words WHERE id = ? AND guild_id = ?', [wordId, guildId]);
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -194,13 +486,91 @@ router.get('/:guildId/roles', (req, res) => {
         id: r.id,
         name: r.name,
         color: r.hexColor,
-        members: r.members.size,
+        memberCount: r.members.size,
         position: r.position,
         managed: r.managed,
+        hoist: r.hoist,
+        mentionable: r.mentionable,
+        permissions: r.permissions.toArray(),
       }));
 
     res.json({ roles });
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /api/guilds/:guildId/roles
+ * Body: { name, color, hoist, mentionable }
+ */
+router.post('/:guildId/roles', async (req, res) => {
+  try {
+    const guild = getGuild(req);
+    if (!guild) return res.status(404).json({ error: 'Guild not found' });
+
+    const { name, color, hoist = false, mentionable = false } = req.body;
+    if (!name) return res.status(400).json({ error: 'name is required' });
+
+    const role = await guild.roles.create({
+      name,
+      color: color || undefined,
+      hoist: !!hoist,
+      mentionable: !!mentionable,
+      reason: 'Created via Dashboard',
+    });
+
+    res.json({ success: true, role: { id: role.id, name: role.name, color: role.hexColor } });
+  } catch (err) {
+    console.error('API create role error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * PUT /api/guilds/:guildId/roles/:roleId
+ * Body: { name, color, hoist, mentionable }
+ */
+router.put('/:guildId/roles/:roleId', async (req, res) => {
+  try {
+    const guild = getGuild(req);
+    if (!guild) return res.status(404).json({ error: 'Guild not found' });
+
+    const role = guild.roles.cache.get(req.params.roleId);
+    if (!role) return res.status(404).json({ error: 'Role not found' });
+    if (role.managed) return res.status(400).json({ error: 'Cannot edit managed/bot roles' });
+
+    const updates = {};
+    if (req.body.name !== undefined) updates.name = req.body.name;
+    if (req.body.color !== undefined) updates.color = req.body.color || null;
+    if (req.body.hoist !== undefined) updates.hoist = !!req.body.hoist;
+    if (req.body.mentionable !== undefined) updates.mentionable = !!req.body.mentionable;
+
+    await role.edit({ ...updates, reason: 'Edited via Dashboard' });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('API edit role error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * DELETE /api/guilds/:guildId/roles/:roleId
+ */
+router.delete('/:guildId/roles/:roleId', async (req, res) => {
+  try {
+    const guild = getGuild(req);
+    if (!guild) return res.status(404).json({ error: 'Guild not found' });
+
+    const role = guild.roles.cache.get(req.params.roleId);
+    if (!role) return res.status(404).json({ error: 'Role not found' });
+    if (role.managed) return res.status(400).json({ error: 'Cannot delete managed/bot roles' });
+
+    await role.delete('Deleted via Dashboard');
+    res.json({ success: true });
+  } catch (err) {
+    console.error('API delete role error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -257,10 +627,11 @@ router.delete('/:guildId/roles/:roleId/members/:userId', async (req, res) => {
  * GET /api/guilds/:guildId/leveling/leaderboard
  * Query: search (user_id), limit
  */
-router.get('/:guildId/leveling/leaderboard', (req, res) => {
+router.get('/:guildId/leveling/leaderboard', async (req, res) => {
   try {
     const { guildId } = req.params;
     const { search, limit = 25 } = req.query;
+    const guild = getGuild(req);
 
     let query = 'SELECT * FROM levels WHERE guild_id = ?';
     const params = [guildId];
@@ -274,7 +645,26 @@ router.get('/:guildId/leveling/leaderboard', (req, res) => {
     params.push(parseInt(limit));
 
     const users = db.all(query, params);
-    res.json({ users });
+
+    // Enrich with usernames from cache
+    const enriched = [];
+    for (const u of users) {
+      let username = u.user_id;
+      if (guild) {
+        const member = guild.members.cache.get(u.user_id);
+        if (member) username = member.user.username;
+      }
+      enriched.push({
+        userId: u.user_id,
+        username,
+        level: u.level,
+        xp: Math.round(u.xp * 10) / 10,
+        messageCount: u.messages,
+        voiceMinutes: u.voice_minutes || 0,
+      });
+    }
+
+    res.json({ users: enriched });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -291,6 +681,14 @@ router.get('/:guildId/leveling/stats', (req, res) => {
       'SELECT COUNT(*) as count FROM levels WHERE guild_id = ?', [guildId]
     )?.count || 0;
 
+    const totalXp = db.get(
+      'SELECT SUM(xp) as total FROM levels WHERE guild_id = ?', [guildId]
+    )?.total || 0;
+
+    const avgLevel = db.get(
+      'SELECT AVG(level) as avg FROM levels WHERE guild_id = ?', [guildId]
+    )?.avg || 0;
+
     const topLevel = db.get(
       'SELECT MAX(level) as maxLevel FROM levels WHERE guild_id = ?', [guildId]
     )?.maxLevel || 0;
@@ -299,7 +697,15 @@ router.get('/:guildId/leveling/stats', (req, res) => {
       'SELECT SUM(messages) as total FROM levels WHERE guild_id = ?', [guildId]
     )?.total || 0;
 
-    res.json({ totalUsers, topLevel, totalMessages });
+    res.json({
+      totalUsers,
+      activeUsers: totalUsers,
+      totalXp: Math.round(totalXp),
+      averageLevel: avgLevel,
+      topLevel,
+      totalMessages,
+      topTierMembers: 0,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -327,8 +733,45 @@ router.post('/:guildId/leveling/xp', (req, res) => {
   }
 });
 
+/**
+ * POST /api/guilds/:guildId/leveling/reset
+ * Body: { userId }  — reset single user
+ */
+router.post('/:guildId/leveling/reset', (req, res) => {
+  try {
+    const { guildId } = req.params;
+    const { userId } = req.body;
+
+    if (!userId) return res.status(400).json({ error: 'userId is required' });
+
+    db.run('DELETE FROM levels WHERE user_id = ? AND guild_id = ?', [userId, guildId]);
+    db.run('DELETE FROM daily_xp WHERE user_id = ? AND guild_id = ?', [userId, guildId]);
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /api/guilds/:guildId/leveling/reset-all
+ * Resets ALL user XP for the guild
+ */
+router.post('/:guildId/leveling/reset-all', (req, res) => {
+  try {
+    const { guildId } = req.params;
+
+    db.run('DELETE FROM levels WHERE guild_id = ?', [guildId]);
+    db.run('DELETE FROM daily_xp WHERE guild_id = ?', [guildId]);
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ══════════════════════════════════════════════════════════════════════════
-// CONFIG
+// CONFIG & SETUP
 // ══════════════════════════════════════════════════════════════════════════
 
 /**
@@ -351,7 +794,11 @@ router.get('/:guildId/config', (req, res) => {
       if (process.env[key]) env[key] = process.env[key];
     });
 
-    res.json({ config, env });
+    // Get guild locale
+    const { guildId } = req.params;
+    const guildSetting = db.get('SELECT locale FROM guild_settings WHERE guild_id = ?', [guildId]);
+
+    res.json({ config, env, locale: guildSetting?.locale || process.env.LOCALE || 'en' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -373,6 +820,36 @@ router.put('/:guildId/config', (req, res) => {
     fs.writeFileSync(configFilePath, JSON.stringify(newConfig, null, 2), 'utf-8');
 
     res.json({ success: true, message: 'Config saved. Restart the bot to apply changes.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /api/guilds/:guildId/config/language
+ * Body: { locale }
+ */
+router.post('/:guildId/config/language', (req, res) => {
+  try {
+    const { guildId } = req.params;
+    const { locale } = req.body;
+
+    const supported = ['en', 'tr', 'de', 'es', 'fr', 'pt', 'ru', 'ar'];
+    if (!locale || !supported.includes(locale)) {
+      return res.status(400).json({ error: `Unsupported locale. Supported: ${supported.join(', ')}` });
+    }
+
+    // Upsert guild locale
+    const existing = db.get('SELECT guild_id FROM guild_settings WHERE guild_id = ?', [guildId]);
+    if (existing) {
+      db.run('UPDATE guild_settings SET locale = ?, updated_at = ? WHERE guild_id = ?',
+        [locale, new Date().toISOString(), guildId]);
+    } else {
+      db.run('INSERT INTO guild_settings (guild_id, locale, updated_at) VALUES (?, ?, ?)',
+        [guildId, locale, new Date().toISOString()]);
+    }
+
+    res.json({ success: true, locale });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -44,6 +44,11 @@
           <button class="tab" onclick="switchTab('warnings')">Warnings</button>
           <button class="tab" onclick="switchTab('stats')">Statistics</button>
           <button class="tab" onclick="switchTab('issue')">Issue Warning</button>
+          <button class="tab" onclick="switchTab('ban')">Ban User</button>
+          <button class="tab" onclick="switchTab('kick')">Kick User</button>
+          <button class="tab" onclick="switchTab('timeout')">Timeout User</button>
+          <button class="tab" onclick="switchTab('clear')">Clear Messages</button>
+          <button class="tab" onclick="switchTab('blocklist')">Blocklist</button>
         </div>
 
         <!-- Actions Log Tab -->
@@ -190,6 +195,158 @@
             </form>
           </div>
         </div>
+
+        <!-- Ban User Tab -->
+        <div id="ban" class="tab-content">
+          <div class="card">
+            <h2 class="card-title">Ban User</h2>
+
+            <form id="ban-form" style="max-width: 500px;">
+              <div class="form-group">
+                <label for="ban-user-id">User ID</label>
+                <input type="text" id="ban-user-id" name="userId" required placeholder="Discord user ID">
+              </div>
+
+              <div class="form-group">
+                <label for="ban-reason">Reason</label>
+                <textarea id="ban-reason" name="reason" required placeholder="Why is this user being banned?"></textarea>
+              </div>
+
+              <div class="form-group">
+                <label for="ban-delete-days">Delete Messages (Days)</label>
+                <select id="ban-delete-days" name="deleteMessageDays" required>
+                  <option value="0">0 days</option>
+                  <option value="1">1 day</option>
+                  <option value="2">2 days</option>
+                  <option value="3">3 days</option>
+                  <option value="4">4 days</option>
+                  <option value="5">5 days</option>
+                  <option value="6">6 days</option>
+                  <option value="7">7 days</option>
+                </select>
+              </div>
+
+              <button type="submit" class="btn btn-danger">Ban User</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Kick User Tab -->
+        <div id="kick" class="tab-content">
+          <div class="card">
+            <h2 class="card-title">Kick User</h2>
+
+            <form id="kick-form" style="max-width: 500px;">
+              <div class="form-group">
+                <label for="kick-user-id">User ID</label>
+                <input type="text" id="kick-user-id" name="userId" required placeholder="Discord user ID">
+              </div>
+
+              <div class="form-group">
+                <label for="kick-reason">Reason</label>
+                <textarea id="kick-reason" name="reason" required placeholder="Why is this user being kicked?"></textarea>
+              </div>
+
+              <button type="submit" class="btn btn-warning">Kick User</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Timeout User Tab -->
+        <div id="timeout" class="tab-content">
+          <div class="card">
+            <h2 class="card-title">Timeout User</h2>
+
+            <form id="timeout-form" style="max-width: 500px;">
+              <div class="form-group">
+                <label for="timeout-user-id">User ID</label>
+                <input type="text" id="timeout-user-id" name="userId" required placeholder="Discord user ID">
+              </div>
+
+              <div class="form-group">
+                <label for="timeout-reason">Reason</label>
+                <textarea id="timeout-reason" name="reason" required placeholder="Why is this user being timed out?"></textarea>
+              </div>
+
+              <div class="form-group">
+                <label for="timeout-duration">Duration</label>
+                <select id="timeout-duration" name="duration" required>
+                  <option value="5">5 minutes</option>
+                  <option value="15">15 minutes</option>
+                  <option value="30">30 minutes</option>
+                  <option value="60">1 hour</option>
+                  <option value="360">6 hours</option>
+                  <option value="720">12 hours</option>
+                  <option value="1440">24 hours</option>
+                  <option value="10080">7 days</option>
+                </select>
+              </div>
+
+              <button type="submit" class="btn btn-primary">Timeout User</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Clear Messages Tab -->
+        <div id="clear" class="tab-content">
+          <div class="card">
+            <h2 class="card-title">Clear Messages</h2>
+
+            <form id="clear-form" style="max-width: 500px;">
+              <div class="form-group">
+                <label for="clear-channel">Channel</label>
+                <select id="clear-channel" name="channelId" required>
+                  <option value="">Loading channels...</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="clear-amount">Number of Messages</label>
+                <input type="number" id="clear-amount" name="amount" required placeholder="Number of messages to delete" min="1" max="100">
+              </div>
+
+              <button type="submit" class="btn btn-danger">Clear Messages</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Blocklist Tab -->
+        <div id="blocklist" class="tab-content">
+          <div class="card">
+            <h2 class="card-title">Add Word to Blocklist</h2>
+
+            <form id="blocklist-add-form" style="max-width: 500px;">
+              <div class="form-group">
+                <label for="blocklist-word">Word</label>
+                <input type="text" id="blocklist-word" name="word" required placeholder="Enter word to block">
+              </div>
+
+              <button type="submit" class="btn btn-primary">Add to Blocklist</button>
+            </form>
+          </div>
+
+          <div class="card">
+            <h2 class="card-title">Blocked Words</h2>
+
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Word</th>
+                    <th>Added By</th>
+                    <th>Added At</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="blocklist-table-body">
+                  <tr>
+                    <td colspan="4" style="text-align: center; color: #b9bbbe; padding: 20px;">Loading...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -219,6 +376,10 @@
         loadWarnings();
       } else if (tabName === 'stats') {
         loadModerationStats();
+      } else if (tabName === 'clear') {
+        loadChannels();
+      } else if (tabName === 'blocklist') {
+        loadBlocklist();
       }
     }
 
@@ -349,6 +510,74 @@
       }
     }
 
+    async function loadChannels() {
+      try {
+        const guildId = getCurrentGuild();
+        if (!guildId) {
+          showToast('Please select a guild', 'warning');
+          return;
+        }
+
+        const data = await api(`/api/guilds/${guildId}/channels?type=text`);
+
+        const select = document.getElementById('clear-channel');
+        select.innerHTML = '<option value="">Select a channel...</option>';
+
+        if (!data.channels || data.channels.length === 0) {
+          select.innerHTML = '<option value="">No text channels found</option>';
+          return;
+        }
+
+        data.channels.forEach(channel => {
+          const option = document.createElement('option');
+          option.value = channel.id;
+          option.textContent = `#${escapeHtml(channel.name)}`;
+          select.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Failed to load channels:', error);
+        showToast('Failed to load channels', 'error');
+      }
+    }
+
+    async function loadBlocklist() {
+      try {
+        const guildId = getCurrentGuild();
+        if (!guildId) {
+          showToast('Please select a guild', 'warning');
+          return;
+        }
+
+        const data = await api(`/api/guilds/${guildId}/moderation/blocklist`);
+
+        const tbody = document.getElementById('blocklist-table-body');
+        tbody.innerHTML = '';
+
+        if (!data.words || data.words.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #b9bbbe; padding: 20px;">No blocked words</td></tr>';
+          return;
+        }
+
+        data.words.forEach(entry => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td><strong>${escapeHtml(entry.word)}</strong></td>
+            <td>${escapeHtml(entry.added_by || 'Unknown')}</td>
+            <td>${formatDate(entry.added_at)}</td>
+            <td>
+              <button class="btn btn-danger btn-small" onclick="removeBlocklistWord('${escapeHtml(entry.id)}')">
+                Remove
+              </button>
+            </td>
+          `;
+          tbody.appendChild(row);
+        });
+      } catch (error) {
+        console.error('Failed to load blocklist:', error);
+        showToast('Failed to load blocklist', 'error');
+      }
+    }
+
     function updatePagination() {
       const container = document.getElementById('actions-pagination');
       container.innerHTML = '';
@@ -399,6 +628,22 @@
       }
     }
 
+    async function removeBlocklistWord(wordId) {
+      if (!confirm('Remove this word from the blocklist?')) return;
+
+      try {
+        const guildId = getCurrentGuild();
+        await api(`/api/guilds/${guildId}/moderation/blocklist/${wordId}`, {
+          method: 'DELETE',
+        });
+        showToast('Word removed from blocklist', 'success');
+        loadBlocklist();
+      } catch (error) {
+        console.error('Failed to remove word:', error);
+        showToast('Failed to remove word', 'error');
+      }
+    }
+
     // Warning form submission
     document.getElementById('warning-form').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -413,6 +658,8 @@
         const userId = document.getElementById('warning-user-id').value;
         const reason = document.getElementById('warning-reason').value;
 
+        if (!confirm('Issue warning to this user?')) return;
+
         await api(`/api/guilds/${guildId}/moderation/warnings`, {
           method: 'POST',
           body: JSON.stringify({ userId, reason }),
@@ -424,6 +671,163 @@
       } catch (error) {
         console.error('Failed to issue warning:', error);
         showToast('Failed to issue warning', 'error');
+      }
+    });
+
+    // Ban form submission
+    document.getElementById('ban-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      try {
+        const guildId = getCurrentGuild();
+        if (!guildId) {
+          showToast('Please select a guild', 'warning');
+          return;
+        }
+
+        const userId = document.getElementById('ban-user-id').value;
+        const reason = document.getElementById('ban-reason').value;
+        const deleteMessageDays = parseInt(document.getElementById('ban-delete-days').value);
+
+        if (!confirm(`Ban user ${userId}? This action cannot be undone.`)) return;
+
+        await api(`/api/guilds/${guildId}/moderation/ban`, {
+          method: 'POST',
+          body: JSON.stringify({ userId, reason, deleteMessageDays }),
+        });
+
+        showToast('User banned successfully', 'success');
+        document.getElementById('ban-form').reset();
+      } catch (error) {
+        console.error('Failed to ban user:', error);
+        showToast('Failed to ban user', 'error');
+      }
+    });
+
+    // Kick form submission
+    document.getElementById('kick-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      try {
+        const guildId = getCurrentGuild();
+        if (!guildId) {
+          showToast('Please select a guild', 'warning');
+          return;
+        }
+
+        const userId = document.getElementById('kick-user-id').value;
+        const reason = document.getElementById('kick-reason').value;
+
+        if (!confirm(`Kick user ${userId}?`)) return;
+
+        await api(`/api/guilds/${guildId}/moderation/kick`, {
+          method: 'POST',
+          body: JSON.stringify({ userId, reason }),
+        });
+
+        showToast('User kicked successfully', 'success');
+        document.getElementById('kick-form').reset();
+      } catch (error) {
+        console.error('Failed to kick user:', error);
+        showToast('Failed to kick user', 'error');
+      }
+    });
+
+    // Timeout form submission
+    document.getElementById('timeout-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      try {
+        const guildId = getCurrentGuild();
+        if (!guildId) {
+          showToast('Please select a guild', 'warning');
+          return;
+        }
+
+        const userId = document.getElementById('timeout-user-id').value;
+        const reason = document.getElementById('timeout-reason').value;
+        const duration = parseInt(document.getElementById('timeout-duration').value);
+
+        if (!confirm(`Timeout user ${userId}?`)) return;
+
+        await api(`/api/guilds/${guildId}/moderation/timeout`, {
+          method: 'POST',
+          body: JSON.stringify({ userId, reason, duration }),
+        });
+
+        showToast('User timed out successfully', 'success');
+        document.getElementById('timeout-form').reset();
+      } catch (error) {
+        console.error('Failed to timeout user:', error);
+        showToast('Failed to timeout user', 'error');
+      }
+    });
+
+    // Clear messages form submission
+    document.getElementById('clear-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      try {
+        const guildId = getCurrentGuild();
+        if (!guildId) {
+          showToast('Please select a guild', 'warning');
+          return;
+        }
+
+        const channelId = document.getElementById('clear-channel').value;
+        const amount = parseInt(document.getElementById('clear-amount').value);
+
+        if (!channelId) {
+          showToast('Please select a channel', 'warning');
+          return;
+        }
+
+        if (!confirm(`Clear ${amount} messages from this channel? This action cannot be undone.`)) return;
+
+        await api(`/api/guilds/${guildId}/moderation/clear`, {
+          method: 'POST',
+          body: JSON.stringify({ channelId, amount }),
+        });
+
+        showToast('Messages cleared successfully', 'success');
+        document.getElementById('clear-form').reset();
+      } catch (error) {
+        console.error('Failed to clear messages:', error);
+        showToast('Failed to clear messages', 'error');
+      }
+    });
+
+    // Blocklist add form submission
+    document.getElementById('blocklist-add-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      try {
+        const guildId = getCurrentGuild();
+        if (!guildId) {
+          showToast('Please select a guild', 'warning');
+          return;
+        }
+
+        const word = document.getElementById('blocklist-word').value.trim();
+
+        if (!word) {
+          showToast('Please enter a word', 'warning');
+          return;
+        }
+
+        if (!confirm(`Add "${word}" to the blocklist?`)) return;
+
+        await api(`/api/guilds/${guildId}/moderation/blocklist`, {
+          method: 'POST',
+          body: JSON.stringify({ word }),
+        });
+
+        showToast('Word added to blocklist', 'success');
+        document.getElementById('blocklist-add-form').reset();
+        loadBlocklist();
+      } catch (error) {
+        console.error('Failed to add word to blocklist:', error);
+        showToast('Failed to add word', 'error');
       }
     });
 

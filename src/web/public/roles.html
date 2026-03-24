@@ -38,46 +38,122 @@
       </div>
 
       <div class="content-area">
-        <!-- Roles List -->
-        <div class="card">
-          <h2 class="card-title">Server Roles</h2>
+        <!-- Tab Navigation -->
+        <div class="tabs" style="margin-bottom: 20px;">
+          <button class="tab active" onclick="switchMainTab('server-roles')">Server Roles</button>
+          <button class="tab" onclick="switchMainTab('create-role')">Create Role</button>
+          <button class="tab" onclick="switchMainTab('give-role')">Give Role</button>
+          <button class="tab" onclick="switchMainTab('remove-role')">Remove Role</button>
+        </div>
 
-          <div class="filter-bar">
-            <input type="text" id="role-search" placeholder="Search roles..." style="flex: 1;">
-            <button class="btn btn-secondary btn-small" onclick="loadRoles()">Refresh</button>
-          </div>
+        <!-- Server Roles Tab -->
+        <div id="server-roles-content" class="tab-content active">
+          <div class="card">
+            <h2 class="card-title">Server Roles</h2>
 
-          <div class="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Color</th>
-                  <th>Members</th>
-                  <th>Position</th>
-                  <th>Permissions</th>
-                </tr>
-              </thead>
-              <tbody id="roles-table-body">
-                <tr>
-                  <td colspan="5" style="text-align: center; color: #b9bbbe; padding: 20px;">Loading...</td>
-                </tr>
-              </tbody>
-            </table>
+            <div class="filter-bar">
+              <input type="text" id="role-search" placeholder="Search roles..." style="flex: 1;">
+              <button class="btn btn-secondary btn-small" onclick="loadRoles()">Refresh</button>
+            </div>
+
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Members</th>
+                    <th>Position</th>
+                    <th>Hoist</th>
+                    <th>Mentionable</th>
+                    <th>Managed</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="roles-table-body">
+                  <tr>
+                    <td colspan="7" style="text-align: center; color: #b9bbbe; padding: 20px;">Loading...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Edit Role Section (shown when editing) -->
+            <div id="edit-role-section" style="display: none; margin-top: 30px; padding-top: 20px; border-top: 1px solid #2c2f33;">
+              <h3 style="margin-bottom: 15px;">Edit Role</h3>
+              <form id="edit-role-form">
+                <div class="form-group">
+                  <label for="edit-role-name">Role Name</label>
+                  <input type="text" id="edit-role-name" name="name" required>
+                </div>
+
+                <div class="form-group">
+                  <label for="edit-role-color">Color</label>
+                  <input type="color" id="edit-role-color" name="color" value="#000000">
+                </div>
+
+                <div class="form-group" style="display: flex; gap: 15px;">
+                  <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="edit-role-hoist" name="hoist">
+                    Hoist (show separately in member list)
+                  </label>
+                </div>
+
+                <div class="form-group" style="display: flex; gap: 15px;">
+                  <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="edit-role-mentionable" name="mentionable">
+                    Mentionable (allow users to mention)
+                  </label>
+                </div>
+
+                <div style="display: flex; gap: 10px;">
+                  <button type="submit" class="btn btn-success">Save Changes</button>
+                  <button type="button" class="btn btn-secondary" onclick="cancelEditRole()">Cancel</button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
 
-        <!-- Give/Remove Role Section -->
-        <div class="card" style="max-width: 600px;">
-          <h2 class="card-title">Manage User Roles</h2>
+        <!-- Create Role Tab -->
+        <div id="create-role-content" class="tab-content">
+          <div class="card" style="max-width: 600px;">
+            <h2 class="card-title">Create New Role</h2>
 
-          <div class="tabs">
-            <button class="tab active" onclick="switchRoleTab('give')">Give Role</button>
-            <button class="tab" onclick="switchRoleTab('remove')">Remove Role</button>
+            <form id="create-role-form">
+              <div class="form-group">
+                <label for="create-role-name">Role Name</label>
+                <input type="text" id="create-role-name" name="name" required placeholder="Enter role name">
+              </div>
+
+              <div class="form-group">
+                <label for="create-role-color">Color</label>
+                <input type="color" id="create-role-color" name="color" value="#000000">
+              </div>
+
+              <div class="form-group" style="display: flex; gap: 15px;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                  <input type="checkbox" id="create-role-hoist" name="hoist">
+                  Hoist (show separately in member list)
+                </label>
+              </div>
+
+              <div class="form-group" style="display: flex; gap: 15px;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                  <input type="checkbox" id="create-role-mentionable" name="mentionable">
+                  Mentionable (allow users to mention)
+                </label>
+              </div>
+
+              <button type="submit" class="btn btn-primary">Create Role</button>
+            </form>
           </div>
+        </div>
 
-          <!-- Give Role Tab -->
-          <div id="give-tab" class="tab-content active">
+        <!-- Give Role Tab -->
+        <div id="give-role-content" class="tab-content">
+          <div class="card" style="max-width: 600px;">
+            <h2 class="card-title">Give Role to User</h2>
+
             <form id="give-role-form">
               <div class="form-group">
                 <label for="give-user-id">User ID</label>
@@ -94,9 +170,13 @@
               <button type="submit" class="btn btn-success">Give Role</button>
             </form>
           </div>
+        </div>
 
-          <!-- Remove Role Tab -->
-          <div id="remove-tab" class="tab-content">
+        <!-- Remove Role Tab -->
+        <div id="remove-role-content" class="tab-content">
+          <div class="card" style="max-width: 600px;">
+            <h2 class="card-title">Remove Role from User</h2>
+
             <form id="remove-role-form">
               <div class="form-group">
                 <label for="remove-user-id">User ID</label>
@@ -121,17 +201,75 @@
   <script src="/js/dashboard.js"></script>
   <script>
     let allRoles = [];
+    let editingRoleId = null;
 
-    function switchRoleTab(tabName) {
-      document.querySelectorAll('[id$="-tab"]').forEach(el => {
+    function switchMainTab(tabName) {
+      // Hide all content sections
+      document.querySelectorAll('[id$="-content"]').forEach(el => {
         el.classList.remove('active');
       });
-      document.querySelectorAll('.tab').forEach(el => {
+      document.querySelectorAll('.tabs:not([id]) .tab').forEach(el => {
         el.classList.remove('active');
       });
 
-      document.getElementById(tabName + '-tab').classList.add('active');
+      // Show selected tab
+      document.getElementById(tabName + '-content').classList.add('active');
       event.target.classList.add('active');
+    }
+
+    function showEditRoleForm(roleId) {
+      const role = allRoles.find(r => r.id === roleId);
+      if (!role) return;
+
+      editingRoleId = roleId;
+
+      // Populate form with role data
+      document.getElementById('edit-role-name').value = role.name;
+      document.getElementById('edit-role-color').value = role.color || '#000000';
+      document.getElementById('edit-role-hoist').checked = role.hoist || false;
+      document.getElementById('edit-role-mentionable').checked = role.mentionable || false;
+
+      // Show edit section
+      document.getElementById('edit-role-section').style.display = 'block';
+      document.getElementById('edit-role-section').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function cancelEditRole() {
+      editingRoleId = null;
+      document.getElementById('edit-role-section').style.display = 'none';
+      document.getElementById('edit-role-form').reset();
+    }
+
+    async function deleteRole(roleId) {
+      const role = allRoles.find(r => r.id === roleId);
+      if (!role) return;
+
+      if (role.managed) {
+        showToast('Cannot delete managed roles', 'warning');
+        return;
+      }
+
+      if (!confirm(`Are you sure you want to delete the role "${escapeHtml(role.name)}"?`)) {
+        return;
+      }
+
+      try {
+        const guildId = getCurrentGuild();
+        if (!guildId) {
+          showToast('Please select a guild', 'warning');
+          return;
+        }
+
+        await api(`/api/guilds/${guildId}/roles/${roleId}`, {
+          method: 'DELETE',
+        });
+
+        showToast('Role deleted successfully', 'success');
+        loadRoles();
+      } catch (error) {
+        console.error('Failed to delete role:', error);
+        showToast('Failed to delete role', 'error');
+      }
     }
 
     async function loadRoles() {
@@ -158,24 +296,26 @@
         tbody.innerHTML = '';
 
         if (filtered.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #b9bbbe; padding: 20px;">No roles found</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #b9bbbe; padding: 20px;">No roles found</td></tr>';
           return;
         }
 
         filtered.forEach(role => {
           const row = document.createElement('tr');
-          const colorStyle = role.color ? `background-color: ${role.color}; color: white;` : '';
+          const colorDot = role.color
+            ? `<span style="display: inline-block; width: 12px; height: 12px; border-radius: 2px; background-color: ${role.color}; margin-right: 8px;"></span>`
+            : '';
+
           row.innerHTML = `
-            <td><strong>${escapeHtml(role.name)}</strong></td>
-            <td>
-              ${role.color ? `<div style="width: 20px; height: 20px; border-radius: 4px; ${colorStyle}"></div>` : 'No color'}
-            </td>
+            <td>${colorDot}<strong>${escapeHtml(role.name)}</strong></td>
             <td>${formatNumber(role.memberCount || 0)}</td>
             <td>${role.position || 0}</td>
+            <td>${role.hoist ? '<span class="badge">✓</span>' : '-'}</td>
+            <td>${role.mentionable ? '<span class="badge">✓</span>' : '-'}</td>
+            <td>${role.managed ? '<span class="badge badge-info">Managed</span>' : '-'}</td>
             <td>
-              ${role.permissions && role.permissions.length > 0
-                ? `<span class="badge badge-info">${role.permissions.length} perms</span>`
-                : 'None'}
+              <button class="btn btn-secondary btn-small" onclick="showEditRoleForm('${role.id}')" title="Edit role">Edit</button>
+              ${!role.managed ? `<button class="btn btn-danger btn-small" onclick="deleteRole('${role.id}')" title="Delete role">Delete</button>` : ''}
             </td>
           `;
           tbody.appendChild(row);
@@ -208,6 +348,70 @@
       });
     }
 
+    // Create role form
+    document.getElementById('create-role-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      try {
+        const guildId = getCurrentGuild();
+        if (!guildId) {
+          showToast('Please select a guild', 'warning');
+          return;
+        }
+
+        const name = document.getElementById('create-role-name').value;
+        const color = document.getElementById('create-role-color').value;
+        const hoist = document.getElementById('create-role-hoist').checked;
+        const mentionable = document.getElementById('create-role-mentionable').checked;
+
+        await api(`/api/guilds/${guildId}/roles`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, color, hoist, mentionable }),
+        });
+
+        showToast('Role created successfully', 'success');
+        document.getElementById('create-role-form').reset();
+        loadRoles();
+      } catch (error) {
+        console.error('Failed to create role:', error);
+        showToast('Failed to create role', 'error');
+      }
+    });
+
+    // Edit role form
+    document.getElementById('edit-role-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      if (!editingRoleId) return;
+
+      try {
+        const guildId = getCurrentGuild();
+        if (!guildId) {
+          showToast('Please select a guild', 'warning');
+          return;
+        }
+
+        const name = document.getElementById('edit-role-name').value;
+        const color = document.getElementById('edit-role-color').value;
+        const hoist = document.getElementById('edit-role-hoist').checked;
+        const mentionable = document.getElementById('edit-role-mentionable').checked;
+
+        await api(`/api/guilds/${guildId}/roles/${editingRoleId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, color, hoist, mentionable }),
+        });
+
+        showToast('Role updated successfully', 'success');
+        cancelEditRole();
+        loadRoles();
+      } catch (error) {
+        console.error('Failed to update role:', error);
+        showToast('Failed to update role', 'error');
+      }
+    });
+
     // Give role form
     document.getElementById('give-role-form').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -223,7 +427,7 @@
         const roleId = document.getElementById('give-role').value;
 
         await api(`/api/guilds/${guildId}/roles/${roleId}/members/${userId}`, {
-          method: 'POST',
+          method: 'PUT',
         });
 
         showToast('Role given successfully', 'success');
@@ -271,6 +475,9 @@
         window.location.href = '/login.html';
       }
     });
+
+    // Search handler
+    document.getElementById('role-search').addEventListener('input', loadRoles);
 
     // Load initial data
     document.addEventListener('DOMContentLoaded', () => {

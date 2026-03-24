@@ -38,6 +38,37 @@
       </div>
 
       <div class="content-area">
+        <!-- Language Settings Card -->
+        <div class="card">
+          <h2 class="card-title">Language Settings</h2>
+          <p class="card-description">Select your preferred language for the bot interface</p>
+
+          <div class="form-group" style="margin-top: 16px;">
+            <label style="display: block; margin-bottom: 8px;">Current Language:</label>
+            <div id="currentLanguageDisplay" style="font-size: 1.1em; margin: 10px 0; font-weight: 600; color: #dcddde;">
+              <span id="langFlag"></span> <span id="langName"></span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="languageSelect" style="display: block; margin-bottom: 8px;">Choose Language:</label>
+            <select id="languageSelect" class="guild-selector" style="width: 100%;">
+              <option value="en">🇬🇧 English</option>
+              <option value="tr">🇹🇷 Türkçe</option>
+              <option value="de">🇩🇪 Deutsch</option>
+              <option value="es">🇪🇸 Español</option>
+              <option value="fr">🇫🇷 Français</option>
+              <option value="pt">🇵🇹 Português</option>
+              <option value="ru">🇷🇺 Русский</option>
+              <option value="ar">🇸🇦 العربية</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <button id="changeLanguageBtn" class="btn btn-primary">Change Language</button>
+          </div>
+        </div>
+
         <!-- JSON Editor -->
         <div class="card">
           <h2 class="card-title">Guild Configuration</h2>
@@ -111,7 +142,20 @@
 
   <script src="/js/dashboard.js"></script>
   <script>
+    // Language mapping with flags
+    const languageNames = {
+      'en': '🇬🇧 English',
+      'tr': '🇹🇷 Türkçe',
+      'de': '🇩🇪 Deutsch',
+      'es': '🇪🇸 Español',
+      'fr': '🇫🇷 Français',
+      'pt': '🇵🇹 Português',
+      'ru': '🇷🇺 Русский',
+      'ar': '🇸🇦 العربية'
+    };
+
     let originalConfig = '';
+    let currentLocale = 'en';
 
     async function loadConfig() {
       try {
@@ -134,10 +178,22 @@
 
         // Load environment variables
         loadEnvironmentVariables(data.environment);
+
+        // Load and display current language
+        if (data.locale) {
+          currentLocale = data.locale;
+          updateLanguageDisplay();
+        }
       } catch (error) {
         console.error('Failed to load config:', error);
         showToast('Failed to load configuration', 'error');
       }
+    }
+
+    function updateLanguageDisplay() {
+      const langDisplay = languageNames[currentLocale] || 'English';
+      document.getElementById('languageSelect').value = currentLocale;
+      document.getElementById('currentLanguageDisplay').innerHTML = langDisplay;
     }
 
     function loadEnvironmentVariables(envVars) {
@@ -149,15 +205,18 @@
         return;
       }
 
-      // Only show safe variables (not secrets)
-      const safeVars = ['NODE_ENV', 'LOG_LEVEL', 'BOT_VERSION', 'DATABASE_URL', 'API_HOST'];
+      // Filter out sensitive variables
+      const sensitiveKeywords = ['TOKEN', 'SECRET', 'PASSWORD', 'KEY', 'CREDENTIAL'];
+      const filteredVars = Object.entries(envVars).filter(([key]) => {
+        return !sensitiveKeywords.some(keyword => key.toUpperCase().includes(keyword));
+      });
 
-      Object.entries(envVars).forEach(([key, value]) => {
-        // Skip sensitive variables
-        if (key.includes('TOKEN') || key.includes('SECRET') || key.includes('PASSWORD')) {
-          return;
-        }
+      if (filteredVars.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="2" style="text-align: center; color: #b9bbbe; padding: 20px;">No safe variables to display</td></tr>';
+        return;
+      }
 
+      filteredVars.forEach(([key, value]) => {
         const row = document.createElement('tr');
         row.innerHTML = `
           <td><strong>${escapeHtml(key)}</strong></td>
@@ -210,6 +269,33 @@
       const editor = document.getElementById('config-editor');
       editor.value = originalConfig;
       showToast('Configuration reset to last saved version', 'info');
+    });
+
+    // Change language
+    document.getElementById('changeLanguageBtn').addEventListener('click', async () => {
+      try {
+        const guildId = getCurrentGuild();
+        if (!guildId) {
+          showToast('Please select a guild', 'warning');
+          return;
+        }
+
+        const selectedLocale = document.getElementById('languageSelect').value;
+
+        const response = await api(`/api/guilds/${guildId}/config/language`, {
+          method: 'POST',
+          body: JSON.stringify({ locale: selectedLocale }),
+        });
+
+        if (response.success || response.locale) {
+          currentLocale = selectedLocale;
+          updateLanguageDisplay();
+          showToast(`Language changed to ${languageNames[selectedLocale]}`, 'success');
+        }
+      } catch (error) {
+        console.error('Failed to change language:', error);
+        showToast('Failed to change language', 'error');
+      }
     });
 
     // Logout handler
