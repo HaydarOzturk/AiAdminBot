@@ -126,9 +126,19 @@
         const lineCount = document.getElementById('line-count-select').value;
         const logLevel = document.getElementById('log-level-filter').value;
 
-        const data = await api(`/api/logs?lines=${lineCount}&level=${logLevel}`);
+        const data = await api(`/api/logs?lines=${lineCount}`);
 
-        allLogs = (data.logs || []).split('\n').filter(line => line.trim());
+        // API returns logs as an array of strings
+        const rawLogs = data.logs || [];
+        allLogs = (Array.isArray(rawLogs) ? rawLogs : String(rawLogs).split('\n'))
+          .filter(line => line.trim());
+
+        // Client-side level filter
+        if (logLevel) {
+          allLogs = allLogs.filter(line =>
+            line.toLowerCase().includes(logLevel.toLowerCase())
+          );
+        }
 
         displayLogs(allLogs);
       } catch (error) {
