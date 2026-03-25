@@ -12,7 +12,7 @@ const path = require('path');
 const { projectPath } = require('../../utils/paths');
 
 // Keys that should be masked when reading (show ••••••)
-const SENSITIVE_KEYS = ['DISCORD_TOKEN', 'GEMINI_API_KEY', 'OPENROUTER_API_KEY', 'WEB_PASSWORD', 'TWITCH_CLIENT_SECRET'];
+const SENSITIVE_KEYS = ['DISCORD_TOKEN', 'GEMINI_API_KEY', 'OPENROUTER_API_KEY', 'WEB_PASSWORD', 'TWITCH_CLIENT_SECRET', 'KICK_CLIENT_SECRET'];
 
 // All known .env keys grouped by feature
 const ENV_SCHEMA = {
@@ -49,6 +49,8 @@ const ENV_SCHEMA = {
       { key: 'YOUTUBE_API_KEY', label: 'YouTube API Key', type: 'password', placeholder: 'From Google Cloud Console' },
       { key: 'TWITCH_CLIENT_ID', label: 'Twitch Client ID', type: 'text', placeholder: 'From dev.twitch.tv' },
       { key: 'TWITCH_CLIENT_SECRET', label: 'Twitch Client Secret', type: 'password', placeholder: 'From dev.twitch.tv' },
+      { key: 'KICK_CLIENT_ID', label: 'Kick Client ID', type: 'text', placeholder: 'From kick.com/api (optional)' },
+      { key: 'KICK_CLIENT_SECRET', label: 'Kick Client Secret', type: 'password', placeholder: 'From kick.com/api (optional)' },
     ],
   },
   linkFilter: {

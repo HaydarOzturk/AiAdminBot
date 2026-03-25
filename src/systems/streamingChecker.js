@@ -91,6 +91,34 @@ function postForm(url, body, ms = 6000) {
 
 // ─── Kick ────────────────────────────────────────────────────────────────────
 
+// Cache the Kick app access token in memory
+let _kickToken = null;
+let _kickTokenExpiry = 0;
+
+/**
+ * Get a Kick app access token using Client Credentials flow.
+ * @returns {Promise<string|null>}
+ */
+async function getKickToken() {
+  const clientId = process.env.KICK_CLIENT_ID;
+  const clientSecret = process.env.KICK_CLIENT_SECRET;
+  if (!clientId || !clientSecret) return null;
+
+  if (_kickToken && Date.now() < _kickTokenExpiry) return _kickToken;
+
+  const data = await postForm('https://id.kick.com/oauth/token', {
+    client_id: clientId,
+    client_secret: clientSecret,
+    grant_type: 'client_credentials',
+  });
+
+  if (!data?.access_token) return null;
+
+  _kickToken = data.access_token;
+  _kickTokenExpiry = Date.now() + (data.expires_in || 3600) * 1000 - 60000;
+  return _kickToken;
+}
+
 /**
  * Extract the Kick channel slug from a URL or handle.
  */
@@ -102,22 +130,81 @@ function extractKickSlug(input) {
 
 /**
  * Check if a Kick channel is live.
+ * Strategy:
+ *  1. If KICK_CLIENT_ID & KICK_CLIENT_SECRET are set → use official API (api.kick.com)
+ *  2. Otherwise → try legacy v1 API (kick.com/api/v1/channels/{slug})
+ *  3. Fallback to v2 API as last resort
  */
 async function checkKick(handleOrUrl) {
   const slug = extractKickSlug(handleOrUrl);
-  const apiUrl = `https://kick.com/api/v2/channels/${encodeURIComponent(slug)}`;
-  const data = await fetchJson(apiUrl);
+  const channelUrl = `https://kick.com/${slug}`;
 
-  if (!data) {
-    return { isLive: false, title: '', viewers: 0, url: `https://kick.com/${slug}` };
+  // ── Strategy 1: Official Kick API (OAuth) ─────────────────────────────
+  const kickToken = await getKickToken();
+  if (kickToken) {
+    try {
+      // Try by slug query — official API
+      const data = await fetchJson(
+        `https://api.kick.com/public/v1/channels?slug=${encodeURIComponent(slug)}`,
+        { 'Authorization': `Bearer ${kickToken}` }
+      );
+
+      if (data?.data?.[0]) {
+        const ch = data.data[0];
+        const isLive = !!(ch.is_live || ch.livestream?.is_live);
+        return {
+          isLive,
+          title: ch.livestream?.session_title || ch.stream_title || '',
+          viewers: ch.livestream?.viewer_count || ch.viewer_count || 0,
+          url: channelUrl,
+        };
+      }
+
+      // Try /livestreams endpoint as alternative
+      const liveData = await fetchJson(
+        `https://api.kick.com/public/v1/livestreams?slug=${encodeURIComponent(slug)}`,
+        { 'Authorization': `Bearer ${kickToken}` }
+      );
+
+      if (liveData?.data?.[0]) {
+        const ls = liveData.data[0];
+        return {
+          isLive: true,
+          title: ls.session_title || ls.title || '',
+          viewers: ls.viewer_count || 0,
+          url: channelUrl,
+        };
+      }
+    } catch (err) {
+      console.warn('⚠️ Kick official API error:', err.message);
+    }
   }
 
-  return {
-    isLive: !!(data.livestream && data.livestream.is_live),
-    title: data.livestream?.session_title || '',
-    viewers: data.livestream?.viewer_count || 0,
-    url: `https://kick.com/${slug}`,
-  };
+  // ── Strategy 2: Legacy v1 API (no auth) ───────────────────────────────
+  const v1Data = await fetchJson(`https://kick.com/api/v1/channels/${encodeURIComponent(slug)}`);
+  if (v1Data) {
+    const isLive = !!(v1Data.livestream && v1Data.livestream.is_live);
+    return {
+      isLive,
+      title: v1Data.livestream?.session_title || '',
+      viewers: v1Data.livestream?.viewer_count || 0,
+      url: channelUrl,
+    };
+  }
+
+  // ── Strategy 3: Legacy v2 API (no auth, last resort) ──────────────────
+  const v2Data = await fetchJson(`https://kick.com/api/v2/channels/${encodeURIComponent(slug)}`);
+  if (v2Data) {
+    return {
+      isLive: !!(v2Data.livestream && v2Data.livestream.is_live),
+      title: v2Data.livestream?.session_title || '',
+      viewers: v2Data.livestream?.viewer_count || 0,
+      url: channelUrl,
+    };
+  }
+
+  console.warn(`⚠️ Kick: all API strategies failed for slug "${slug}"`);
+  return { isLive: false, title: '', viewers: 0, url: channelUrl };
 }
 
 // ─── Twitch ──────────────────────────────────────────────────────────────────
