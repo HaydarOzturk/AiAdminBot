@@ -17,31 +17,41 @@ const https = require('https');
 
 /**
  * Simple HTTPS GET that returns parsed JSON. Times out after `ms` ms.
+ * Uses browser-like headers to avoid Cloudflare blocks.
  * @param {string} url
  * @param {object} [extraHeaders={}]
- * @param {number} [ms=6000]
+ * @param {number} [ms=8000]
  * @returns {Promise<object|null>}
  */
-function fetchJson(url, extraHeaders = {}, ms = 6000) {
+function fetchJson(url, extraHeaders = {}, ms = 8000) {
   const parsed = new URL(url);
   const options = {
     hostname: parsed.hostname,
     path: parsed.pathname + parsed.search,
     timeout: ms,
-    headers: { 'User-Agent': 'AiAdminBot/1.0', ...extraHeaders },
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'application/json, text/plain, */*',
+      'Accept-Language': 'en-US,en;q=0.9',
+      ...extraHeaders,
+    },
   };
 
   return new Promise(resolve => {
     const req = https.get(options, res => {
-      if (res.statusCode !== 200) { res.resume(); return resolve(null); }
+      if (res.statusCode !== 200) {
+        console.warn(`⚠️ fetchJson ${parsed.hostname}${parsed.pathname} → HTTP ${res.statusCode}`);
+        res.resume();
+        return resolve(null);
+      }
       let data = '';
       res.on('data', chunk => { data += chunk; });
       res.on('end', () => {
         try { resolve(JSON.parse(data)); } catch { resolve(null); }
       });
     });
-    req.on('error', () => resolve(null));
-    req.on('timeout', () => { req.destroy(); resolve(null); });
+    req.on('error', (err) => { console.warn(`⚠️ fetchJson ${parsed.hostname} error: ${err.message}`); resolve(null); });
+    req.on('timeout', () => { req.destroy(); console.warn(`⚠️ fetchJson ${parsed.hostname} timeout`); resolve(null); });
   });
 }
 
