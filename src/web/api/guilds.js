@@ -785,7 +785,8 @@ router.post('/:guildId/roles', async (req, res) => {
 
 /**
  * PUT /api/guilds/:guildId/roles/:roleId
- * Body: { name, color, hoist, mentionable }
+ * Body: { name, color, hoist, mentionable, permissions }
+ * permissions: array of permission flag names to enable (e.g. ['SendMessages', 'ViewChannel'])
  */
 router.put('/:guildId/roles/:roleId', async (req, res) => {
   try {
@@ -802,11 +803,50 @@ router.put('/:guildId/roles/:roleId', async (req, res) => {
     if (req.body.hoist !== undefined) updates.hoist = !!req.body.hoist;
     if (req.body.mentionable !== undefined) updates.mentionable = !!req.body.mentionable;
 
+    // Handle permissions update
+    if (Array.isArray(req.body.permissions)) {
+      const { PermissionsBitField } = require('discord.js');
+      const validPerms = Object.keys(PermissionsBitField.Flags);
+      const filtered = req.body.permissions.filter(p => validPerms.includes(p));
+      updates.permissions = filtered;
+    }
+
     await role.edit({ ...updates, reason: 'Edited via Dashboard' });
 
     res.json({ success: true });
   } catch (err) {
     console.error('API edit role error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * GET /api/guilds/:guildId/roles/:roleId/members
+ * Returns members with this role (for the role detail view)
+ * Query: limit (default 50)
+ */
+router.get('/:guildId/roles/:roleId/members', (req, res) => {
+  try {
+    const guild = getGuild(req);
+    if (!guild) return res.status(404).json({ error: 'Guild not found' });
+
+    const role = guild.roles.cache.get(req.params.roleId);
+    if (!role) return res.status(404).json({ error: 'Role not found' });
+
+    const limit = Math.min(parseInt(req.query.limit) || 50, 100);
+
+    const members = [...role.members.values()]
+      .slice(0, limit)
+      .map(m => ({
+        id: m.id,
+        username: m.user.username,
+        displayName: m.displayName,
+        avatar: m.user.displayAvatarURL({ size: 32 }),
+        bot: m.user.bot,
+      }));
+
+    res.json({ members, total: role.members.size });
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });

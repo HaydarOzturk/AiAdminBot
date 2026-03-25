@@ -5,6 +5,143 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Roles - Admin Dashboard</title>
   <link rel="stylesheet" href="/css/dashboard.css">
+  <style>
+    /* Split layout */
+    .roles-layout { display: grid; grid-template-columns: 320px 1fr; gap: 16px; min-height: calc(100vh - 140px); }
+    @media (max-width: 900px) { .roles-layout { grid-template-columns: 1fr; } }
+
+    /* Role list */
+    .role-list-panel { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; }
+    .role-list-header { padding: 12px 16px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 8px; }
+    .role-list-header h3 { font-size: 14px; margin: 0; flex-shrink: 0; }
+    .role-list-header input { flex: 1; font-size: 12px; padding: 6px 10px; }
+    .role-list-scroll { overflow-y: auto; flex: 1; padding: 4px; }
+
+    .role-item {
+      display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+      border-radius: 6px; cursor: pointer; transition: background 0.15s;
+      margin-bottom: 2px;
+    }
+    .role-item:hover { background: rgba(255,255,255,0.04); }
+    .role-item.selected { background: rgba(88,101,242,0.15); }
+    .role-color-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; border: 2px solid rgba(255,255,255,0.1); }
+    .role-item-info { flex: 1; min-width: 0; }
+    .role-item-name { font-size: 14px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .role-item-meta { font-size: 11px; color: var(--text-muted); display: flex; gap: 8px; }
+    .role-item-badges { display: flex; gap: 4px; flex-shrink: 0; }
+    .role-mini-badge { font-size: 9px; padding: 1px 5px; border-radius: 3px; background: rgba(255,255,255,0.06); color: var(--text-muted); }
+    .role-mini-badge.managed { background: rgba(88,101,242,0.2); color: #7983f5; }
+
+    /* Detail panel */
+    .role-detail-panel { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; overflow-y: auto; max-height: calc(100vh - 140px); }
+
+    .detail-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; min-height: 400px; color: var(--text-muted); text-align: center; padding: 40px; }
+    .detail-empty .icon { font-size: 48px; margin-bottom: 16px; }
+
+    .role-detail-content { padding: 24px; }
+    .role-detail-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color); }
+    .role-detail-color { width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0; border: 3px solid rgba(255,255,255,0.1); }
+    .role-detail-title { flex: 1; }
+    .role-detail-title h2 { font-size: 20px; margin: 0 0 2px; }
+    .role-detail-title .meta-row { font-size: 12px; color: var(--text-muted); display: flex; gap: 12px; }
+    .role-detail-actions { display: flex; gap: 8px; }
+
+    /* Sections */
+    .role-section { margin-bottom: 24px; }
+    .role-section-title {
+      font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+      color: var(--text-muted); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+    }
+    .role-section-title .count { font-weight: 400; }
+
+    /* Properties grid */
+    .props-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 700px) { .props-grid { grid-template-columns: 1fr; } }
+    .prop-card {
+      background: var(--bg-tertiary); border-radius: 8px; padding: 14px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .prop-card label { font-size: 13px; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; gap: 8px; }
+    .prop-card .prop-icon { font-size: 16px; }
+
+    /* Toggle switch */
+    .toggle { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute; inset: 0; background: #4f545c; border-radius: 11px;
+      cursor: pointer; transition: background 0.2s;
+    }
+    .toggle-slider::before {
+      content: ''; position: absolute; width: 16px; height: 16px; border-radius: 50%;
+      background: white; bottom: 3px; left: 3px; transition: transform 0.2s;
+    }
+    .toggle input:checked + .toggle-slider { background: #57f287; }
+    .toggle input:checked + .toggle-slider::before { transform: translateX(18px); }
+    .toggle input:disabled + .toggle-slider { opacity: 0.5; cursor: not-allowed; }
+
+    /* Permission groups */
+    .perm-group { margin-bottom: 16px; }
+    .perm-group-header {
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+      color: var(--text-muted); padding: 8px 0 6px; margin-bottom: 4px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .perm-row {
+      display: flex; align-items: center; gap: 10px; padding: 8px 4px;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+    .perm-row:last-child { border-bottom: none; }
+    .perm-icon { width: 20px; text-align: center; font-size: 14px; }
+    .perm-info { flex: 1; }
+    .perm-name { font-size: 13px; color: var(--text-primary); }
+    .perm-desc { font-size: 11px; color: var(--text-muted); }
+    .perm-danger { background: rgba(237,66,69,0.06); border-radius: 4px; padding: 2px 4px; }
+
+    /* Members list */
+    .member-row {
+      display: flex; align-items: center; gap: 10px; padding: 8px 4px;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+    .member-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; background: var(--bg-tertiary); }
+    .member-name { font-size: 13px; color: var(--text-primary); flex: 1; }
+    .member-id { font-size: 11px; color: var(--text-muted); font-family: monospace; }
+
+    /* Assign role panel */
+    .assign-panel { background: var(--bg-tertiary); border-radius: 8px; padding: 16px; margin-top: 12px; }
+    .assign-panel .assign-row { display: flex; gap: 8px; align-items: center; }
+    .assign-panel input { flex: 1; font-size: 13px; }
+
+    /* Save bar */
+    .save-bar {
+      position: sticky; bottom: 0; background: #5865f2; border-radius: 8px;
+      padding: 12px 20px; display: none; align-items: center; justify-content: space-between;
+      margin-top: 20px; box-shadow: 0 -4px 16px rgba(0,0,0,0.3);
+    }
+    .save-bar.visible { display: flex; }
+    .save-bar span { font-size: 14px; font-weight: 600; }
+    .save-bar .save-actions { display: flex; gap: 8px; }
+
+    /* Color input wrapper */
+    .color-input-wrap { display: flex; align-items: center; gap: 10px; }
+    .color-input-wrap input[type="color"] { width: 36px; height: 36px; border: none; border-radius: 8px; cursor: pointer; padding: 0; background: none; }
+    .color-input-wrap .color-hex { font-size: 12px; color: var(--text-muted); font-family: monospace; }
+
+    /* Name edit inline */
+    .name-edit-wrap { display: flex; align-items: center; gap: 8px; }
+    .name-edit-wrap input { font-size: 18px; font-weight: 700; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 10px; color: var(--text-primary); width: 100%; }
+
+    /* Create role form */
+    .create-form { max-width: 500px; }
+    .create-form .form-group { margin-bottom: 16px; }
+    .create-form label { font-size: 13px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 6px; }
+    .create-form input[type="text"] { width: 100%; }
+
+    /* Quick perm presets */
+    .preset-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+    .preset-btn { font-size: 11px; padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-secondary); cursor: pointer; transition: all 0.15s; }
+    .preset-btn:hover { background: rgba(88,101,242,0.15); border-color: #5865f2; color: var(--text-primary); }
+    .preset-btn.active { background: rgba(88,101,242,0.25); border-color: #5865f2; color: #5865f2; }
+  </style>
 </head>
 <body>
   <div class="layout">
@@ -36,163 +173,143 @@
     <div class="main-content">
       <div class="content-header">
         <h1 class="content-title">Role Management</h1>
+        <button class="btn btn-primary" onclick="showCreatePanel()">+ New Role</button>
       </div>
 
       <div class="content-area">
-        <!-- Tab Navigation -->
-        <div class="tabs" style="margin-bottom: 20px;">
-          <button class="tab active" onclick="switchMainTab('server-roles')">Server Roles</button>
-          <button class="tab" onclick="switchMainTab('create-role')">Create Role</button>
-          <button class="tab" onclick="switchMainTab('give-role')">Give Role</button>
-          <button class="tab" onclick="switchMainTab('remove-role')">Remove Role</button>
-        </div>
+        <div class="roles-layout">
+          <!-- Left: Role List -->
+          <div class="role-list-panel">
+            <div class="role-list-header">
+              <h3>Roles</h3>
+              <input type="text" id="role-search" placeholder="Search..." oninput="filterRoles()">
+            </div>
+            <div class="role-list-scroll" id="role-list"></div>
+          </div>
 
-        <!-- Server Roles Tab -->
-        <div id="server-roles-content" class="tab-content active">
-          <div class="card">
-            <h2 class="card-title">Server Roles</h2>
-
-            <div class="filter-bar">
-              <input type="text" id="role-search" placeholder="Search roles..." style="flex: 1;">
-              <button class="btn btn-secondary btn-small" onclick="loadRoles()">Refresh</button>
+          <!-- Right: Detail Panel -->
+          <div class="role-detail-panel" id="detail-panel">
+            <!-- Empty state -->
+            <div id="detail-empty" class="detail-empty">
+              <div class="icon">👥</div>
+              <h2 style="color: var(--text-primary); margin-bottom: 8px;">Select a Role</h2>
+              <p style="font-size: 13px;">Click on any role to view its properties, permissions, and members.</p>
             </div>
 
-            <div class="table-wrapper">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Members</th>
-                    <th>Position</th>
-                    <th>Hoist</th>
-                    <th>Mentionable</th>
-                    <th>Managed</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="roles-table-body">
-                  <tr>
-                    <td colspan="7" style="text-align: center; color: #b9bbbe; padding: 20px;">Loading...</td>
-                  </tr>
-                </tbody>
-              </table>
+            <!-- Role Detail -->
+            <div id="detail-content" style="display: none;" class="role-detail-content">
+              <!-- Header -->
+              <div class="role-detail-header">
+                <div class="role-detail-color" id="rd-color"></div>
+                <div class="role-detail-title">
+                  <div class="name-edit-wrap">
+                    <input type="text" id="rd-name" onchange="markDirty()">
+                  </div>
+                  <div class="meta-row">
+                    <span id="rd-members-count"></span>
+                    <span id="rd-position"></span>
+                    <span id="rd-managed-badge"></span>
+                  </div>
+                </div>
+                <div class="role-detail-actions">
+                  <button class="btn btn-danger btn-small" id="rd-delete-btn" onclick="deleteSelectedRole()">Delete</button>
+                </div>
+              </div>
+
+              <!-- Display Settings -->
+              <div class="role-section">
+                <div class="role-section-title">Display Settings</div>
+                <div class="props-grid">
+                  <div class="prop-card">
+                    <label><span class="prop-icon">🎨</span> Color</label>
+                    <div class="color-input-wrap">
+                      <input type="color" id="rd-color-picker" onchange="updateColorPreview(); markDirty();">
+                      <span class="color-hex" id="rd-color-hex">#000000</span>
+                    </div>
+                  </div>
+                  <div class="prop-card">
+                    <label for="rd-hoist"><span class="prop-icon">📌</span> Show separately</label>
+                    <label class="toggle"><input type="checkbox" id="rd-hoist" onchange="markDirty()"><span class="toggle-slider"></span></label>
+                  </div>
+                  <div class="prop-card">
+                    <label for="rd-mentionable"><span class="prop-icon">📢</span> Mentionable</label>
+                    <label class="toggle"><input type="checkbox" id="rd-mentionable" onchange="markDirty()"><span class="toggle-slider"></span></label>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Permissions -->
+              <div class="role-section">
+                <div class="role-section-title">Permissions <span class="count" id="rd-perm-count"></span></div>
+                <div class="preset-bar">
+                  <button class="preset-btn" onclick="applyPreset('none')">No Permissions</button>
+                  <button class="preset-btn" onclick="applyPreset('member')">Basic Member</button>
+                  <button class="preset-btn" onclick="applyPreset('moderator')">Moderator</button>
+                  <button class="preset-btn" onclick="applyPreset('admin')">Administrator</button>
+                </div>
+                <div id="rd-permissions"></div>
+              </div>
+
+              <!-- Members with this role -->
+              <div class="role-section">
+                <div class="role-section-title">Members <span class="count" id="rd-member-list-count"></span></div>
+                <div id="rd-member-list"></div>
+                <div class="assign-panel">
+                  <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Give or remove this role</div>
+                  <div class="assign-row">
+                    <input type="text" id="rd-assign-user" placeholder="User ID or search name...">
+                    <button class="btn btn-success btn-small" onclick="giveRoleToUser()">Give</button>
+                    <button class="btn btn-danger btn-small" onclick="removeRoleFromUser()">Remove</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Save bar -->
+              <div class="save-bar" id="save-bar">
+                <span>You have unsaved changes</span>
+                <div class="save-actions">
+                  <button class="btn btn-secondary btn-small" onclick="discardChanges()">Discard</button>
+                  <button class="btn btn-success btn-small" onclick="saveRole()">Save Changes</button>
+                </div>
+              </div>
             </div>
 
-            <!-- Edit Role Section (shown when editing) -->
-            <div id="edit-role-section" style="display: none; margin-top: 30px; padding-top: 20px; border-top: 1px solid #2c2f33;">
-              <h3 style="margin-bottom: 15px;">Edit Role</h3>
-              <form id="edit-role-form">
+            <!-- Create Role Panel -->
+            <div id="create-panel" style="display: none;" class="role-detail-content">
+              <div class="role-detail-header">
+                <div class="role-detail-color" style="background: #5865f2;"></div>
+                <div class="role-detail-title">
+                  <h2>Create New Role</h2>
+                  <div class="meta-row"><span>Set up a new role with custom permissions</span></div>
+                </div>
+                <button class="btn btn-secondary btn-small" onclick="hideCreatePanel()">Cancel</button>
+              </div>
+
+              <form class="create-form" id="create-role-form">
                 <div class="form-group">
-                  <label for="edit-role-name">Role Name</label>
-                  <input type="text" id="edit-role-name" name="name" required>
+                  <label>Role Name</label>
+                  <input type="text" id="cr-name" required placeholder="e.g. Moderator, VIP, Member">
                 </div>
-
                 <div class="form-group">
-                  <label for="edit-role-color">Color</label>
-                  <input type="color" id="edit-role-color" name="color" value="#000000">
+                  <label>Color</label>
+                  <div class="color-input-wrap">
+                    <input type="color" id="cr-color" value="#5865f2">
+                    <span class="color-hex" id="cr-color-hex">#5865f2</span>
+                  </div>
                 </div>
-
-                <div class="form-group" style="display: flex; gap: 15px;">
-                  <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                    <input type="checkbox" id="edit-role-hoist" name="hoist">
-                    Hoist (show separately in member list)
-                  </label>
+                <div class="props-grid" style="margin-bottom: 16px;">
+                  <div class="prop-card">
+                    <label for="cr-hoist"><span class="prop-icon">📌</span> Show separately</label>
+                    <label class="toggle"><input type="checkbox" id="cr-hoist"><span class="toggle-slider"></span></label>
+                  </div>
+                  <div class="prop-card">
+                    <label for="cr-mentionable"><span class="prop-icon">📢</span> Mentionable</label>
+                    <label class="toggle"><input type="checkbox" id="cr-mentionable"><span class="toggle-slider"></span></label>
+                  </div>
                 </div>
-
-                <div class="form-group" style="display: flex; gap: 15px;">
-                  <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                    <input type="checkbox" id="edit-role-mentionable" name="mentionable">
-                    Mentionable (allow users to mention)
-                  </label>
-                </div>
-
-                <div style="display: flex; gap: 10px;">
-                  <button type="submit" class="btn btn-success">Save Changes</button>
-                  <button type="button" class="btn btn-secondary" onclick="cancelEditRole()">Cancel</button>
-                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Create Role</button>
               </form>
             </div>
-          </div>
-        </div>
-
-        <!-- Create Role Tab -->
-        <div id="create-role-content" class="tab-content">
-          <div class="card" style="max-width: 600px;">
-            <h2 class="card-title">Create New Role</h2>
-
-            <form id="create-role-form">
-              <div class="form-group">
-                <label for="create-role-name">Role Name</label>
-                <input type="text" id="create-role-name" name="name" required placeholder="Enter role name">
-              </div>
-
-              <div class="form-group">
-                <label for="create-role-color">Color</label>
-                <input type="color" id="create-role-color" name="color" value="#000000">
-              </div>
-
-              <div class="form-group" style="display: flex; gap: 15px;">
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                  <input type="checkbox" id="create-role-hoist" name="hoist">
-                  Hoist (show separately in member list)
-                </label>
-              </div>
-
-              <div class="form-group" style="display: flex; gap: 15px;">
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                  <input type="checkbox" id="create-role-mentionable" name="mentionable">
-                  Mentionable (allow users to mention)
-                </label>
-              </div>
-
-              <button type="submit" class="btn btn-primary">Create Role</button>
-            </form>
-          </div>
-        </div>
-
-        <!-- Give Role Tab -->
-        <div id="give-role-content" class="tab-content">
-          <div class="card" style="max-width: 600px;">
-            <h2 class="card-title">Give Role to User</h2>
-
-            <form id="give-role-form">
-              <div class="form-group">
-                <label for="give-user-id">User ID</label>
-                <input type="text" id="give-user-id" name="userId" required placeholder="Discord user ID">
-              </div>
-
-              <div class="form-group">
-                <label for="give-role">Role</label>
-                <select id="give-role" name="roleId" required>
-                  <option value="">Select a role...</option>
-                </select>
-              </div>
-
-              <button type="submit" class="btn btn-success">Give Role</button>
-            </form>
-          </div>
-        </div>
-
-        <!-- Remove Role Tab -->
-        <div id="remove-role-content" class="tab-content">
-          <div class="card" style="max-width: 600px;">
-            <h2 class="card-title">Remove Role from User</h2>
-
-            <form id="remove-role-form">
-              <div class="form-group">
-                <label for="remove-user-id">User ID</label>
-                <input type="text" id="remove-user-id" name="userId" required placeholder="Discord user ID">
-              </div>
-
-              <div class="form-group">
-                <label for="remove-role">Role</label>
-                <select id="remove-role" name="roleId" required>
-                  <option value="">Select a role...</option>
-                </select>
-              </div>
-
-              <button type="submit" class="btn btn-danger">Remove Role</button>
-            </form>
           </div>
         </div>
       </div>
@@ -202,288 +319,431 @@
   <script src="/js/dashboard.js"></script>
   <script>
     let allRoles = [];
-    let editingRoleId = null;
+    let selectedRoleId = null;
+    let isDirty = false;
+    let originalRoleData = null;
 
-    function switchMainTab(tabName) {
-      // Hide all content sections
-      document.querySelectorAll('[id$="-content"]').forEach(el => {
-        el.classList.remove('active');
-      });
-      document.querySelectorAll('.tabs:not([id]) .tab').forEach(el => {
-        el.classList.remove('active');
-      });
+    // ── Permission definitions ───────────────────────────────────────────
+    const PERM_GROUPS = {
+      General: [
+        { key: 'ViewChannel', label: 'View Channels', icon: '👁️', desc: 'See channels and read messages' },
+        { key: 'ManageChannels', label: 'Manage Channels', icon: '⚙️', desc: 'Create, edit, and delete channels', danger: true },
+        { key: 'ManageRoles', label: 'Manage Roles', icon: '🔑', desc: 'Create and edit roles below this one', danger: true },
+        { key: 'ManageGuildExpressions', label: 'Manage Expressions', icon: '😀', desc: 'Add, remove, and edit emojis and stickers' },
+        { key: 'ViewAuditLog', label: 'View Audit Log', icon: '📋', desc: 'View the server audit log' },
+        { key: 'ManageWebhooks', label: 'Manage Webhooks', icon: '🪝', desc: 'Create and manage webhooks', danger: true },
+        { key: 'ManageGuild', label: 'Manage Server', icon: '🏠', desc: 'Change server name, icon, and settings', danger: true },
+        { key: 'CreateInstantInvite', label: 'Create Invite', icon: '✉️', desc: 'Create server invites' },
+        { key: 'ChangeNickname', label: 'Change Nickname', icon: '✏️', desc: 'Change their own nickname' },
+        { key: 'ManageNicknames', label: 'Manage Nicknames', icon: '📝', desc: 'Change nicknames of other members' },
+        { key: 'ManageEvents', label: 'Manage Events', icon: '📅', desc: 'Create, edit, and delete events' },
+      ],
+      'Text Channels': [
+        { key: 'SendMessages', label: 'Send Messages', icon: '💬', desc: 'Send messages in text channels' },
+        { key: 'SendMessagesInThreads', label: 'Send in Threads', icon: '🧵', desc: 'Send messages in threads' },
+        { key: 'CreatePublicThreads', label: 'Create Threads', icon: '➕', desc: 'Create public threads' },
+        { key: 'CreatePrivateThreads', label: 'Private Threads', icon: '🔒', desc: 'Create private threads' },
+        { key: 'EmbedLinks', label: 'Embed Links', icon: '🔗', desc: 'Send embedded links with previews' },
+        { key: 'AttachFiles', label: 'Attach Files', icon: '📎', desc: 'Upload files and images' },
+        { key: 'AddReactions', label: 'Add Reactions', icon: '😀', desc: 'Add emoji reactions to messages' },
+        { key: 'UseExternalEmojis', label: 'External Emojis', icon: '🎭', desc: 'Use emojis from other servers' },
+        { key: 'UseExternalStickers', label: 'External Stickers', icon: '🏷️', desc: 'Use stickers from other servers' },
+        { key: 'MentionEveryone', label: 'Mention @everyone', icon: '📢', desc: 'Mention @everyone and all roles', danger: true },
+        { key: 'ManageMessages', label: 'Manage Messages', icon: '🗑️', desc: 'Delete and pin messages from others', danger: true },
+        { key: 'ManageThreads', label: 'Manage Threads', icon: '🧹', desc: 'Delete and archive threads', danger: true },
+        { key: 'ReadMessageHistory', label: 'Read History', icon: '📜', desc: 'Read previous messages in channels' },
+        { key: 'SendTTSMessages', label: 'Send TTS', icon: '🔊', desc: 'Send text-to-speech messages' },
+        { key: 'UseApplicationCommands', label: 'Use Commands', icon: '/', desc: 'Use bot slash commands' },
+      ],
+      'Voice Channels': [
+        { key: 'Connect', label: 'Connect', icon: '🔊', desc: 'Join voice channels' },
+        { key: 'Speak', label: 'Speak', icon: '🎙️', desc: 'Talk in voice channels' },
+        { key: 'Stream', label: 'Video / Screen', icon: '📺', desc: 'Share screen and use video' },
+        { key: 'UseVAD', label: 'Voice Activity', icon: '🎚️', desc: 'Use voice activity detection' },
+        { key: 'PrioritySpeaker', label: 'Priority Speaker', icon: '⭐', desc: 'Be heard over other members' },
+        { key: 'MuteMembers', label: 'Mute Members', icon: '🔇', desc: 'Server-mute members in voice', danger: true },
+        { key: 'DeafenMembers', label: 'Deafen Members', icon: '🔈', desc: 'Server-deafen members in voice', danger: true },
+        { key: 'MoveMembers', label: 'Move Members', icon: '↔️', desc: 'Move members between voice channels', danger: true },
+      ],
+      Moderation: [
+        { key: 'KickMembers', label: 'Kick Members', icon: '👢', desc: 'Remove members from the server', danger: true },
+        { key: 'BanMembers', label: 'Ban Members', icon: '🔨', desc: 'Permanently ban members', danger: true },
+        { key: 'ModerateMembers', label: 'Timeout Members', icon: '⏱️', desc: 'Put members in timeout', danger: true },
+      ],
+      Dangerous: [
+        { key: 'Administrator', label: 'Administrator', icon: '⚡', desc: 'Full server access — overrides all permissions', danger: true },
+      ],
+    };
 
-      // Show selected tab
-      document.getElementById(tabName + '-content').classList.add('active');
-      event.target.classList.add('active');
-    }
+    // ── Permission presets ────────────────────────────────────────────────
+    const PRESETS = {
+      none: [],
+      member: ['ViewChannel','SendMessages','SendMessagesInThreads','CreatePublicThreads','EmbedLinks','AttachFiles','AddReactions','UseExternalEmojis','UseExternalStickers','ReadMessageHistory','UseApplicationCommands','Connect','Speak','Stream','UseVAD','ChangeNickname','CreateInstantInvite'],
+      moderator: ['ViewChannel','SendMessages','SendMessagesInThreads','CreatePublicThreads','CreatePrivateThreads','EmbedLinks','AttachFiles','AddReactions','UseExternalEmojis','UseExternalStickers','MentionEveryone','ManageMessages','ManageThreads','ReadMessageHistory','UseApplicationCommands','Connect','Speak','Stream','UseVAD','PrioritySpeaker','MuteMembers','DeafenMembers','MoveMembers','KickMembers','ModerateMembers','ChangeNickname','ManageNicknames','ManageEvents','ViewAuditLog','ManageGuildExpressions','CreateInstantInvite','SendTTSMessages'],
+      admin: ['Administrator'],
+    };
 
-    function showEditRoleForm(roleId) {
-      const role = allRoles.find(r => r.id === roleId);
-      if (!role) return;
-
-      editingRoleId = roleId;
-
-      // Populate form with role data
-      document.getElementById('edit-role-name').value = role.name;
-      document.getElementById('edit-role-color').value = role.color || '#000000';
-      document.getElementById('edit-role-hoist').checked = role.hoist || false;
-      document.getElementById('edit-role-mentionable').checked = role.mentionable || false;
-
-      // Show edit section
-      document.getElementById('edit-role-section').style.display = 'block';
-      document.getElementById('edit-role-section').scrollIntoView({ behavior: 'smooth' });
-    }
-
-    function cancelEditRole() {
-      editingRoleId = null;
-      document.getElementById('edit-role-section').style.display = 'none';
-      document.getElementById('edit-role-form').reset();
-    }
-
-    async function deleteRole(roleId) {
-      const role = allRoles.find(r => r.id === roleId);
-      if (!role) return;
-
-      if (role.managed) {
-        showToast('Cannot delete managed roles', 'warning');
-        return;
-      }
-
-      if (!confirm(`Are you sure you want to delete the role "${escapeHtml(role.name)}"?`)) {
-        return;
-      }
-
-      try {
-        const guildId = getCurrentGuild();
-        if (!guildId) {
-          showToast('Please select a guild', 'warning');
-          return;
-        }
-
-        await api(`/api/guilds/${guildId}/roles/${roleId}`, {
-          method: 'DELETE',
-        });
-
-        showToast('Role deleted successfully', 'success');
-        loadRoles();
-      } catch (error) {
-        console.error('Failed to delete role:', error);
-        showToast('Failed to delete role', 'error');
-      }
-    }
-
+    // ── Load Roles ───────────────────────────────────────────────────────
     async function loadRoles() {
       try {
         const guildId = getCurrentGuild();
-        if (!guildId) {
-          showToast('Please select a guild', 'warning');
-          return;
-        }
-
-        const search = document.getElementById('role-search')?.value.toLowerCase() || '';
-
+        if (!guildId) return;
         const data = await api(`/api/guilds/${guildId}/roles`);
-
         allRoles = data.roles || [];
-
-        // Filter roles
-        const filtered = search
-          ? allRoles.filter(r => r.name.toLowerCase().includes(search))
-          : allRoles;
-
-        // Update table
-        const tbody = document.getElementById('roles-table-body');
-        tbody.innerHTML = '';
-
-        if (filtered.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #b9bbbe; padding: 20px;">No roles found</td></tr>';
-          return;
-        }
-
-        filtered.forEach(role => {
-          const row = document.createElement('tr');
-          const colorDot = role.color
-            ? `<span style="display: inline-block; width: 12px; height: 12px; border-radius: 2px; background-color: ${role.color}; margin-right: 8px;"></span>`
-            : '';
-
-          row.innerHTML = `
-            <td>${colorDot}<strong>${escapeHtml(role.name)}</strong></td>
-            <td>${formatNumber(role.memberCount || 0)}</td>
-            <td>${role.position || 0}</td>
-            <td>${role.hoist ? '<span class="badge">✓</span>' : '-'}</td>
-            <td>${role.mentionable ? '<span class="badge">✓</span>' : '-'}</td>
-            <td>${role.managed ? '<span class="badge badge-info">Managed</span>' : '-'}</td>
-            <td>
-              <button class="btn btn-secondary btn-small" onclick="showEditRoleForm('${role.id}')" title="Edit role">Edit</button>
-              ${!role.managed ? `<button class="btn btn-danger btn-small" onclick="deleteRole('${role.id}')" title="Delete role">Delete</button>` : ''}
-            </td>
-          `;
-          tbody.appendChild(row);
-        });
-
-        // Update role selectors
-        updateRoleSelectors();
-      } catch (error) {
-        console.error('Failed to load roles:', error);
+        renderRoleList();
+      } catch (err) {
+        console.error('Failed to load roles:', err);
         showToast('Failed to load roles', 'error');
       }
     }
 
-    function updateRoleSelectors() {
-      const giveSelect = document.getElementById('give-role');
-      const removeSelect = document.getElementById('remove-role');
+    function filterRoles() { renderRoleList(); }
 
-      [giveSelect, removeSelect].forEach(select => {
-        const currentValue = select.value;
-        select.innerHTML = '<option value="">Select a role...</option>';
+    function renderRoleList() {
+      const list = document.getElementById('role-list');
+      const search = (document.getElementById('role-search')?.value || '').toLowerCase();
+      const filtered = search ? allRoles.filter(r => r.name.toLowerCase().includes(search)) : allRoles;
 
-        allRoles.forEach(role => {
-          const option = document.createElement('option');
-          option.value = role.id;
-          option.textContent = role.name;
-          select.appendChild(option);
-        });
+      list.innerHTML = '';
+      if (filtered.length === 0) {
+        list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px;">No roles found</div>';
+        return;
+      }
 
-        select.value = currentValue;
+      filtered.forEach(role => {
+        const div = document.createElement('div');
+        div.className = 'role-item' + (selectedRoleId === role.id ? ' selected' : '');
+        div.onclick = () => selectRole(role.id);
+
+        let badges = '';
+        if (role.managed) badges += '<span class="role-mini-badge managed">BOT</span>';
+        if (role.hoist) badges += '<span class="role-mini-badge">H</span>';
+        if (role.mentionable) badges += '<span class="role-mini-badge">@</span>';
+
+        div.innerHTML = `
+          <div class="role-color-dot" style="background: ${role.color || '#99aab5'};"></div>
+          <div class="role-item-info">
+            <div class="role-item-name">${escapeHtml(role.name)}</div>
+            <div class="role-item-meta">
+              <span>${role.memberCount || 0} member${role.memberCount !== 1 ? 's' : ''}</span>
+              <span>pos ${role.position}</span>
+            </div>
+          </div>
+          <div class="role-item-badges">${badges}</div>
+        `;
+        list.appendChild(div);
       });
     }
 
-    // Create role form
+    // ── Select Role ──────────────────────────────────────────────────────
+    async function selectRole(roleId) {
+      if (isDirty && !confirm('You have unsaved changes. Discard them?')) return;
+      isDirty = false;
+
+      selectedRoleId = roleId;
+      renderRoleList();
+
+      const role = allRoles.find(r => r.id === roleId);
+      if (!role) return;
+
+      originalRoleData = JSON.parse(JSON.stringify(role));
+
+      document.getElementById('detail-empty').style.display = 'none';
+      document.getElementById('create-panel').style.display = 'none';
+      document.getElementById('detail-content').style.display = 'block';
+      document.getElementById('save-bar').classList.remove('visible');
+
+      // Fill header
+      document.getElementById('rd-color').style.background = role.color || '#99aab5';
+      document.getElementById('rd-name').value = role.name;
+      document.getElementById('rd-members-count').textContent = `${role.memberCount || 0} members`;
+      document.getElementById('rd-position').textContent = `Position ${role.position}`;
+      document.getElementById('rd-managed-badge').innerHTML = role.managed
+        ? '<span class="role-mini-badge managed" style="font-size:11px;padding:2px 8px;">Managed by integration</span>' : '';
+
+      // Fill properties
+      document.getElementById('rd-color-picker').value = role.color && role.color !== '#000000' ? role.color : '#99aab5';
+      updateColorPreview();
+      document.getElementById('rd-hoist').checked = !!role.hoist;
+      document.getElementById('rd-mentionable').checked = !!role.mentionable;
+
+      // Disable editing for managed roles
+      const isManaged = !!role.managed;
+      document.getElementById('rd-name').disabled = isManaged;
+      document.getElementById('rd-color-picker').disabled = isManaged;
+      document.getElementById('rd-hoist').disabled = isManaged;
+      document.getElementById('rd-mentionable').disabled = isManaged;
+      document.getElementById('rd-delete-btn').style.display = isManaged ? 'none' : '';
+
+      // Render permissions
+      renderPermissions(role.permissions || []);
+
+      // Load members
+      loadRoleMembers(roleId);
+    }
+
+    function updateColorPreview() {
+      const v = document.getElementById('rd-color-picker').value;
+      document.getElementById('rd-color-hex').textContent = v;
+      document.getElementById('rd-color').style.background = v;
+    }
+
+    // ── Permissions ──────────────────────────────────────────────────────
+    function renderPermissions(activePerms) {
+      const container = document.getElementById('rd-permissions');
+      container.innerHTML = '';
+
+      const role = allRoles.find(r => r.id === selectedRoleId);
+      const isManaged = role?.managed;
+
+      let totalEnabled = 0;
+
+      for (const [groupName, perms] of Object.entries(PERM_GROUPS)) {
+        const group = document.createElement('div');
+        group.className = 'perm-group';
+        group.innerHTML = `<div class="perm-group-header">${groupName}</div>`;
+
+        perms.forEach(p => {
+          const enabled = activePerms.includes(p.key);
+          if (enabled) totalEnabled++;
+
+          const row = document.createElement('div');
+          row.className = 'perm-row' + (p.danger ? ' perm-danger' : '');
+          row.innerHTML = `
+            <span class="perm-icon">${p.icon}</span>
+            <div class="perm-info">
+              <div class="perm-name">${p.label}</div>
+              <div class="perm-desc">${p.desc}</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" data-perm="${p.key}" ${enabled ? 'checked' : ''} ${isManaged ? 'disabled' : ''} onchange="onPermToggle(this)">
+              <span class="toggle-slider"></span>
+            </label>
+          `;
+          group.appendChild(row);
+        });
+
+        container.appendChild(group);
+      }
+
+      document.getElementById('rd-perm-count').textContent = `(${totalEnabled} enabled)`;
+    }
+
+    function onPermToggle(cb) {
+      // If Administrator is toggled on, visually indicate it overrides everything
+      if (cb.dataset.perm === 'Administrator' && cb.checked) {
+        showToast('Administrator overrides all other permissions', 'warning');
+      }
+      markDirty();
+    }
+
+    function applyPreset(name) {
+      const perms = PRESETS[name] || [];
+      document.querySelectorAll('#rd-permissions input[data-perm]').forEach(cb => {
+        if (!cb.disabled) cb.checked = perms.includes(cb.dataset.perm);
+      });
+
+      // Update count
+      const total = document.querySelectorAll('#rd-permissions input[data-perm]:checked').length;
+      document.getElementById('rd-perm-count').textContent = `(${total} enabled)`;
+
+      markDirty();
+    }
+
+    function getSelectedPermissions() {
+      const perms = [];
+      document.querySelectorAll('#rd-permissions input[data-perm]:checked').forEach(cb => {
+        perms.push(cb.dataset.perm);
+      });
+      return perms;
+    }
+
+    // ── Members ──────────────────────────────────────────────────────────
+    async function loadRoleMembers(roleId) {
+      const list = document.getElementById('rd-member-list');
+      list.innerHTML = '<div style="padding:8px;color:var(--text-muted);font-size:12px;">Loading...</div>';
+
+      try {
+        const guildId = getCurrentGuild();
+        const data = await api(`/api/guilds/${guildId}/roles/${roleId}/members?limit=30`);
+        const members = data.members || [];
+        const total = data.total || 0;
+
+        document.getElementById('rd-member-list-count').textContent = `(${total})`;
+
+        if (members.length === 0) {
+          list.innerHTML = '<div style="padding:12px;color:var(--text-muted);font-size:13px;text-align:center;">No members with this role</div>';
+          return;
+        }
+
+        list.innerHTML = '';
+        members.forEach(m => {
+          const row = document.createElement('div');
+          row.className = 'member-row';
+          row.innerHTML = `
+            <img class="member-avatar" src="${m.avatar}" alt="" onerror="this.style.display='none'">
+            <span class="member-name">${escapeHtml(m.displayName)}${m.bot ? ' <span class="role-mini-badge managed">BOT</span>' : ''}</span>
+            <span class="member-id">${m.id}</span>
+          `;
+          list.appendChild(row);
+        });
+
+        if (total > members.length) {
+          list.innerHTML += `<div style="padding:8px;text-align:center;color:var(--text-muted);font-size:12px;">and ${total - members.length} more...</div>`;
+        }
+      } catch (err) {
+        list.innerHTML = '<div style="padding:8px;color:var(--accent-danger);font-size:12px;">Failed to load members</div>';
+      }
+    }
+
+    // ── Give / Remove role ───────────────────────────────────────────────
+    async function giveRoleToUser() {
+      const userId = document.getElementById('rd-assign-user').value.trim();
+      if (!userId || !selectedRoleId) { showToast('Enter a user ID', 'warning'); return; }
+
+      try {
+        const guildId = getCurrentGuild();
+        await api(`/api/guilds/${guildId}/roles/${selectedRoleId}/members/${userId}`, { method: 'PUT' });
+        showToast('Role given', 'success');
+        document.getElementById('rd-assign-user').value = '';
+        loadRoleMembers(selectedRoleId);
+        loadRoles();
+      } catch (err) { showToast('Failed: ' + (err.message || 'User not found'), 'error'); }
+    }
+
+    async function removeRoleFromUser() {
+      const userId = document.getElementById('rd-assign-user').value.trim();
+      if (!userId || !selectedRoleId) { showToast('Enter a user ID', 'warning'); return; }
+
+      try {
+        const guildId = getCurrentGuild();
+        await api(`/api/guilds/${guildId}/roles/${selectedRoleId}/members/${userId}`, { method: 'DELETE' });
+        showToast('Role removed', 'success');
+        document.getElementById('rd-assign-user').value = '';
+        loadRoleMembers(selectedRoleId);
+        loadRoles();
+      } catch (err) { showToast('Failed: ' + (err.message || 'User not found'), 'error'); }
+    }
+
+    // ── Save / Discard ───────────────────────────────────────────────────
+    function markDirty() {
+      isDirty = true;
+      document.getElementById('save-bar').classList.add('visible');
+    }
+
+    function discardChanges() {
+      isDirty = false;
+      document.getElementById('save-bar').classList.remove('visible');
+      if (selectedRoleId && originalRoleData) selectRole(selectedRoleId);
+    }
+
+    async function saveRole() {
+      if (!selectedRoleId) return;
+
+      const guildId = getCurrentGuild();
+      if (!guildId) return;
+
+      const body = {
+        name: document.getElementById('rd-name').value,
+        color: document.getElementById('rd-color-picker').value,
+        hoist: document.getElementById('rd-hoist').checked,
+        mentionable: document.getElementById('rd-mentionable').checked,
+        permissions: getSelectedPermissions(),
+      };
+
+      try {
+        await api(`/api/guilds/${guildId}/roles/${selectedRoleId}`, {
+          method: 'PUT',
+          body: JSON.stringify(body),
+        });
+
+        isDirty = false;
+        document.getElementById('save-bar').classList.remove('visible');
+        showToast('Role updated', 'success');
+        loadRoles();
+        setTimeout(() => selectRole(selectedRoleId), 300);
+      } catch (err) {
+        showToast('Failed to save: ' + (err.message || 'Unknown error'), 'error');
+      }
+    }
+
+    // ── Delete ───────────────────────────────────────────────────────────
+    async function deleteSelectedRole() {
+      const role = allRoles.find(r => r.id === selectedRoleId);
+      if (!role) return;
+      if (role.managed) { showToast('Cannot delete managed roles', 'warning'); return; }
+      if (!confirm(`Delete "${role.name}"? This cannot be undone.`)) return;
+
+      try {
+        const guildId = getCurrentGuild();
+        await api(`/api/guilds/${guildId}/roles/${selectedRoleId}`, { method: 'DELETE' });
+        showToast('Role deleted', 'success');
+        selectedRoleId = null;
+        isDirty = false;
+        document.getElementById('detail-content').style.display = 'none';
+        document.getElementById('detail-empty').style.display = '';
+        loadRoles();
+      } catch (err) { showToast('Failed to delete role', 'error'); }
+    }
+
+    // ── Create Role ──────────────────────────────────────────────────────
+    function showCreatePanel() {
+      if (isDirty && !confirm('Discard unsaved changes?')) return;
+      isDirty = false;
+      selectedRoleId = null;
+      renderRoleList();
+      document.getElementById('detail-empty').style.display = 'none';
+      document.getElementById('detail-content').style.display = 'none';
+      document.getElementById('save-bar').classList.remove('visible');
+      document.getElementById('create-panel').style.display = 'block';
+    }
+
+    function hideCreatePanel() {
+      document.getElementById('create-panel').style.display = 'none';
+      document.getElementById('detail-empty').style.display = '';
+    }
+
+    document.getElementById('cr-color').addEventListener('input', () => {
+      document.getElementById('cr-color-hex').textContent = document.getElementById('cr-color').value;
+    });
+
     document.getElementById('create-role-form').addEventListener('submit', async (e) => {
       e.preventDefault();
-
       try {
         const guildId = getCurrentGuild();
-        if (!guildId) {
-          showToast('Please select a guild', 'warning');
-          return;
-        }
+        if (!guildId) { showToast('Select a guild first', 'warning'); return; }
 
-        const name = document.getElementById('create-role-name').value;
-        const color = document.getElementById('create-role-color').value;
-        const hoist = document.getElementById('create-role-hoist').checked;
-        const mentionable = document.getElementById('create-role-mentionable').checked;
+        const body = {
+          name: document.getElementById('cr-name').value,
+          color: document.getElementById('cr-color').value,
+          hoist: document.getElementById('cr-hoist').checked,
+          mentionable: document.getElementById('cr-mentionable').checked,
+        };
 
-        await api(`/api/guilds/${guildId}/roles`, {
+        const result = await api(`/api/guilds/${guildId}/roles`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, color, hoist, mentionable }),
+          body: JSON.stringify(body),
         });
 
-        showToast('Role created successfully', 'success');
+        showToast(`Role "${body.name}" created`, 'success');
         document.getElementById('create-role-form').reset();
-        loadRoles();
-      } catch (error) {
-        console.error('Failed to create role:', error);
-        showToast('Failed to create role', 'error');
-      }
+        document.getElementById('cr-color-hex').textContent = '#5865f2';
+        hideCreatePanel();
+        await loadRoles();
+
+        // Auto-select the new role
+        if (result.role?.id) selectRole(result.role.id);
+      } catch (err) { showToast('Failed to create role', 'error'); }
     });
 
-    // Edit role form
-    document.getElementById('edit-role-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      if (!editingRoleId) return;
-
-      try {
-        const guildId = getCurrentGuild();
-        if (!guildId) {
-          showToast('Please select a guild', 'warning');
-          return;
-        }
-
-        const name = document.getElementById('edit-role-name').value;
-        const color = document.getElementById('edit-role-color').value;
-        const hoist = document.getElementById('edit-role-hoist').checked;
-        const mentionable = document.getElementById('edit-role-mentionable').checked;
-
-        await api(`/api/guilds/${guildId}/roles/${editingRoleId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, color, hoist, mentionable }),
-        });
-
-        showToast('Role updated successfully', 'success');
-        cancelEditRole();
-        loadRoles();
-      } catch (error) {
-        console.error('Failed to update role:', error);
-        showToast('Failed to update role', 'error');
-      }
-    });
-
-    // Give role form
-    document.getElementById('give-role-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      try {
-        const guildId = getCurrentGuild();
-        if (!guildId) {
-          showToast('Please select a guild', 'warning');
-          return;
-        }
-
-        const userId = document.getElementById('give-user-id').value;
-        const roleId = document.getElementById('give-role').value;
-
-        await api(`/api/guilds/${guildId}/roles/${roleId}/members/${userId}`, {
-          method: 'PUT',
-        });
-
-        showToast('Role given successfully', 'success');
-        document.getElementById('give-role-form').reset();
-        loadRoles();
-      } catch (error) {
-        console.error('Failed to give role:', error);
-        showToast('Failed to give role', 'error');
-      }
-    });
-
-    // Remove role form
-    document.getElementById('remove-role-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      try {
-        const guildId = getCurrentGuild();
-        if (!guildId) {
-          showToast('Please select a guild', 'warning');
-          return;
-        }
-
-        const userId = document.getElementById('remove-user-id').value;
-        const roleId = document.getElementById('remove-role').value;
-
-        await api(`/api/guilds/${guildId}/roles/${roleId}/members/${userId}`, {
-          method: 'DELETE',
-        });
-
-        showToast('Role removed successfully', 'success');
-        document.getElementById('remove-role-form').reset();
-        loadRoles();
-      } catch (error) {
-        console.error('Failed to remove role:', error);
-        showToast('Failed to remove role', 'error');
-      }
-    });
-
-    // Logout handler
+    // ── Logout ───────────────────────────────────────────────────────────
     document.getElementById('logout-btn').addEventListener('click', async () => {
-      try {
-        await api('/api/auth/logout', { method: 'POST' });
-        window.location.href = '/login.html';
-      } catch (error) {
-        window.location.href = '/login.html';
-      }
+      try { await api('/api/auth/logout', { method: 'POST' }); } catch {}
+      window.location.href = '/login.html';
     });
 
-    // Search handler
-    document.getElementById('role-search').addEventListener('input', loadRoles);
-
-    // Load initial data
-    document.addEventListener('DOMContentLoaded', () => {
-      loadRoles();
-    });
+    // ── Init ─────────────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => { loadRoles(); });
   </script>
 </body>
 </html>
