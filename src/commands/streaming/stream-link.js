@@ -6,7 +6,8 @@
  *   /stream-link remove <platform>
  *   /stream-link list
  *
- * Only the guild owner can manage streaming links.
+ * Links are always stored under the stream owner (STREAM_OWNER_ID or guild owner).
+ * The command can be used by: stream owner, guild owner, or debug owner.
  */
 
 const { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
@@ -14,7 +15,7 @@ const { hasPermission } = require('../../utils/permissions');
 const { createEmbed } = require('../../utils/embedBuilder');
 const { t } = require('../../utils/locale');
 const { run, all } = require('../../utils/database');
-const { PLATFORMS, extractKickSlug, parseYouTubeInput } = require('../../systems/streamingChecker');
+const { PLATFORMS, extractKickSlug, extractTwitchLogin, parseYouTubeInput } = require('../../systems/streamingChecker');
 
 const PLATFORM_CHOICES = Object.entries(PLATFORMS).map(([value, meta]) => ({
   name: meta.label,
@@ -24,7 +25,7 @@ const PLATFORM_CHOICES = Object.entries(PLATFORMS).map(([value, meta]) => ({
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('stream-link')
-    .setDescription('Manage your streaming platform links')
+    .setDescription('Manage streaming platform links')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addSubcommand(sub =>
       sub.setName('add')
@@ -53,7 +54,7 @@ module.exports = {
     )
     .addSubcommand(sub =>
       sub.setName('list')
-        .setDescription('List all your streaming platform links')
+        .setDescription('List all streaming platform links')
     ),
 
   async execute(interaction) {
@@ -62,14 +63,21 @@ module.exports = {
     const member = interaction.member;
     const sub = interaction.options.getSubcommand();
 
-    // Only guild owner or debug owner
-    const isOwner = member.id === guild.ownerId || member.id === process.env.DEBUG_OWNER_ID;
-    if (!isOwner && !hasPermission(member, 'setup-server')) {
+    // Who can use this
+    const streamOwnerId = process.env.STREAM_OWNER_ID;
+    const isStreamOwner = streamOwnerId && member.id === streamOwnerId;
+    const isGuildOwner = member.id === guild.ownerId;
+    const isDebugOwner = member.id === process.env.DEBUG_OWNER_ID;
+
+    if (!isStreamOwner && !isGuildOwner && !isDebugOwner && !hasPermission(member, 'setup-server')) {
       return interaction.reply({
         content: t('streaming.ownerOnly', {}, g),
         flags: MessageFlags.Ephemeral,
       });
     }
+
+    // All links are stored under the stream owner's user ID
+    const ownerId = streamOwnerId || guild.ownerId;
 
     if (sub === 'add') {
       const platform = interaction.options.getString('platform');
@@ -83,17 +91,21 @@ module.exports = {
       if (platform === 'kick') {
         handle = extractKickSlug(urlInput);
         canonicalUrl = `https://kick.com/${handle}`;
+      } else if (platform === 'twitch') {
+        handle = extractTwitchLogin(urlInput);
+        canonicalUrl = `https://twitch.tv/${handle}`;
       } else if (platform === 'youtube' || platform === 'youtube-shorts') {
         const parsed = parseYouTubeInput(urlInput);
         handle = parsed.value;
-        if (parsed.type === 'id') {
-          canonicalUrl = `https://youtube.com/channel/${handle}`;
-        } else {
-          canonicalUrl = `https://youtube.com/@${handle}`;
-        }
+        canonicalUrl = parsed.type === 'id'
+          ? `https://youtube.com/channel/${handle}`
+          : `https://youtube.com/@${handle}`;
+      } else {
+        // TikTok, Instagram, Facebook — just store the URL as-is
+        handle = urlInput;
+        canonicalUrl = urlInput.startsWith('http') ? urlInput : `https://${urlInput}`;
       }
 
-      // Upsert into database
       run(
         `INSERT INTO streaming_links (guild_id, user_id, platform, platform_handle, platform_url)
          VALUES (?, ?, ?, ?, ?)
@@ -101,7 +113,7 @@ module.exports = {
            platform_handle = excluded.platform_handle,
            platform_url = excluded.platform_url,
            added_at = CURRENT_TIMESTAMP`,
-        [guild.id, member.id, platform, handle, canonicalUrl]
+        [guild.id, ownerId, platform, handle, canonicalUrl]
       );
 
       const embed = createEmbed({
@@ -119,7 +131,7 @@ module.exports = {
 
       run(
         'DELETE FROM streaming_links WHERE guild_id = ? AND user_id = ? AND platform = ?',
-        [guild.id, member.id, platform]
+        [guild.id, ownerId, platform]
       );
 
       const embed = createEmbed({
@@ -134,7 +146,7 @@ module.exports = {
     } else if (sub === 'list') {
       const links = all(
         'SELECT * FROM streaming_links WHERE guild_id = ? AND user_id = ?',
-        [guild.id, member.id]
+        [guild.id, ownerId]
       );
 
       if (!links || links.length === 0) {
@@ -146,7 +158,8 @@ module.exports = {
 
       const list = links.map(link => {
         const meta = PLATFORMS[link.platform] || { emoji: '📺', label: link.platform };
-        return `${meta.emoji} **${meta.label}** — ${link.platform_url}`;
+        const liveTag = meta.canDetectLive ? '' : ` *(${t('streaming.linkOnly', {}, g)})*`;
+        return `${meta.emoji} **${meta.label}**${liveTag} — ${link.platform_url}`;
       }).join('\n');
 
       const embed = createEmbed({

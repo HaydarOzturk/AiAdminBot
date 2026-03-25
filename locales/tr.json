@@ -459,7 +459,12 @@
     "linkAddedDesc": "**{platform}** linki kaydedildi: {url}",
     "linkRemovedTitle": "✅ Link Kaldırıldı",
     "linkRemovedDesc": "**{platform}** linki kaldırıldı.",
-    "linkListTitle": "📺 Yayın Linklerin"
+    "linkListTitle": "📺 Yayın Linklerin",
+    "linkOnly": "sadece link",
+    "isLiveNow": "şu anda YAYINDA!",
+    "platformStatus": "Platform Durumu",
+    "linkOnlyMode": "Sadece link modu",
+    "ownerNotFound": "Yayın sahibi bu sunucuda bulunamadı."
   },
   "aiChat": {
     "statusTitle": "🤖 AI Sohbet Durumu",

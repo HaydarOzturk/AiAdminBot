@@ -447,7 +447,12 @@
     "linkAddedDesc": "Ссылка на **{platform}** сохранена: {url}",
     "linkRemovedTitle": "✅ Ссылка удалена",
     "linkRemovedDesc": "Ссылка на **{platform}** удалена.",
-    "linkListTitle": "📺 Ваши ссылки на трансляции"
+    "linkListTitle": "📺 Ваши ссылки на трансляции",
+    "linkOnly": "только ссылка",
+    "isLiveNow": "сейчас В ЭФИРЕ!",
+    "platformStatus": "Статус платформ",
+    "linkOnlyMode": "Режим только ссылок",
+    "ownerNotFound": "Владелец стрима не найден на этом сервере."
   },
   "aiChat": {
     "statusTitle": "🤖 Статус ИИ Чата",

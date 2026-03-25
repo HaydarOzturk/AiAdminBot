@@ -447,7 +447,12 @@
     "linkAddedDesc": "Enlace de **{platform}** guardado: {url}",
     "linkRemovedTitle": "✅ Enlace eliminado",
     "linkRemovedDesc": "Enlace de **{platform}** eliminado.",
-    "linkListTitle": "📺 Tus enlaces de streaming"
+    "linkListTitle": "📺 Tus enlaces de streaming",
+    "linkOnly": "solo enlace",
+    "isLiveNow": "¡está EN VIVO ahora!",
+    "platformStatus": "Estado de plataformas",
+    "linkOnlyMode": "Modo solo enlace",
+    "ownerNotFound": "No se pudo encontrar al dueño del stream en este servidor."
   },
   "aiChat": {
     "statusTitle": "🤖 Estado del Chat IA",

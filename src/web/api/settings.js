@@ -12,7 +12,7 @@ const path = require('path');
 const { projectPath } = require('../../utils/paths');
 
 // Keys that should be masked when reading (show ••••••)
-const SENSITIVE_KEYS = ['DISCORD_TOKEN', 'GEMINI_API_KEY', 'OPENROUTER_API_KEY', 'WEB_PASSWORD'];
+const SENSITIVE_KEYS = ['DISCORD_TOKEN', 'GEMINI_API_KEY', 'OPENROUTER_API_KEY', 'WEB_PASSWORD', 'TWITCH_CLIENT_SECRET'];
 
 // All known .env keys grouped by feature
 const ENV_SCHEMA = {
@@ -45,7 +45,10 @@ const ENV_SCHEMA = {
     icon: '📺',
     fields: [
       { key: 'STREAMING_ENABLED', label: 'Enable Streaming Detection', type: 'toggle', default: 'true' },
+      { key: 'STREAM_OWNER_ID', label: 'Stream Owner (Discord User ID)', type: 'text', placeholder: 'The streamer who uses /go-live' },
       { key: 'YOUTUBE_API_KEY', label: 'YouTube API Key', type: 'password', placeholder: 'From Google Cloud Console' },
+      { key: 'TWITCH_CLIENT_ID', label: 'Twitch Client ID', type: 'text', placeholder: 'From dev.twitch.tv' },
+      { key: 'TWITCH_CLIENT_SECRET', label: 'Twitch Client Secret', type: 'password', placeholder: 'From dev.twitch.tv' },
     ],
   },
   linkFilter: {

@@ -447,7 +447,12 @@
     "linkAddedDesc": "تم حفظ رابط **{platform}**: {url}",
     "linkRemovedTitle": "✅ تم إزالة الرابط",
     "linkRemovedDesc": "تم إزالة رابط **{platform}**.",
-    "linkListTitle": "📺 روابط البث الخاصة بك"
+    "linkListTitle": "📺 روابط البث الخاصة بك",
+    "linkOnly": "رابط فقط",
+    "isLiveNow": "يبث مباشرة الآن!",
+    "platformStatus": "حالة المنصات",
+    "linkOnlyMode": "وضع الرابط فقط",
+    "ownerNotFound": "لم يتم العثور على صاحب البث في هذا الخادم."
   },
   "aiChat": {
     "statusTitle": "🤖 حالة الدردشة الذكية",

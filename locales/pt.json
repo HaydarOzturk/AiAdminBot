@@ -447,7 +447,12 @@
     "linkAddedDesc": "Link de **{platform}** salvo: {url}",
     "linkRemovedTitle": "✅ Link removido",
     "linkRemovedDesc": "Link de **{platform}** removido.",
-    "linkListTitle": "📺 Seus links de streaming"
+    "linkListTitle": "📺 Seus links de streaming",
+    "linkOnly": "apenas link",
+    "isLiveNow": "está AO VIVO agora!",
+    "platformStatus": "Status das plataformas",
+    "linkOnlyMode": "Modo apenas link",
+    "ownerNotFound": "O dono da stream não foi encontrado neste servidor."
   },
   "aiChat": {
     "statusTitle": "🤖 Status do Bate-papo IA",

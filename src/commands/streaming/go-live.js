@@ -1,18 +1,17 @@
 /**
  * /go-live — Check registered streaming platforms and announce if live.
  *
- * When the streamer runs this command, the bot:
- *  1. Fetches their streaming links from the database
- *  2. Checks each platform in parallel for live status
- *  3. If any platform is live → posts @everyone announcement in the stream-announcements channel
- *  4. Sends a summary back to the user (ephemeral)
- *
- * Only the guild owner can use this command.
+ * Flow:
+ *  1. Only the stream owner (STREAM_OWNER_ID), guild owner, or debug owner can use this
+ *  2. Fetches the stream owner's links from the database
+ *  3. Checks platforms with live-detection APIs (Kick, Twitch, YouTube) in parallel
+ *  4. Posts a rich @everyone announcement with ALL platform links as buttons
+ *  5. The announcement always shows the stream owner's name/avatar, not whoever ran the command
  */
 
-const { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, MessageFlags } = require('discord.js');
 const { hasPermission } = require('../../utils/permissions');
-const { t, channelName } = require('../../utils/locale');
+const { t } = require('../../utils/locale');
 const { all } = require('../../utils/database');
 const { checkAllPlatforms, PLATFORMS } = require('../../systems/streamingChecker');
 const { findAnnouncementChannel } = require('../../systems/streamAnnouncer');
@@ -28,9 +27,13 @@ module.exports = {
     const guild = interaction.guild;
     const member = interaction.member;
 
-    // Only guild owner or debug owner can use this
-    const isOwner = member.id === guild.ownerId || member.id === process.env.DEBUG_OWNER_ID;
-    if (!isOwner && !hasPermission(member, 'setup-server')) {
+    // Who can use this: stream owner, guild owner, or debug owner
+    const streamOwnerId = process.env.STREAM_OWNER_ID;
+    const isStreamOwner = streamOwnerId && member.id === streamOwnerId;
+    const isGuildOwner = member.id === guild.ownerId;
+    const isDebugOwner = member.id === process.env.DEBUG_OWNER_ID;
+
+    if (!isStreamOwner && !isGuildOwner && !isDebugOwner && !hasPermission(member, 'setup-server')) {
       return interaction.reply({
         content: t('streaming.ownerOnly', {}, g),
         flags: MessageFlags.Ephemeral,
@@ -39,15 +42,23 @@ module.exports = {
 
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-    // Check if streaming is enabled
     if (process.env.STREAMING_ENABLED === 'false') {
       return interaction.editReply({ content: t('streaming.disabled', {}, g) });
     }
 
-    // Get the user's streaming links from the database
+    // Resolve the stream owner — the person whose links and identity we use
+    const ownerId = streamOwnerId || guild.ownerId;
+    let ownerMember;
+    try {
+      ownerMember = await guild.members.fetch(ownerId);
+    } catch {
+      return interaction.editReply({ content: t('streaming.ownerNotFound', {}, g) });
+    }
+
+    // Get the stream owner's links
     const links = all(
       'SELECT * FROM streaming_links WHERE guild_id = ? AND user_id = ?',
-      [guild.id, member.id]
+      [guild.id, ownerId]
     );
 
     if (!links || links.length === 0) {
@@ -57,10 +68,12 @@ module.exports = {
     // Check all platforms in parallel
     const results = await checkAllPlatforms(links);
     const liveResults = results.filter(r => r.isLive);
+    const detectableResults = results.filter(r => PLATFORMS[r.platform]?.canDetectLive);
+    const anyDetectableLive = liveResults.some(r => PLATFORMS[r.platform]?.canDetectLive);
 
-    if (liveResults.length === 0) {
-      // None are live — tell the user
-      const platformList = results
+    // If no detectable platform is live, warn the user (link-only platforms are always included)
+    if (detectableResults.length > 0 && !anyDetectableLive) {
+      const platformList = detectableResults
         .map(r => `${r.emoji} **${r.label}**: ${t('streaming.offline', {}, g)}`)
         .join('\n');
 
@@ -69,95 +82,99 @@ module.exports = {
       });
     }
 
-    // ── Found live streams! Post announcement ──────────────────────────────
+    // ── Build and send announcement ──────────────────────────────────────
 
     const announcementChannel = findAnnouncementChannel(guild);
     if (!announcementChannel) {
       return interaction.editReply({ content: t('streaming.noChannel', {}, g) });
     }
 
-    // Ensure channel is locked: only bot + guild owner can send messages
+    // Lock the channel: bot + guild owner only
     try {
       await announcementChannel.permissionOverwrites.edit(guild.roles.everyone, {
-        SendMessages: false,
-        ViewChannel: true,
-        ReadMessageHistory: true,
-      }, { reason: 'Stream announcements — locked to bot + owner' });
+        SendMessages: false, ViewChannel: true, ReadMessageHistory: true,
+      }, { reason: 'Stream announcements — locked' });
 
-      // Allow guild owner
       await announcementChannel.permissionOverwrites.edit(guild.ownerId, {
         SendMessages: true,
       }, { reason: 'Stream announcements — allow owner' });
 
-      // Allow bot itself
       await announcementChannel.permissionOverwrites.edit(guild.members.me, {
-        SendMessages: true,
-        EmbedLinks: true,
+        SendMessages: true, EmbedLinks: true,
       }, { reason: 'Stream announcements — allow bot' });
     } catch (err) {
-      // Non-fatal — permissions might already be correct or bot lacks ManageChannels
       console.warn('Could not enforce announcement channel permissions:', err.message);
     }
 
-    const userName = member.displayName || member.user.username;
+    const ownerName = ownerMember.displayName || ownerMember.user.username;
+    const ownerAvatar = ownerMember.user.displayAvatarURL({ dynamic: true, size: 256 });
 
-    // Build the announcement embed
+    // ── Build the embed ──────────────────────────────────────────────────
+
+    // Find the "main" live stream for the title (prefer YouTube > Twitch > Kick)
+    const mainLive = liveResults.find(r => r.platform === 'youtube')
+      || liveResults.find(r => r.platform === 'twitch')
+      || liveResults.find(r => r.platform === 'kick')
+      || liveResults[0];
+
+    const streamTitle = mainLive?.title || '';
+
     const embed = new EmbedBuilder()
-      .setColor(0xFF0000) // Red for LIVE
-      .setTitle(t('streaming.liveTitle', { user: userName }, g))
-      .setDescription(t('streaming.goLiveDesc', { user: userName }, g))
-      .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 256 }))
+      .setColor(0xFF0000)
+      .setAuthor({ name: `${ownerName} ${t('streaming.isLiveNow', {}, g)}`, iconURL: ownerAvatar })
+      .setThumbnail(ownerAvatar)
       .setTimestamp();
 
-    // Add a field for each live platform
-    for (const live of liveResults) {
-      const fieldValue = live.title
-        ? `📺 **${live.title}**\n🔗 ${live.url}`
-        : `🔗 ${live.url}`;
-
-      embed.addFields({
-        name: `${live.emoji} ${live.label}`,
-        value: fieldValue,
-        inline: false,
-      });
+    // Stream title as description if available
+    if (streamTitle) {
+      embed.setTitle(`📺 ${streamTitle}`);
     }
 
-    // Also show non-live platforms (so people know all the links)
-    const offlineResults = results.filter(r => !r.isLive);
-    if (offlineResults.length > 0) {
-      const offlineLinks = offlineResults
-        .map(r => `${r.emoji} [${r.label}](${r.url})`)
-        .join(' • ');
+    embed.setDescription(t('streaming.goLiveDesc', { user: ownerName }, g));
 
-      embed.addFields({
-        name: t('streaming.otherPlatforms', {}, g),
-        value: offlineLinks,
-        inline: false,
-      });
-    }
+    // Add live platforms with status
+    const statusLines = results.map(r => {
+      if (r.isLive) {
+        const viewerStr = r.viewers > 0 ? ` • 👥 ${r.viewers}` : '';
+        return `${r.emoji} **${r.label}** — 🔴 LIVE${viewerStr}`;
+      } else if (PLATFORMS[r.platform]?.canDetectLive) {
+        return `${r.emoji} **${r.label}** — ⚫ ${t('streaming.offline', {}, g)}`;
+      } else {
+        return `${r.emoji} **${r.label}**`;
+      }
+    });
 
-    // Build button row with links to live streams
-    const buttons = liveResults.map(live =>
+    embed.addFields({
+      name: t('streaming.platformStatus', {}, g),
+      value: statusLines.join('\n'),
+      inline: false,
+    });
+
+    // ── Build button rows (ALL platforms get a link button) ──────────────
+
+    const allButtons = results.map(r =>
       new ButtonBuilder()
-        .setLabel(`${live.label}`)
+        .setLabel(r.isLive ? `🔴 ${r.label}` : r.label)
         .setStyle(ButtonStyle.Link)
-        .setURL(live.url)
-        .setEmoji(live.emoji)
+        .setURL(r.isLive ? r.liveUrl : r.url)
+        .setEmoji(r.emoji)
     );
 
-    const components = buttons.length > 0
-      ? [new ActionRowBuilder().addComponents(...buttons)]
-      : [];
+    // Discord allows max 5 buttons per row
+    const components = [];
+    for (let i = 0; i < allButtons.length; i += 5) {
+      components.push(new ActionRowBuilder().addComponents(...allButtons.slice(i, i + 5)));
+    }
 
-    // Send the announcement with @everyone
+    // Send the announcement
     await announcementChannel.send({
-      content: t('streaming.everyoneTag', { user: userName }, g),
+      content: `@everyone\n🔴 **${ownerName}** ${t('streaming.isLiveNow', {}, g)}`,
       embeds: [embed],
       components,
     });
 
-    // Reply to the user (ephemeral)
-    const liveNames = liveResults.map(r => r.label).join(', ');
+    // Ephemeral reply to command user
+    const liveNames = liveResults.map(r => r.label).join(', ') || t('streaming.linkOnlyMode', {}, g);
     await interaction.editReply({
       content: t('streaming.announcementSent', { platforms: liveNames, channel: announcementChannel.name }, g),
     });
