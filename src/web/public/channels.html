@@ -18,7 +18,7 @@
       letter-spacing: 0.5px; color: var(--text-secondary);
       transition: background 0.15s;
     }
-    .category-header:hover { background: #2a2d31; }
+    .category-header:hover { background: var(--bg-primary); }
     .category-header .arrow { transition: transform 0.2s; font-size: 10px; }
     .category-header .arrow.collapsed { transform: rotate(-90deg); }
     .category-header .cat-actions { margin-left: auto; display: flex; gap: 6px; }
@@ -31,13 +31,13 @@
       border-radius: 4px; cursor: pointer; transition: background 0.15s;
       font-size: 14px; color: var(--text-secondary);
     }
-    .channel-item:hover { background: rgba(255,255,255,0.04); color: var(--text-primary); }
-    .channel-item.selected { background: rgba(88,101,242,0.15); color: var(--text-primary); }
+    .channel-item:hover { background: var(--bg-primary); color: var(--text-primary); }
+    .channel-item.selected { background: rgba(249,115,22,0.1); color: var(--text-primary); }
     .channel-icon { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
     .channel-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .channel-type-badge {
       font-size: 10px; padding: 2px 6px; border-radius: 3px;
-      background: rgba(255,255,255,0.06); color: var(--text-muted);
+      background: var(--bg-tertiary); color: var(--text-muted);
     }
     .channel-actions { display: flex; gap: 4px; opacity: 0; transition: opacity 0.15s; }
     .channel-item:hover .channel-actions,
@@ -47,7 +47,7 @@
       font-size: 14px; padding: 2px 4px; border-radius: 3px;
     }
     .channel-actions button:hover, .cat-actions button:hover {
-      background: rgba(255,255,255,0.1); color: var(--text-primary);
+      background: var(--bg-primary); color: var(--text-primary);
     }
 
     /* No channels in category */
@@ -76,7 +76,7 @@
     .perm-group-title {
       font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
       color: var(--text-muted); margin: 12px 0 6px 0; padding-bottom: 4px;
-      border-bottom: 1px solid rgba(255,255,255,0.06);
+      border-bottom: 1px solid var(--border-color);
     }
     .perm-group-title:first-child { margin-top: 0; }
 
@@ -93,8 +93,8 @@
     }
     .perm-toggle.allow { background: rgba(87,242,135,0.1); color: var(--text-muted); }
     .perm-toggle.allow.active { background: rgba(87,242,135,0.3); color: var(--accent-success); }
-    .perm-toggle.inherit { background: rgba(255,255,255,0.04); color: var(--text-muted); }
-    .perm-toggle.inherit.active { background: rgba(255,255,255,0.1); color: var(--text-secondary); }
+    .perm-toggle.inherit { background: var(--bg-tertiary); color: var(--text-muted); }
+    .perm-toggle.inherit.active { background: var(--bg-primary); color: var(--text-secondary); }
     .perm-toggle.deny { background: rgba(237,66,69,0.1); color: var(--text-muted); }
     .perm-toggle.deny.active { background: rgba(237,66,69,0.3); color: var(--accent-danger); }
 
@@ -128,7 +128,7 @@
     /* Add role button */
     .add-role-row {
       display: flex; gap: 8px; align-items: center; margin-top: 12px;
-      padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.06);
+      padding-top: 12px; border-top: 1px solid var(--border-color);
     }
     .add-role-row select { flex: 1; }
 
@@ -146,8 +146,8 @@
       font-size: 14px; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent;
       margin-bottom: -2px; transition: all 0.15s; border-radius: 6px 6px 0 0;
     }
-    .tab-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.04); }
-    .tab-btn.active { color: #5865f2; border-bottom-color: #5865f2; }
+    .tab-btn:hover { color: var(--text-primary); background: var(--bg-tertiary); }
+    .tab-btn.active { color: var(--accent-primary); border-bottom-color: var(--accent-primary); }
 
     /* Quick Setup cards */
     .setup-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
@@ -175,7 +175,7 @@
       display: flex; align-items: center; gap: 4px;
     }
     .setup-ch-chip.exists  { background: rgba(87,242,135,0.1); color: #57f287; }
-    .setup-ch-chip.missing { background: rgba(255,255,255,0.06); color: var(--text-muted); }
+    .setup-ch-chip.missing { background: var(--bg-tertiary); color: var(--text-muted); }
     .setup-ch-chip .ch-icon { font-size: 12px; }
     .setup-card-footer { display: flex; align-items: center; gap: 8px; }
     .setup-card-footer .btn { font-size: 13px; padding: 6px 16px; }

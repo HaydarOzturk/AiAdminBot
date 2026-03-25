@@ -84,7 +84,7 @@
                 </thead>
                 <tbody id="actions-table-body">
                   <tr>
-                    <td colspan="6" style="text-align: center; color: #b9bbbe; padding: 20px;">Loading...</td>
+                    <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">Loading...</td>
                   </tr>
                 </tbody>
               </table>
@@ -117,7 +117,7 @@
                 </thead>
                 <tbody id="warnings-table-body">
                   <tr>
-                    <td colspan="5" style="text-align: center; color: #b9bbbe; padding: 20px;">Loading...</td>
+                    <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">Loading...</td>
                   </tr>
                 </tbody>
               </table>
@@ -168,7 +168,7 @@
                 </thead>
                 <tbody id="top-moderators-body">
                   <tr>
-                    <td colspan="3" style="text-align: center; color: #b9bbbe; padding: 20px;">Loading...</td>
+                    <td colspan="3" style="text-align: center; color: var(--text-muted); padding: 20px;">Loading...</td>
                   </tr>
                 </tbody>
               </table>
@@ -341,7 +341,7 @@
                 </thead>
                 <tbody id="blocklist-table-body">
                   <tr>
-                    <td colspan="4" style="text-align: center; color: #b9bbbe; padding: 20px;">Loading...</td>
+                    <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">Loading...</td>
                   </tr>
                 </tbody>
               </table>
@@ -403,7 +403,7 @@
         tbody.innerHTML = '';
 
         if (!data.actions || data.actions.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #b9bbbe; padding: 20px;">No actions found</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">No actions found</td></tr>';
           return;
         }
 
@@ -445,7 +445,7 @@
         tbody.innerHTML = '';
 
         if (!data.warnings || data.warnings.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #b9bbbe; padding: 20px;">No active warnings</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">No active warnings</td></tr>';
           return;
         }
 
@@ -492,7 +492,7 @@
         tbody.innerHTML = '';
 
         if (!data.topModerators || data.topModerators.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #b9bbbe; padding: 20px;">No data</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 20px;">No data</td></tr>';
           return;
         }
 
@@ -555,7 +555,7 @@
         tbody.innerHTML = '';
 
         if (!data.words || data.words.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #b9bbbe; padding: 20px;">No blocked words</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">No blocked words</td></tr>';
           return;
         }
 

@@ -12,26 +12,27 @@
       gap: 4px;
       margin-bottom: 20px;
       flex-wrap: wrap;
-      border-bottom: 2px solid #2f3136;
+      border-bottom: 2px solid var(--border-color);
       padding-bottom: 0;
     }
     .settings-tab {
       padding: 10px 18px;
       background: transparent;
       border: none;
-      color: #b9bbbe;
+      color: var(--text-muted);
       cursor: pointer;
       font-size: 14px;
       border-bottom: 2px solid transparent;
       margin-bottom: -2px;
       transition: all 0.2s;
       border-radius: 4px 4px 0 0;
+      font-family: inherit;
     }
-    .settings-tab:hover { color: #dcddde; background: rgba(255,255,255,0.04); }
+    .settings-tab:hover { color: var(--text-primary); background: var(--bg-tertiary); }
     .settings-tab.active {
-      color: #fff;
-      border-bottom-color: #5865f2;
-      background: rgba(88,101,242,0.1);
+      color: var(--accent-primary);
+      border-bottom-color: var(--accent-primary);
+      background: rgba(249,115,22,0.06);
     }
     .settings-tab .tab-icon { margin-right: 6px; }
     .settings-panel { display: none; }
@@ -53,27 +54,28 @@
       font-size: 13px;
       font-weight: 500;
     }
-    .status-chip.on { background: rgba(87,242,135,0.15); color: #57f287; }
-    .status-chip.off { background: rgba(237,66,69,0.15); color: #ed4245; }
-    .status-chip.info { background: rgba(88,101,242,0.15); color: #5865f2; }
+    .status-chip.on { background: rgba(34,197,94,0.1); color: var(--accent-success); }
+    .status-chip.off { background: rgba(239,68,68,0.1); color: var(--accent-danger); }
+    .status-chip.info { background: rgba(249,115,22,0.1); color: var(--accent-primary); }
     .status-dot {
       width: 8px; height: 8px;
       border-radius: 50%;
       display: inline-block;
     }
-    .status-dot.on { background: #57f287; }
-    .status-dot.off { background: #ed4245; }
+    .status-dot.on { background: var(--accent-success); }
+    .status-dot.off { background: var(--accent-danger); }
 
     /* Setting field rows */
     .setting-group {
-      background: #2f3136;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
       border-radius: 8px;
       padding: 20px;
       margin-bottom: 16px;
     }
     .setting-group-title {
       font-size: 13px;
-      color: #b9bbbe;
+      color: var(--text-muted);
       text-transform: uppercase;
       letter-spacing: 0.5px;
       margin-bottom: 16px;
@@ -84,7 +86,7 @@
       align-items: center;
       justify-content: space-between;
       padding: 12px 0;
-      border-bottom: 1px solid rgba(255,255,255,0.06);
+      border-bottom: 1px solid var(--border-color);
     }
     .setting-row:last-child { border-bottom: none; }
     .setting-label {
@@ -93,12 +95,12 @@
     }
     .setting-label strong {
       display: block;
-      color: #dcddde;
+      color: var(--text-primary);
       font-size: 14px;
       margin-bottom: 2px;
     }
     .setting-label small {
-      color: #72767d;
+      color: var(--text-muted);
       font-size: 12px;
     }
     .setting-control {
@@ -121,7 +123,7 @@
       position: absolute;
       cursor: pointer;
       inset: 0;
-      background: #72767d;
+      background: #d6d3d1;
       border-radius: 24px;
       transition: 0.3s;
     }
@@ -136,29 +138,31 @@
       border-radius: 50%;
       transition: 0.3s;
     }
-    .toggle-switch input:checked + .toggle-slider { background: #5865f2; }
+    .toggle-switch input:checked + .toggle-slider { background: var(--accent-primary); }
     .toggle-switch input:checked + .toggle-slider::before { transform: translateX(20px); }
 
     /* Setting inputs */
     .setting-input {
-      background: #202225;
-      border: 1px solid #40444b;
-      color: #dcddde;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
       padding: 8px 12px;
-      border-radius: 4px;
+      border-radius: 6px;
       font-size: 14px;
       width: 220px;
+      font-family: inherit;
     }
-    .setting-input:focus { border-color: #5865f2; outline: none; }
+    .setting-input:focus { border-color: var(--accent-primary); outline: none; }
     .setting-input.password-field { font-family: monospace; }
     .setting-select {
-      background: #202225;
-      border: 1px solid #40444b;
-      color: #dcddde;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
       padding: 8px 12px;
-      border-radius: 4px;
+      border-radius: 6px;
       font-size: 14px;
       width: 220px;
+      font-family: inherit;
     }
 
     /* Password field with toggle */
@@ -173,7 +177,7 @@
       right: 8px;
       background: none;
       border: none;
-      color: #b9bbbe;
+      color: var(--text-muted);
       cursor: pointer;
       font-size: 14px;
       padding: 4px;
@@ -184,15 +188,15 @@
       font-size: 12px;
       margin-top: 4px;
     }
-    .key-status.set { color: #57f287; }
-    .key-status.unset { color: #faa61a; }
+    .key-status.set { color: var(--accent-success); }
+    .key-status.unset { color: var(--accent-warning); }
 
     /* Save bar */
     .save-bar {
       position: sticky;
       bottom: 0;
-      background: #2f3136;
-      border-top: 1px solid #40444b;
+      background: var(--bg-tertiary);
+      border-top: 1px solid var(--border-color);
       padding: 12px 20px;
       display: flex;
       justify-content: space-between;
@@ -201,13 +205,13 @@
       border-radius: 0 0 8px 8px;
     }
     .save-bar.hidden { display: none; }
-    .save-bar .changes-text { color: #faa61a; font-size: 13px; }
+    .save-bar .changes-text { color: var(--accent-warning); font-size: 13px; }
 
     /* Restart notice */
     .restart-notice {
-      background: rgba(250,166,26,0.1);
-      border: 1px solid rgba(250,166,26,0.3);
-      color: #faa61a;
+      background: rgba(245,158,11,0.08);
+      border: 1px solid rgba(245,158,11,0.25);
+      color: var(--accent-warning);
       padding: 10px 16px;
       border-radius: 6px;
       font-size: 13px;
@@ -228,16 +232,16 @@
       align-items: center;
       gap: 8px;
       padding: 10px 14px;
-      border: 2px solid #40444b;
+      border: 2px solid var(--border-color);
       border-radius: 8px;
       cursor: pointer;
       transition: 0.2s;
-      background: #202225;
+      background: var(--bg-tertiary);
     }
-    .lang-option:hover { border-color: #5865f2; }
-    .lang-option.selected { border-color: #5865f2; background: rgba(88,101,242,0.1); }
+    .lang-option:hover { border-color: var(--accent-primary); }
+    .lang-option.selected { border-color: var(--accent-primary); background: rgba(249,115,22,0.08); }
     .lang-option .flag { font-size: 20px; }
-    .lang-option .lang-name { font-size: 13px; color: #dcddde; }
+    .lang-option .lang-name { font-size: 13px; color: var(--text-primary); }
   </style>
 </head>
 <body>
@@ -347,7 +351,7 @@
         <div class="settings-panel" id="panel-language">
           <div class="setting-group">
             <div class="setting-group-title">Guild Language</div>
-            <p style="color: #b9bbbe; font-size: 13px; margin-bottom: 16px;">
+            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">
               This sets the language for all bot messages in the selected server. Channel names are set during server setup.
             </p>
             <div class="lang-grid" id="langGrid">
@@ -370,15 +374,15 @@
         <div class="settings-panel" id="panel-advanced">
           <div class="setting-group">
             <div class="setting-group-title">Raw Configuration (config.json)</div>
-            <p style="color: #b9bbbe; font-size: 13px; margin-bottom: 12px;">
+            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">
               Edit the raw JSON configuration file. Be careful — invalid JSON will not save.
             </p>
-            <textarea id="config-editor" class="code-editor" style="width:100%; min-height:300px; background:#202225; color:#dcddde; border:1px solid #40444b; border-radius:4px; padding:12px; font-family:monospace; font-size:13px; resize:vertical;" required></textarea>
+            <textarea id="config-editor" class="code-editor" style="width:100%; min-height:300px; background:#1c1917; color:#d6d3d1; border:1px solid #292524; border-radius:6px; padding:12px; font-family:monospace; font-size:13px; resize:vertical;" required></textarea>
             <div style="display:flex; gap:12px; margin-top:12px;">
               <button class="btn btn-primary" id="save-config-btn">Save JSON</button>
               <button class="btn btn-secondary" id="reset-config-btn">Reset</button>
             </div>
-            <p style="color:#72767d; font-size:12px; margin-top:8px;">Last saved: <span id="last-saved">Never</span></p>
+            <p style="color:var(--text-muted); font-size:12px; margin-top:8px;">Last saved: <span id="last-saved">Never</span></p>
           </div>
         </div>
 
