@@ -14,6 +14,9 @@ function getPermissionLevel(member) {
   // Server owner is always level 4
   if (member.id === member.guild.ownerId) return 4;
 
+  // DEBUG_OWNER_ID also gets level 4 (for testing/development)
+  if (process.env.DEBUG_OWNER_ID && member.id === process.env.DEBUG_OWNER_ID) return 4;
+
   // Check role names for permission levels
   const roleNames = member.roles.cache.map(r => r.name.toLowerCase());
 
