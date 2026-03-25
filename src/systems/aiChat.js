@@ -132,21 +132,34 @@ async function handleMessage(message) {
     // Rules not available, continue without them
   }
 
-  // Build streaming context — who is the streamer and their platform links
+  // Build streaming context — find this guild's streamer and their platform links
   let streamingContext = null;
   try {
     const guildId = message.guild?.id;
-    const streamOwnerId = process.env.STREAM_OWNER_ID || message.guild?.ownerId;
-    if (guildId && streamOwnerId) {
+    if (guildId) {
+      // Find ALL streaming links for this guild (any user)
       const links = all(
-        'SELECT platform, platform_url FROM streaming_links WHERE guild_id = ? AND user_id = ?',
-        [guildId, streamOwnerId]
+        'SELECT user_id, platform, platform_url FROM streaming_links WHERE guild_id = ? ORDER BY added_at',
+        [guildId]
       );
       if (links && links.length > 0) {
-        const ownerMember = message.guild.members.cache.get(streamOwnerId);
-        const ownerName = ownerMember?.displayName || ownerMember?.user?.username || 'the server owner';
-        const platformList = links.map(l => `  - ${l.platform}: ${l.platform_url}`).join('\n');
-        streamingContext = `This server's streamer is "${ownerName}". They stream on the following platforms:\n${platformList}\nWhen users ask about this streamer, be enthusiastic and share their streaming links. This is the server owner's community.`;
+        // Group links by user
+        const byUser = {};
+        for (const link of links) {
+          if (!byUser[link.user_id]) byUser[link.user_id] = [];
+          byUser[link.user_id].push(link);
+        }
+
+        const streamerDescs = [];
+        for (const [userId, userLinks] of Object.entries(byUser)) {
+          const member = message.guild.members.cache.get(userId);
+          const name = member?.displayName || member?.user?.username || 'Unknown';
+          const isOwner = userId === message.guild.ownerId;
+          const platformList = userLinks.map(l => `  - ${l.platform}: ${l.platform_url}`).join('\n');
+          streamerDescs.push(`"${name}"${isOwner ? ' (server owner)' : ''} streams on:\n${platformList}`);
+        }
+
+        streamingContext = `This server has the following streamers:\n${streamerDescs.join('\n\n')}\nWhen users ask about any of these streamers, be enthusiastic and share their streaming links. This is their community.`;
       }
     }
   } catch {
