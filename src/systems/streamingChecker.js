@@ -91,34 +91,6 @@ function postForm(url, body, ms = 6000) {
 
 // ─── Kick ────────────────────────────────────────────────────────────────────
 
-// Cache the Kick app access token in memory
-let _kickToken = null;
-let _kickTokenExpiry = 0;
-
-/**
- * Get a Kick app access token using Client Credentials flow.
- * @returns {Promise<string|null>}
- */
-async function getKickToken() {
-  const clientId = process.env.KICK_CLIENT_ID;
-  const clientSecret = process.env.KICK_CLIENT_SECRET;
-  if (!clientId || !clientSecret) return null;
-
-  if (_kickToken && Date.now() < _kickTokenExpiry) return _kickToken;
-
-  const data = await postForm('https://id.kick.com/oauth/token', {
-    client_id: clientId,
-    client_secret: clientSecret,
-    grant_type: 'client_credentials',
-  });
-
-  if (!data?.access_token) return null;
-
-  _kickToken = data.access_token;
-  _kickTokenExpiry = Date.now() + (data.expires_in || 3600) * 1000 - 60000;
-  return _kickToken;
-}
-
 /**
  * Extract the Kick channel slug from a URL or handle.
  */
@@ -129,60 +101,56 @@ function extractKickSlug(input) {
 }
 
 /**
+ * Fetch raw HTML/text from a URL (not JSON). Used for page scraping fallback.
+ */
+function fetchText(url, ms = 10000) {
+  const parsed = new URL(url);
+  const options = {
+    hostname: parsed.hostname,
+    path: parsed.pathname + parsed.search,
+    timeout: ms,
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
+    },
+  };
+
+  return new Promise(resolve => {
+    const req = https.get(options, res => {
+      if (res.statusCode !== 200) {
+        console.warn(`⚠️ fetchText ${parsed.hostname}${parsed.pathname} → HTTP ${res.statusCode}`);
+        res.resume();
+        return resolve(null);
+      }
+      let data = '';
+      res.on('data', chunk => { data += chunk; });
+      res.on('end', () => resolve(data));
+    });
+    req.on('error', (err) => { console.warn(`⚠️ fetchText ${parsed.hostname} error: ${err.message}`); resolve(null); });
+    req.on('timeout', () => { req.destroy(); console.warn(`⚠️ fetchText ${parsed.hostname} timeout`); resolve(null); });
+  });
+}
+
+/**
  * Check if a Kick channel is live.
+ *
+ * Kick's official API (api.kick.com) requires OAuth UserAccessToken (user login),
+ * which isn't practical for a bot. We use the legacy internal APIs instead:
+ *
  * Strategy:
- *  1. If KICK_CLIENT_ID & KICK_CLIENT_SECRET are set → use official API (api.kick.com)
- *  2. Otherwise → try legacy v1 API (kick.com/api/v1/channels/{slug})
- *  3. Fallback to v2 API as last resort
+ *  1. Legacy v1 API — kick.com/api/v1/channels/{slug}
+ *  2. Legacy v2 API — kick.com/api/v2/channels/{slug}
+ *  3. Page scrape — parse embedded JSON from the channel page HTML
  */
 async function checkKick(handleOrUrl) {
   const slug = extractKickSlug(handleOrUrl);
   const channelUrl = `https://kick.com/${slug}`;
 
-  // ── Strategy 1: Official Kick API (OAuth) ─────────────────────────────
-  const kickToken = await getKickToken();
-  if (kickToken) {
-    try {
-      // Try by slug query — official API
-      const data = await fetchJson(
-        `https://api.kick.com/public/v1/channels?slug=${encodeURIComponent(slug)}`,
-        { 'Authorization': `Bearer ${kickToken}` }
-      );
-
-      if (data?.data?.[0]) {
-        const ch = data.data[0];
-        const isLive = !!(ch.is_live || ch.livestream?.is_live);
-        return {
-          isLive,
-          title: ch.livestream?.session_title || ch.stream_title || '',
-          viewers: ch.livestream?.viewer_count || ch.viewer_count || 0,
-          url: channelUrl,
-        };
-      }
-
-      // Try /livestreams endpoint as alternative
-      const liveData = await fetchJson(
-        `https://api.kick.com/public/v1/livestreams?slug=${encodeURIComponent(slug)}`,
-        { 'Authorization': `Bearer ${kickToken}` }
-      );
-
-      if (liveData?.data?.[0]) {
-        const ls = liveData.data[0];
-        return {
-          isLive: true,
-          title: ls.session_title || ls.title || '',
-          viewers: ls.viewer_count || 0,
-          url: channelUrl,
-        };
-      }
-    } catch (err) {
-      console.warn('⚠️ Kick official API error:', err.message);
-    }
-  }
-
-  // ── Strategy 2: Legacy v1 API (no auth) ───────────────────────────────
+  // ── Strategy 1: Legacy v1 API ─────────────────────────────────────────
   const v1Data = await fetchJson(`https://kick.com/api/v1/channels/${encodeURIComponent(slug)}`);
   if (v1Data) {
+    console.log(`✅ Kick v1 API responded for "${slug}"`);
     const isLive = !!(v1Data.livestream && v1Data.livestream.is_live);
     return {
       isLive,
@@ -192,9 +160,10 @@ async function checkKick(handleOrUrl) {
     };
   }
 
-  // ── Strategy 3: Legacy v2 API (no auth, last resort) ──────────────────
+  // ── Strategy 2: Legacy v2 API ─────────────────────────────────────────
   const v2Data = await fetchJson(`https://kick.com/api/v2/channels/${encodeURIComponent(slug)}`);
   if (v2Data) {
+    console.log(`✅ Kick v2 API responded for "${slug}"`);
     return {
       isLive: !!(v2Data.livestream && v2Data.livestream.is_live),
       title: v2Data.livestream?.session_title || '',
@@ -203,7 +172,29 @@ async function checkKick(handleOrUrl) {
     };
   }
 
-  console.warn(`⚠️ Kick: all API strategies failed for slug "${slug}"`);
+  // ── Strategy 3: Scrape channel page for embedded data ─────────────────
+  try {
+    const html = await fetchText(`https://kick.com/${encodeURIComponent(slug)}`);
+    if (html) {
+      // Kick embeds channel data in a <script> tag or __NEXT_DATA__
+      const jsonMatch = html.match(/"livestream"\s*:\s*(\{[^}]*"is_live"\s*:\s*(true|false)[^}]*\})/);
+      if (jsonMatch) {
+        const isLive = jsonMatch[2] === 'true';
+        console.log(`✅ Kick page scrape for "${slug}" → is_live: ${isLive}`);
+
+        // Try to extract title
+        let title = '';
+        const titleMatch = html.match(/"session_title"\s*:\s*"([^"]+)"/);
+        if (titleMatch) title = titleMatch[1];
+
+        return { isLive, title, viewers: 0, url: channelUrl };
+      }
+    }
+  } catch (err) {
+    console.warn('⚠️ Kick page scrape error:', err.message);
+  }
+
+  console.warn(`⚠️ Kick: all strategies failed for slug "${slug}" — check PM2 logs for HTTP status codes`);
   return { isLive: false, title: '', viewers: 0, url: channelUrl };
 }
 
