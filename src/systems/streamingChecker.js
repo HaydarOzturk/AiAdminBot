@@ -132,22 +132,75 @@ function fetchText(url, ms = 10000) {
   });
 }
 
+// Cache the Kick app access token in memory
+let _kickToken = null;
+let _kickTokenExpiry = 0;
+
+/**
+ * Get a Kick app access token using Client Credentials flow.
+ * @returns {Promise<string|null>}
+ */
+async function getKickToken() {
+  const clientId = process.env.KICK_CLIENT_ID;
+  const clientSecret = process.env.KICK_CLIENT_SECRET;
+  if (!clientId || !clientSecret) return null;
+
+  if (_kickToken && Date.now() < _kickTokenExpiry) return _kickToken;
+
+  const data = await postForm('https://id.kick.com/oauth/token', {
+    client_id: clientId,
+    client_secret: clientSecret,
+    grant_type: 'client_credentials',
+  });
+
+  if (!data?.access_token) {
+    console.warn('⚠️ Kick OAuth token request failed');
+    return null;
+  }
+
+  console.log('✅ Kick OAuth token obtained');
+  _kickToken = data.access_token;
+  _kickTokenExpiry = Date.now() + (data.expires_in || 3600) * 1000 - 60000;
+  return _kickToken;
+}
+
 /**
  * Check if a Kick channel is live.
  *
- * Kick's official API (api.kick.com) requires OAuth UserAccessToken (user login),
- * which isn't practical for a bot. We use the legacy internal APIs instead:
- *
- * Strategy:
- *  1. Legacy v1 API — kick.com/api/v1/channels/{slug}
- *  2. Legacy v2 API — kick.com/api/v2/channels/{slug}
- *  3. Page scrape — parse embedded JSON from the channel page HTML
+ * Strategy (tries in order, returns first success):
+ *  1. Official API (api.kick.com) — if KICK_CLIENT_ID & SECRET are set
+ *  2. Legacy v1 API — kick.com/api/v1/channels/{slug}
+ *  3. Legacy v2 API — kick.com/api/v2/channels/{slug}
+ *  4. Page scrape — parse embedded JSON from channel page HTML
  */
 async function checkKick(handleOrUrl) {
   const slug = extractKickSlug(handleOrUrl);
   const channelUrl = `https://kick.com/${slug}`;
 
-  // ── Strategy 1: Legacy v1 API ─────────────────────────────────────────
+  // ── Strategy 1: Official Kick API (OAuth) ─────────────────────────────
+  const kickToken = await getKickToken();
+  if (kickToken) {
+    const data = await fetchJson(
+      `https://api.kick.com/public/v1/channels?slug=${encodeURIComponent(slug)}`,
+      { 'Authorization': `Bearer ${kickToken}` }
+    );
+
+    if (data?.data?.[0]) {
+      const ch = data.data[0];
+      const stream = ch.stream || {};
+      const isLive = !!(stream.is_live || ch.is_live);
+      console.log(`✅ Kick official API for "${slug}" → is_live: ${isLive}`);
+      return {
+        isLive,
+        title: stream.session_title || stream.title || '',
+        viewers: stream.viewer_count || 0,
+        url: channelUrl,
+      };
+    }
+    console.warn(`⚠️ Kick official API returned no data for "${slug}"`);
+  }
+
+  // ── Strategy 2: Legacy v1 API ─────────────────────────────────────────
   const v1Data = await fetchJson(`https://kick.com/api/v1/channels/${encodeURIComponent(slug)}`);
   if (v1Data) {
     console.log(`✅ Kick v1 API responded for "${slug}"`);
@@ -160,7 +213,7 @@ async function checkKick(handleOrUrl) {
     };
   }
 
-  // ── Strategy 2: Legacy v2 API ─────────────────────────────────────────
+  // ── Strategy 3: Legacy v2 API ─────────────────────────────────────────
   const v2Data = await fetchJson(`https://kick.com/api/v2/channels/${encodeURIComponent(slug)}`);
   if (v2Data) {
     console.log(`✅ Kick v2 API responded for "${slug}"`);
