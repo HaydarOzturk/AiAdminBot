@@ -509,6 +509,10 @@
     "sent": "✅ Sua sugestão foi enviada aos moderadores! Obrigado.",
     "sendFailed": "❌ Falha ao enviar sugestão. Por favor tente novamente mais tarde."
   },
+  "linkFilter": {
+    "warningTitle": "🔗 Link não permitido",
+    "warningDesc": "**{user}**, links não são permitidos neste servidor. Sua mensagem foi removida."
+  },
   "voiceXp": {
     "source": "Ganho por XP de canal de voz"
   },

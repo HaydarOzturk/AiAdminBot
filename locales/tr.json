@@ -521,6 +521,10 @@
     "sent": "✅ Öneriniz moderatörlere iletildi! Teşekkürler.",
     "sendFailed": "❌ Öneri gönderilemedi. Lütfen daha sonra tekrar deneyin."
   },
+  "linkFilter": {
+    "warningTitle": "🔗 Link Paylaşımı Yasak",
+    "warningDesc": "**{user}**, bu sunucuda link paylaşımı kapalıdır. Mesajınız silindi."
+  },
   "voiceXp": {
     "source": "Sesli kanal XP ile kazanıldı"
   },

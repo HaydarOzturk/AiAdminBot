@@ -1391,4 +1391,54 @@ router.get('/:guildId/setup/afk', (req, res) => {
   }
 });
 
+/**
+ * PUT /api/guilds/:guildId/setup/afk
+ * Body: { timeoutSeconds: 60|300|900|1800|3600, channelId?: string }
+ * Updates the guild's native AFK timeout and optionally the AFK channel.
+ * Discord only allows these timeout values: 60, 300, 900, 1800, 3600
+ */
+router.put('/:guildId/setup/afk', async (req, res) => {
+  try {
+    const guild = getGuild(req);
+    if (!guild) return res.status(404).json({ error: 'Guild not found' });
+
+    const { timeoutSeconds, channelId } = req.body;
+
+    // Valid Discord AFK timeout values (in seconds)
+    const VALID_TIMEOUTS = [60, 300, 900, 1800, 3600];
+
+    if (timeoutSeconds !== undefined) {
+      if (!VALID_TIMEOUTS.includes(timeoutSeconds)) {
+        return res.status(400).json({
+          error: `Invalid timeout. Valid values: ${VALID_TIMEOUTS.join(', ')} seconds (1, 5, 15, 30, 60 min)`,
+        });
+      }
+      await guild.setAFKTimeout(timeoutSeconds, 'Updated via dashboard');
+    }
+
+    if (channelId) {
+      const channel = guild.channels.cache.get(channelId);
+      if (!channel) return res.status(400).json({ error: 'Channel not found' });
+      await guild.setAFKChannel(channel, 'Updated via dashboard');
+    }
+
+    // Return updated state
+    const afkChannel = guild.afkChannelId
+      ? guild.channels.cache.get(guild.afkChannelId)
+      : null;
+
+    res.json({
+      success: true,
+      hasAfkChannel: !!afkChannel,
+      channelId: afkChannel?.id || null,
+      channelName: afkChannel?.name || null,
+      afkTimeout: guild.afkTimeout || 0,
+      afkTimeoutMinutes: Math.floor((guild.afkTimeout || 0) / 60),
+    });
+  } catch (err) {
+    console.error('API AFK update error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

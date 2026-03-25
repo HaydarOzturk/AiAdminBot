@@ -40,11 +40,20 @@ const ENV_SCHEMA = {
       { key: 'AI_TIMEOUT_MINUTES', label: 'AI Auto-Timeout Duration (min)', type: 'number', default: '3' },
     ],
   },
+  linkFilter: {
+    label: 'Link Filter',
+    icon: '🔗',
+    fields: [
+      { key: 'LINK_FILTER_ENABLED', label: 'Enable Link Filter', type: 'toggle', default: 'false' },
+      { key: 'LINK_FILTER_WARN_USER', label: 'Send Warning to User', type: 'toggle', default: 'true' },
+    ],
+  },
   afk: {
     label: 'AFK Channel',
     icon: '💤',
     fields: [
-      { key: 'AFK_TIMEOUT_MINUTES', label: 'AFK Timeout (minutes)', type: 'number', default: '10', min: '1', max: '120' },
+      { key: 'AFK_CUSTOM_ENABLED', label: 'Custom AFK Tracking (on top of Discord)', type: 'toggle', default: 'false' },
+      { key: 'AFK_TIMEOUT_MINUTES', label: 'Custom AFK Timeout (minutes)', type: 'number', default: '30', min: '1', max: '120' },
     ],
   },
   voiceXp: {
@@ -261,8 +270,13 @@ router.get('/status', (req, res) => {
         enabled: p('AI_MODERATION_ENABLED') === 'true',
         threshold: parseFloat(p('AI_MOD_CONFIDENCE_THRESHOLD') || '0.8'),
       },
+      linkFilter: {
+        enabled: p('LINK_FILTER_ENABLED') === 'true',
+        warnUser: p('LINK_FILTER_WARN_USER') !== 'false',
+      },
       afk: {
-        timeout: parseInt(p('AFK_TIMEOUT_MINUTES') || '10'),
+        customEnabled: p('AFK_CUSTOM_ENABLED') === 'true',
+        timeout: parseInt(p('AFK_TIMEOUT_MINUTES') || '30'),
       },
       voiceXp: {
         amount: parseInt(p('VOICE_XP_AMOUNT') || '3'),

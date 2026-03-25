@@ -74,6 +74,15 @@ module.exports = {
       console.error('❌ AI setup error:', error.message);
     }
 
+    // ── Link Filter ─────────────────────────────────────────────────────
+    try {
+      const linkFilter = require('../systems/linkFilter');
+      const blocked = await linkFilter.checkMessage(message);
+      if (blocked) return; // Message was deleted — stop processing
+    } catch (error) {
+      console.error('❌ Link filter error:', error.message);
+    }
+
     // ── AI Smart Moderation ──────────────────────────────────────────────
     try {
       const aiModeration = require('../systems/aiModeration');

@@ -521,6 +521,10 @@
     "sent": "✅ Your suggestion has been sent to the moderators! Thank you.",
     "sendFailed": "❌ Failed to send suggestion. Please try again later."
   },
+  "linkFilter": {
+    "warningTitle": "🔗 Link Not Allowed",
+    "warningDesc": "**{user}**, links are not allowed in this server. Your message was removed."
+  },
   "voiceXp": {
     "source": "Earned via voice channel XP"
   },

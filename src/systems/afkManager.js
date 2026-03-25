@@ -21,8 +21,24 @@ const { channelName } = require('../utils/locale');
 // How often to check for idle users (ms)
 const CHECK_INTERVAL = 60000; // 1 minute
 
-// How long a user can be idle before being moved (ms)
-const AFK_TIMEOUT_MS = parseInt(process.env.AFK_TIMEOUT_MINUTES || '10') * 60000;
+/**
+ * Get the current AFK timeout in milliseconds.
+ * Reads from process.env each time so dashboard changes take effect without restart.
+ * @returns {number}
+ */
+function getAfkTimeoutMs() {
+  return parseInt(process.env.AFK_TIMEOUT_MINUTES || '10') * 60000;
+}
+
+/**
+ * Check if the custom AFK tracking system is enabled.
+ * Disabled by default — Discord's native AFK system handles most cases.
+ * Enable this only if you want the bot to do its own idle detection on top of Discord's.
+ * @returns {boolean}
+ */
+function isAfkEnabled() {
+  return process.env.AFK_CUSTOM_ENABLED === 'true';
+}
 
 // Track last activity per user: Map<"guildId-userId", timestamp>
 const lastActivity = new Map();
@@ -90,7 +106,11 @@ function findAfkChannel(guild) {
 async function checkIdleUsers() {
   if (!_client) return;
 
+  // Check if AFK system is enabled (reads from process.env dynamically)
+  if (!isAfkEnabled()) return;
+
   const now = Date.now();
+  const timeoutMs = getAfkTimeoutMs();
 
   for (const [, guild] of _client.guilds.cache) {
     const afkChannel = findAfkChannel(guild);
@@ -115,7 +135,7 @@ async function checkIdleUsers() {
 
       const idleTime = now - lastActive;
 
-      if (idleTime >= AFK_TIMEOUT_MS) {
+      if (idleTime >= timeoutMs) {
         try {
           await state.setChannel(afkChannel, 'AFK timeout — idle too long');
           // Reset their activity so they don't get moved again immediately if they come back
@@ -163,7 +183,7 @@ function startAfkTimer(client) {
   if (_checkInterval) return; // Already running
 
   _checkInterval = setInterval(checkIdleUsers, CHECK_INTERVAL);
-  console.log(`💤 AFK timer started (move after ${AFK_TIMEOUT_MS / 60000} min idle, check every ${CHECK_INTERVAL / 1000}s)`);
+  console.log(`💤 AFK timer started (move after ${getAfkTimeoutMs() / 60000} min idle, check every ${CHECK_INTERVAL / 1000}s)`);
 }
 
 /**
