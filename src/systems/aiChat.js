@@ -260,9 +260,30 @@ async function handleMessage(message) {
   // Build dynamic system prompt with rules and guild context
   const systemPrompt = buildAiChatSystemPrompt(rulesText, guildContext);
 
+  // Resolve Discord mentions (<@123>) to readable names before passing to AI
+  let userContent = message.content;
+  const mentionPattern = /<@!?(\d+)>/g;
+  let match;
+  while ((match = mentionPattern.exec(message.content)) !== null) {
+    const mentionedId = match[1];
+    const mentionedMember = message.guild?.members.cache.get(mentionedId);
+    const name = mentionedMember?.displayName || mentionedMember?.user?.username || `User(${mentionedId})`;
+    userContent = userContent.replace(match[0], `@${name}`);
+  }
+
+  // Also resolve role mentions (<@&123>) and channel mentions (<#123>)
+  userContent = userContent.replace(/<@&(\d+)>/g, (_, id) => {
+    const role = message.guild?.roles.cache.get(id);
+    return role ? `@${role.name}` : `@UnknownRole`;
+  });
+  userContent = userContent.replace(/<#(\d+)>/g, (_, id) => {
+    const channel = message.guild?.channels.cache.get(id);
+    return channel ? `#${channel.name}` : `#unknown-channel`;
+  });
+
   // Build conversation with history
   const history = getHistory(message.author.id);
-  history.push({ role: 'user', content: message.content });
+  history.push({ role: 'user', content: userContent });
 
   // Trim history to max
   while (history.length > MAX_HISTORY) {
