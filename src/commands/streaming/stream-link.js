@@ -144,10 +144,26 @@ module.exports = {
       return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
 
     } else if (sub === 'list') {
-      const links = all(
+      let links = all(
         'SELECT * FROM streaming_links WHERE guild_id = ? AND user_id = ?',
         [guild.id, ownerId]
       );
+
+      // Fallback: check command user's links and migrate them
+      if ((!links || links.length === 0) && member.id !== ownerId) {
+        links = all(
+          'SELECT * FROM streaming_links WHERE guild_id = ? AND user_id = ?',
+          [guild.id, member.id]
+        );
+        if (links && links.length > 0) {
+          for (const link of links) {
+            run(
+              `UPDATE streaming_links SET user_id = ? WHERE guild_id = ? AND user_id = ? AND platform = ?`,
+              [ownerId, guild.id, member.id, link.platform]
+            );
+          }
+        }
+      }
 
       if (!links || links.length === 0) {
         return interaction.reply({

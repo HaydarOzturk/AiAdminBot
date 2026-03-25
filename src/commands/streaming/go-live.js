@@ -12,7 +12,7 @@
 const { SlashCommandBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, MessageFlags } = require('discord.js');
 const { hasPermission } = require('../../utils/permissions');
 const { t } = require('../../utils/locale');
-const { all } = require('../../utils/database');
+const { all, run } = require('../../utils/database');
 const { checkAllPlatforms, PLATFORMS } = require('../../systems/streamingChecker');
 const { findAnnouncementChannel } = require('../../systems/streamAnnouncer');
 
@@ -55,11 +55,28 @@ module.exports = {
       return interaction.editReply({ content: t('streaming.ownerNotFound', {}, g) });
     }
 
-    // Get the stream owner's links
-    const links = all(
+    // Get the stream owner's links (fallback: also check the command user's links)
+    let links = all(
       'SELECT * FROM streaming_links WHERE guild_id = ? AND user_id = ?',
       [guild.id, ownerId]
     );
+
+    // If stream owner has no links, check if the person running the command has links
+    if ((!links || links.length === 0) && member.id !== ownerId) {
+      links = all(
+        'SELECT * FROM streaming_links WHERE guild_id = ? AND user_id = ?',
+        [guild.id, member.id]
+      );
+      // Migrate these links to the stream owner so future lookups work
+      if (links && links.length > 0) {
+        for (const link of links) {
+          run(
+            `UPDATE streaming_links SET user_id = ? WHERE guild_id = ? AND user_id = ? AND platform = ?`,
+            [ownerId, guild.id, member.id, link.platform]
+          );
+        }
+      }
+    }
 
     if (!links || links.length === 0) {
       return interaction.editReply({ content: t('streaming.noLinks', {}, g) });
@@ -68,19 +85,6 @@ module.exports = {
     // Check all platforms in parallel
     const results = await checkAllPlatforms(links);
     const liveResults = results.filter(r => r.isLive);
-    const detectableResults = results.filter(r => PLATFORMS[r.platform]?.canDetectLive);
-    const anyDetectableLive = liveResults.some(r => PLATFORMS[r.platform]?.canDetectLive);
-
-    // If no detectable platform is live, warn the user (link-only platforms are always included)
-    if (detectableResults.length > 0 && !anyDetectableLive) {
-      const platformList = detectableResults
-        .map(r => `${r.emoji} **${r.label}**: ${t('streaming.offline', {}, g)}`)
-        .join('\n');
-
-      return interaction.editReply({
-        content: `${t('streaming.notLive', {}, g)}\n\n${platformList}`,
-      });
-    }
 
     // ── Build and send announcement ──────────────────────────────────────
 
