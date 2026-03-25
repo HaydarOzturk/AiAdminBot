@@ -2,6 +2,7 @@ const { chat, isConfigured } = require('../utils/openrouter');
 const { createEmbed } = require('../utils/embedBuilder');
 const { t } = require('../utils/locale');
 const { fetchRules } = require('./rulesReader');
+const { all } = require('../utils/database');
 
 // Per-user conversation history (userId -> messages[])
 // Limited to last 10 messages to keep token usage low on free models
@@ -18,7 +19,7 @@ const RATE_WINDOW = 60000; // 1 minute
  * @param {string|null} rulesText - The server rules text (or null)
  * @returns {string}
  */
-function buildAiChatSystemPrompt(rulesText) {
+function buildAiChatSystemPrompt(rulesText, streamingContext) {
   let prompt = `You are AiAdminBot AI, a friendly assistant in a Discord server powered by AiAdminBot — an AI-powered administration bot.
 
 You know about all the bot's features and can help users understand them:
@@ -27,8 +28,18 @@ You know about all the bot's features and can help users understand them:
 - Moderation: Staff can use /warn, /mute, /kick, /ban, /timeout, /clear. Use /warnings and /mod-history to check records
 - Leveling: Users earn 15-25 XP per message (60s cooldown) AND 1 XP per hour in voice channels. Check rank with /rank, see leaderboard with /leaderboard
 - Suggestions: Users can send suggestions/feedback to moderators using /suggest
+- Streaming: The server owner can announce live streams with /go-live. Platform links are managed with /stream-link
 - AI Chat: This channel! Ask me anything
 - /help shows all available commands`;
+
+  // Inject streaming context if available
+  if (streamingContext) {
+    prompt += `
+
+=== SERVER STREAMER ===
+${streamingContext}
+=== END STREAMER ===`;
+  }
 
   // Inject server rules if available
   if (rulesText) {
@@ -121,8 +132,29 @@ async function handleMessage(message) {
     // Rules not available, continue without them
   }
 
-  // Build dynamic system prompt with rules
-  const systemPrompt = buildAiChatSystemPrompt(rulesText);
+  // Build streaming context — who is the streamer and their platform links
+  let streamingContext = null;
+  try {
+    const guildId = message.guild?.id;
+    const streamOwnerId = process.env.STREAM_OWNER_ID || message.guild?.ownerId;
+    if (guildId && streamOwnerId) {
+      const links = all(
+        'SELECT platform, platform_url FROM streaming_links WHERE guild_id = ? AND user_id = ?',
+        [guildId, streamOwnerId]
+      );
+      if (links && links.length > 0) {
+        const ownerMember = message.guild.members.cache.get(streamOwnerId);
+        const ownerName = ownerMember?.displayName || ownerMember?.user?.username || 'the server owner';
+        const platformList = links.map(l => `  - ${l.platform}: ${l.platform_url}`).join('\n');
+        streamingContext = `This server's streamer is "${ownerName}". They stream on the following platforms:\n${platformList}\nWhen users ask about this streamer, be enthusiastic and share their streaming links. This is the server owner's community.`;
+      }
+    }
+  } catch {
+    // Streaming context not available, continue without it
+  }
+
+  // Build dynamic system prompt with rules and streaming context
+  const systemPrompt = buildAiChatSystemPrompt(rulesText, streamingContext);
 
   // Build conversation with history
   const history = getHistory(message.author.id);

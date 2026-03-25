@@ -138,8 +138,8 @@
         // Overall stats
         document.getElementById('stat-servers').textContent = formatNumber(data.totalGuilds || 0);
         document.getElementById('stat-members').textContent = formatNumber(data.totalMembers || 0);
-        document.getElementById('stat-uptime').textContent = formatDuration(data.uptime || 0);
-        document.getElementById('stat-version').textContent = data.version || 'N/A';
+        document.getElementById('stat-uptime').textContent = formatDuration(data.botUptime || 0);
+        document.getElementById('stat-version').textContent = data.botVersion || 'N/A';
 
         // Bot info
         document.getElementById('bot-prefix').textContent = data.prefix || '!';
