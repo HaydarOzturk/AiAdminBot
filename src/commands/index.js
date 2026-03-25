@@ -34,6 +34,7 @@ module.exports = [
   require('./roles/role-menu'),
 
   // Setup
+  require('./setup/afk-setup'),
   require('./setup/fix-permissions'),
   require('./setup/language'),
   require('./setup/setup'),

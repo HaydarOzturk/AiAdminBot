@@ -1111,4 +1111,244 @@ router.post('/:guildId/config/language', (req, res) => {
   }
 });
 
+// ══════════════════════════════════════════════════════════════════════════
+// AFK CHANNEL SETUP
+// ══════════════════════════════════════════════════════════════════════════
+
+/**
+ * POST /api/guilds/:guildId/setup/afk
+ * Creates the AFK voice channel + category if not already present
+ */
+router.post('/:guildId/setup/afk', async (req, res) => {
+  try {
+    const guild = getGuild(req);
+    if (!guild) return res.status(404).json({ error: 'Guild not found' });
+
+    const { createAfkChannel } = require('../../commands/setup/afk-setup');
+    const result = await createAfkChannel(guild);
+
+    res.json(result);
+  } catch (err) {
+    console.error('API AFK setup error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * GET /api/guilds/:guildId/setup/channel-status
+ * Returns the status of every bot feature channel group (which exist, which are missing).
+ */
+router.get('/:guildId/setup/channel-status', (req, res) => {
+  try {
+    const guild = getGuild(req);
+    if (!guild) return res.status(404).json({ error: 'Guild not found' });
+
+    const { buildLocalizedDefaultConfig } = require('../../systems/serverSetup');
+    const { channelName } = require('../../utils/locale');
+    const config = buildLocalizedDefaultConfig();
+
+    // Define the 9 feature groups mapped to their category index in config.categories
+    const GROUP_META = {
+      verification:  { label: 'Verification',       icon: '✅', catIndex: 0, description: 'Rules & verify channels for new members' },
+      roles:         { label: 'Role Menus',          icon: '🎨', catIndex: 1, description: 'Self-assign color, game, and platform roles' },
+      chat:          { label: 'Chat Channels',       icon: '💬', catIndex: 2, description: 'General chat, media, bot commands, AI chat' },
+      welcome:       { label: 'Welcome & Goodbye',   icon: '👋', catIndex: 3, description: 'Automated welcome and farewell messages' },
+      voice:         { label: 'Voice Channels',      icon: '🔊', catIndex: 4, description: 'General voice, gaming, and music channels' },
+      logs:          { label: 'Log Channels',        icon: '📋', catIndex: 5, description: 'Staff-only audit and moderation logs' },
+      staff:         { label: 'Staff Area',          icon: '🛡️', catIndex: 6, description: 'Private staff chat, commands, and voice' },
+      streaming:     { label: 'Streaming',           icon: '🎬', catIndex: 7, description: 'Live stream announcements and chat' },
+      afk:           { label: 'AFK Channel',         icon: '💤', catIndex: 8, description: 'Idle members auto-moved here after timeout' },
+    };
+
+    const channelNames = guild.channels.cache.map(c => c.name.toLowerCase());
+
+    const groups = {};
+
+    for (const [groupKey, meta] of Object.entries(GROUP_META)) {
+      const catCfg = config.categories[meta.catIndex];
+      if (!catCfg) continue;
+
+      const expectedChannels = catCfg.channels.map(ch => ({
+        name: ch.name,
+        type: ch.type,
+        exists: channelNames.some(n => n === ch.name.toLowerCase()),
+      }));
+
+      const existingCount = expectedChannels.filter(c => c.exists).length;
+      const totalCount = expectedChannels.length;
+
+      // Check if category exists
+      const catExists = guild.channels.cache.some(
+        c => c.type === 4 && c.name.toLowerCase() === catCfg.name.toLowerCase()
+      );
+
+      // Special AFK check: also verify guild.afkChannelId is set
+      let afkConfigured = false;
+      if (groupKey === 'afk') {
+        afkConfigured = !!guild.afkChannelId && !!guild.channels.cache.get(guild.afkChannelId);
+      }
+
+      groups[groupKey] = {
+        ...meta,
+        categoryName: catCfg.name,
+        categoryExists: catExists,
+        channels: expectedChannels,
+        existingCount,
+        totalCount,
+        complete: existingCount === totalCount && (groupKey !== 'afk' || afkConfigured),
+        afkConfigured: groupKey === 'afk' ? afkConfigured : undefined,
+        afkTimeoutMinutes: groupKey === 'afk' ? Math.floor((guild.afkTimeout || 0) / 60) : undefined,
+      };
+    }
+
+    res.json({ groups });
+  } catch (err) {
+    console.error('API channel-status error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /api/guilds/:guildId/setup/channel-group
+ * Body: { group: 'verification' | 'roles' | 'chat' | ... }
+ * Creates the specified feature channel group (category + channels + permissions).
+ */
+router.post('/:guildId/setup/channel-group', async (req, res) => {
+  try {
+    const guild = getGuild(req);
+    if (!guild) return res.status(404).json({ error: 'Guild not found' });
+
+    const { group } = req.body;
+    if (!group) return res.status(400).json({ error: 'group is required' });
+
+    // Special case: AFK uses the existing dedicated handler
+    if (group === 'afk') {
+      const { createAfkChannel } = require('../../commands/setup/afk-setup');
+      const result = await createAfkChannel(guild);
+      return res.json({ success: true, created: result.created ? 1 : 0, skipped: result.created ? 0 : 1, message: result.message });
+    }
+
+    const { ChannelType: CT, PermissionFlagsBits: PFB } = require('discord.js');
+    const { buildLocalizedDefaultConfig } = require('../../systems/serverSetup');
+    const config = buildLocalizedDefaultConfig();
+
+    const GROUP_CAT_INDEX = {
+      verification: 0, roles: 1, chat: 2, welcome: 3, voice: 4, logs: 5, staff: 6, streaming: 7, afk: 8,
+    };
+
+    const catIndex = GROUP_CAT_INDEX[group];
+    if (catIndex === undefined) return res.status(400).json({ error: `Unknown group: ${group}` });
+
+    const catCfg = config.categories[catIndex];
+    if (!catCfg) return res.status(400).json({ error: 'Group config not found' });
+
+    const PERM_MAP = {
+      ViewChannel: PFB.ViewChannel, SendMessages: PFB.SendMessages, ReadMessageHistory: PFB.ReadMessageHistory,
+      AddReactions: PFB.AddReactions, AttachFiles: PFB.AttachFiles, EmbedLinks: PFB.EmbedLinks,
+      Connect: PFB.Connect, Speak: PFB.Speak, ManageMessages: PFB.ManageMessages,
+      KickMembers: PFB.KickMembers, MuteMembers: PFB.MuteMembers, DeafenMembers: PFB.DeafenMembers,
+      MoveMembers: PFB.MoveMembers, ManageNicknames: PFB.ManageNicknames, ModerateMembers: PFB.ModerateMembers,
+      Administrator: PFB.Administrator,
+    };
+
+    const everyoneRole = guild.roles.everyone;
+    const staffRoles = guild.roles.cache.filter(
+      r => r.permissions.has(PFB.Administrator) || r.permissions.has(PFB.ManageMessages)
+    );
+
+    // Find or create category
+    let category = guild.channels.cache.find(
+      c => c.type === CT.GuildCategory && c.name.toLowerCase() === catCfg.name.toLowerCase()
+    );
+
+    let created = 0;
+    let skipped = 0;
+
+    if (!category) {
+      const catPerms = [];
+      if (catCfg.staffOnly) {
+        catPerms.push({ id: everyoneRole.id, deny: [PFB.ViewChannel] });
+        for (const [, sr] of staffRoles) {
+          catPerms.push({ id: sr.id, allow: [PFB.ViewChannel, PFB.SendMessages] });
+        }
+      }
+      category = await guild.channels.create({
+        name: catCfg.name, type: CT.GuildCategory,
+        permissionOverwrites: catPerms, reason: 'Quick Setup via Dashboard',
+      });
+    }
+
+    // Create channels
+    for (const chCfg of catCfg.channels) {
+      const channelType = chCfg.type === 'voice' ? CT.GuildVoice : CT.GuildText;
+
+      const exists = guild.channels.cache.find(
+        c => c.name.toLowerCase() === chCfg.name.toLowerCase() && c.parentId === category.id
+      );
+      if (exists) { skipped++; continue; }
+
+      // Build permission overwrites
+      const overwrites = [];
+      if (catCfg.staffOnly) {
+        overwrites.push({ id: everyoneRole.id, deny: [PFB.ViewChannel] });
+        for (const [, sr] of staffRoles) {
+          overwrites.push({ id: sr.id, allow: [PFB.ViewChannel, PFB.SendMessages] });
+        }
+      } else if (chCfg.permissions) {
+        for (const [roleName, perms] of Object.entries(chCfg.permissions)) {
+          let targetId;
+          if (roleName === 'everyone') {
+            targetId = everyoneRole.id;
+          } else {
+            const role = guild.roles.cache.find(r => r.name === roleName);
+            if (!role) continue;
+            targetId = role.id;
+          }
+          const ow = { id: targetId };
+          if (perms.allow) ow.allow = perms.allow.map(p => PERM_MAP[p]).filter(Boolean);
+          if (perms.deny)  ow.deny  = perms.deny.map(p => PERM_MAP[p]).filter(Boolean);
+          overwrites.push(ow);
+        }
+      }
+
+      await guild.channels.create({
+        name: chCfg.name, type: channelType, parent: category.id,
+        topic: chCfg.topic || null, permissionOverwrites: overwrites,
+        reason: 'Quick Setup via Dashboard',
+      });
+      created++;
+    }
+
+    res.json({ success: true, created, skipped, categoryName: catCfg.name });
+  } catch (err) {
+    console.error('API channel-group setup error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * GET /api/guilds/:guildId/setup/afk
+ * Returns current AFK channel status for the guild
+ */
+router.get('/:guildId/setup/afk', (req, res) => {
+  try {
+    const guild = getGuild(req);
+    if (!guild) return res.status(404).json({ error: 'Guild not found' });
+
+    const afkChannel = guild.afkChannelId
+      ? guild.channels.cache.get(guild.afkChannelId)
+      : null;
+
+    res.json({
+      hasAfkChannel: !!afkChannel,
+      channelId: afkChannel?.id || null,
+      channelName: afkChannel?.name || null,
+      afkTimeout: guild.afkTimeout || 0,
+      afkTimeoutMinutes: Math.floor((guild.afkTimeout || 0) / 60),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

@@ -138,6 +138,48 @@
       font-size: 12px; padding: 2px 8px; border-radius: 3px; margin-left: 8px;
     }
     .remove-ow-btn:hover { background: rgba(237,66,69,0.15); }
+
+    /* Tab bar */
+    .tab-bar { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 2px solid var(--border-color); padding-bottom: 0; }
+    .tab-btn {
+      padding: 10px 20px; border: none; background: none; color: var(--text-muted);
+      font-size: 14px; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent;
+      margin-bottom: -2px; transition: all 0.15s; border-radius: 6px 6px 0 0;
+    }
+    .tab-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.04); }
+    .tab-btn.active { color: #5865f2; border-bottom-color: #5865f2; }
+
+    /* Quick Setup cards */
+    .setup-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+    .setup-card {
+      background: var(--bg-card); border: 1px solid var(--border-color);
+      border-radius: 8px; padding: 20px; border-left: 4px solid #faa61a;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    .setup-card.complete { border-left-color: #57f287; }
+    .setup-card.partial  { border-left-color: #fee75c; }
+    .setup-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .setup-card-icon { font-size: 24px; }
+    .setup-card-title { font-size: 16px; font-weight: 700; color: var(--text-primary); }
+    .setup-card-status {
+      margin-left: auto; font-size: 11px; font-weight: 600; padding: 3px 10px;
+      border-radius: 12px; white-space: nowrap;
+    }
+    .setup-card-status.active { background: rgba(87,242,135,0.15); color: #57f287; }
+    .setup-card-status.missing { background: rgba(250,166,26,0.15); color: #faa61a; }
+    .setup-card-status.partial-status { background: rgba(254,231,92,0.15); color: #fee75c; }
+    .setup-card-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 12px; }
+    .setup-card-channels { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+    .setup-ch-chip {
+      font-size: 11px; padding: 3px 8px; border-radius: 4px;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .setup-ch-chip.exists  { background: rgba(87,242,135,0.1); color: #57f287; }
+    .setup-ch-chip.missing { background: rgba(255,255,255,0.06); color: var(--text-muted); }
+    .setup-ch-chip .ch-icon { font-size: 12px; }
+    .setup-card-footer { display: flex; align-items: center; gap: 8px; }
+    .setup-card-footer .btn { font-size: 13px; padding: 6px 16px; }
+    .setup-card-extra { font-size: 12px; color: var(--text-muted); margin-left: auto; }
   </style>
 </head>
 <body>
@@ -174,6 +216,29 @@
       </div>
 
       <div class="content-area">
+        <!-- Tab Bar -->
+        <div class="tab-bar">
+          <button class="tab-btn active" onclick="switchTab('channels')">📁 Channels</button>
+          <button class="tab-btn" onclick="switchTab('quick-setup')">⚡ Quick Setup</button>
+        </div>
+
+        <!-- Quick Setup Tab -->
+        <div id="tab-quick-setup" style="display: none;">
+          <div class="card" style="margin-bottom: 16px; padding: 16px 20px;">
+            <p style="margin: 0; color: var(--text-secondary); font-size: 13px;">
+              One-click setup for all bot feature channels. <strong style="color: #57f287;">Green</strong> = active,
+              <strong style="color: #fee75c;">Yellow</strong> = partially set up,
+              <strong style="color: #faa61a;">Orange</strong> = missing.
+              Click <strong>Create</strong> to set up any group with proper permissions and locale-aware names.
+            </p>
+          </div>
+          <div class="setup-grid" id="setup-grid">
+            <div style="padding: 40px; text-align: center; color: var(--text-muted); grid-column: 1 / -1;">Loading feature status...</div>
+          </div>
+        </div>
+
+        <!-- Channels Tab -->
+        <div id="tab-channels">
         <div class="channels-layout">
 
           <!-- Left: Channel Tree -->
@@ -354,6 +419,7 @@
             </div>
           </div>
         </div>
+        </div><!-- /tab-channels -->
       </div>
     </div>
   </div>
@@ -927,6 +993,119 @@
         window.location.href = '/login.html';
       } catch { window.location.href = '/login.html'; }
     });
+
+    // ── Tab Switching ───────────────────────────────────────────────────
+    let currentTab = 'channels';
+
+    function switchTab(tab) {
+      currentTab = tab;
+      document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+        btn.classList.toggle('active', (i === 0 && tab === 'channels') || (i === 1 && tab === 'quick-setup'));
+      });
+      document.getElementById('tab-channels').style.display = tab === 'channels' ? '' : 'none';
+      document.getElementById('tab-quick-setup').style.display = tab === 'quick-setup' ? '' : 'none';
+
+      if (tab === 'quick-setup') loadQuickSetupStatus();
+    }
+
+    // ── Quick Setup ──────────────────────────────────────────────────────
+    let setupStatusCache = null;
+
+    async function loadQuickSetupStatus() {
+      const guildId = getCurrentGuild();
+      if (!guildId) { showToast('Please select a guild', 'warning'); return; }
+
+      const grid = document.getElementById('setup-grid');
+      grid.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted);grid-column:1/-1;">Loading...</div>';
+
+      try {
+        const data = await api(`/api/guilds/${guildId}/setup/channel-status`);
+        setupStatusCache = data.groups;
+        renderSetupCards(data.groups);
+      } catch (err) {
+        console.error('Failed to load setup status:', err);
+        grid.innerHTML = '<div style="padding:40px;text-align:center;color:var(--accent-danger);grid-column:1/-1;">Failed to load status</div>';
+      }
+    }
+
+    function renderSetupCards(groups) {
+      const grid = document.getElementById('setup-grid');
+      grid.innerHTML = '';
+
+      const ORDER = ['verification','roles','chat','welcome','voice','logs','staff','streaming','afk'];
+
+      for (const key of ORDER) {
+        const g = groups[key];
+        if (!g) continue;
+
+        const isComplete = g.complete;
+        const isPartial = !isComplete && g.existingCount > 0;
+        const statusClass = isComplete ? 'complete' : isPartial ? 'partial' : '';
+        const statusLabel = isComplete ? 'Active' : isPartial ? `${g.existingCount}/${g.totalCount}` : 'Missing';
+        const statusBadge = isComplete ? 'active' : isPartial ? 'partial-status' : 'missing';
+
+        let extraInfo = '';
+        if (key === 'afk' && g.afkConfigured) {
+          extraInfo = `Timeout: ${g.afkTimeoutMinutes} min`;
+        }
+
+        const chipsHtml = g.channels.map(ch => {
+          const icon = ch.type === 'voice' ? '🔊' : '#';
+          const cls = ch.exists ? 'exists' : 'missing';
+          return `<span class="setup-ch-chip ${cls}"><span class="ch-icon">${icon}</span>${escapeHtml(ch.name)}</span>`;
+        }).join('');
+
+        const card = document.createElement('div');
+        card.className = `setup-card ${statusClass}`;
+        card.innerHTML = `
+          <div class="setup-card-header">
+            <span class="setup-card-icon">${g.icon}</span>
+            <span class="setup-card-title">${escapeHtml(g.label)}</span>
+            <span class="setup-card-status ${statusBadge}">${statusLabel}</span>
+          </div>
+          <div class="setup-card-desc">${escapeHtml(g.description)}</div>
+          <div class="setup-card-channels">${chipsHtml}</div>
+          <div class="setup-card-footer">
+            ${isComplete
+              ? '<span style="color:#57f287;font-size:13px;font-weight:600;">✓ All channels ready</span>'
+              : `<button class="btn btn-primary" onclick="createChannelGroup('${key}', this)">${isPartial ? 'Create Missing' : 'Create'}</button>`
+            }
+            ${extraInfo ? `<span class="setup-card-extra">${extraInfo}</span>` : ''}
+          </div>
+        `;
+
+        grid.appendChild(card);
+      }
+    }
+
+    async function createChannelGroup(groupKey, btn) {
+      const guildId = getCurrentGuild();
+      if (!guildId) { showToast('Select a guild first', 'warning'); return; }
+
+      const originalText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Creating...';
+
+      try {
+        const result = await api(`/api/guilds/${guildId}/setup/channel-group`, {
+          method: 'POST',
+          body: JSON.stringify({ group: groupKey }),
+        });
+
+        const msg = result.created > 0
+          ? `Created ${result.created} channel${result.created > 1 ? 's' : ''}${result.skipped > 0 ? ` (${result.skipped} already existed)` : ''}`
+          : result.message || 'Channels already exist';
+
+        showToast(msg, 'success');
+        // Refresh both views
+        loadQuickSetupStatus();
+        loadChannels();
+      } catch (err) {
+        showToast('Failed: ' + (err.message || 'Unknown error'), 'error');
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    }
 
     // ── Init ──────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', () => {
