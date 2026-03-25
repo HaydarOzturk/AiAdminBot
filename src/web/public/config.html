@@ -3,8 +3,242 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Configuration - Admin Dashboard</title>
+  <title>Settings - Admin Dashboard</title>
   <link rel="stylesheet" href="/css/dashboard.css">
+  <style>
+    /* Settings page styles */
+    .settings-tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      border-bottom: 2px solid #2f3136;
+      padding-bottom: 0;
+    }
+    .settings-tab {
+      padding: 10px 18px;
+      background: transparent;
+      border: none;
+      color: #b9bbbe;
+      cursor: pointer;
+      font-size: 14px;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.2s;
+      border-radius: 4px 4px 0 0;
+    }
+    .settings-tab:hover { color: #dcddde; background: rgba(255,255,255,0.04); }
+    .settings-tab.active {
+      color: #fff;
+      border-bottom-color: #5865f2;
+      background: rgba(88,101,242,0.1);
+    }
+    .settings-tab .tab-icon { margin-right: 6px; }
+    .settings-panel { display: none; }
+    .settings-panel.active { display: block; }
+
+    /* Feature status bar */
+    .status-bar {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .status-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .status-chip.on { background: rgba(87,242,135,0.15); color: #57f287; }
+    .status-chip.off { background: rgba(237,66,69,0.15); color: #ed4245; }
+    .status-chip.info { background: rgba(88,101,242,0.15); color: #5865f2; }
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .status-dot.on { background: #57f287; }
+    .status-dot.off { background: #ed4245; }
+
+    /* Setting field rows */
+    .setting-group {
+      background: #2f3136;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .setting-group-title {
+      font-size: 13px;
+      color: #b9bbbe;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 16px;
+      font-weight: 600;
+    }
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .setting-row:last-child { border-bottom: none; }
+    .setting-label {
+      flex: 1;
+      min-width: 0;
+    }
+    .setting-label strong {
+      display: block;
+      color: #dcddde;
+      font-size: 14px;
+      margin-bottom: 2px;
+    }
+    .setting-label small {
+      color: #72767d;
+      font-size: 12px;
+    }
+    .setting-control {
+      flex-shrink: 0;
+      margin-left: 16px;
+    }
+
+    /* Toggle switch */
+    .toggle-switch {
+      position: relative;
+      width: 44px;
+      height: 24px;
+    }
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background: #72767d;
+      border-radius: 24px;
+      transition: 0.3s;
+    }
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: 0.3s;
+    }
+    .toggle-switch input:checked + .toggle-slider { background: #5865f2; }
+    .toggle-switch input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+    /* Setting inputs */
+    .setting-input {
+      background: #202225;
+      border: 1px solid #40444b;
+      color: #dcddde;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 14px;
+      width: 220px;
+    }
+    .setting-input:focus { border-color: #5865f2; outline: none; }
+    .setting-input.password-field { font-family: monospace; }
+    .setting-select {
+      background: #202225;
+      border: 1px solid #40444b;
+      color: #dcddde;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 14px;
+      width: 220px;
+    }
+
+    /* Password field with toggle */
+    .password-wrapper {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+    }
+    .password-wrapper .setting-input { padding-right: 36px; }
+    .password-toggle {
+      position: absolute;
+      right: 8px;
+      background: none;
+      border: none;
+      color: #b9bbbe;
+      cursor: pointer;
+      font-size: 14px;
+      padding: 4px;
+    }
+
+    /* API key status */
+    .key-status {
+      font-size: 12px;
+      margin-top: 4px;
+    }
+    .key-status.set { color: #57f287; }
+    .key-status.unset { color: #faa61a; }
+
+    /* Save bar */
+    .save-bar {
+      position: sticky;
+      bottom: 0;
+      background: #2f3136;
+      border-top: 1px solid #40444b;
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 20px -20px -20px;
+      border-radius: 0 0 8px 8px;
+    }
+    .save-bar.hidden { display: none; }
+    .save-bar .changes-text { color: #faa61a; font-size: 13px; }
+
+    /* Restart notice */
+    .restart-notice {
+      background: rgba(250,166,26,0.1);
+      border: 1px solid rgba(250,166,26,0.3);
+      color: #faa61a;
+      padding: 10px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .restart-notice.show { display: block; }
+
+    /* Language flags grid */
+    .lang-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .lang-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border: 2px solid #40444b;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.2s;
+      background: #202225;
+    }
+    .lang-option:hover { border-color: #5865f2; }
+    .lang-option.selected { border-color: #5865f2; background: rgba(88,101,242,0.1); }
+    .lang-option .flag { font-size: 20px; }
+    .lang-option .lang-name { font-size: 13px; color: #dcddde; }
+  </style>
 </head>
 <body>
   <div class="layout">
@@ -23,7 +257,7 @@
         <li><a href="/roles.html"><span class="nav-icon">👥</span> Roles</a></li>
         <li><a href="/channels.html"><span class="nav-icon">📁</span> Channels</a></li>
         <li><a href="/leveling.html"><span class="nav-icon">📈</span> Leveling</a></li>
-        <li><a href="/config.html" class="active"><span class="nav-icon">⚙️</span> Config</a></li>
+        <li><a href="/config.html" class="active"><span class="nav-icon">⚙️</span> Settings</a></li>
         <li><a href="/logs.html"><span class="nav-icon">📝</span> Logs</a></li>
       </ul>
 
@@ -35,106 +269,125 @@
     <!-- Main Content -->
     <div class="main-content">
       <div class="content-header">
-        <h1 class="content-title">Configuration</h1>
+        <h1 class="content-title">Settings</h1>
       </div>
 
       <div class="content-area">
-        <!-- Language Settings Card -->
-        <div class="card">
-          <h2 class="card-title">Language Settings</h2>
-          <p class="card-description">Select your preferred language for the bot interface</p>
+        <!-- Feature Status Bar -->
+        <div class="status-bar" id="statusBar">
+          <div class="status-chip info" id="statusProvider">
+            <span>🧠</span> <span id="statusProviderText">AI: Loading...</span>
+          </div>
+          <div class="status-chip off" id="statusChat">
+            <span class="status-dot off"></span> <span id="statusChatText">Chat: Off</span>
+          </div>
+          <div class="status-chip off" id="statusMod">
+            <span class="status-dot off"></span> <span id="statusModText">Moderation: Off</span>
+          </div>
+          <div class="status-chip info" id="statusAfk">
+            <span>💤</span> <span id="statusAfkText">AFK: 10 min</span>
+          </div>
+          <div class="status-chip info" id="statusLang">
+            <span>🌐</span> <span id="statusLangText">Language: en</span>
+          </div>
+        </div>
 
-          <div class="form-group" style="margin-top: 16px;">
-            <label style="display: block; margin-bottom: 8px;">Current Language:</label>
-            <div id="currentLanguageDisplay" style="font-size: 1.1em; margin: 10px 0; font-weight: 600; color: #dcddde;">
-              <span id="langFlag"></span> <span id="langName"></span>
+        <!-- Restart notice -->
+        <div class="restart-notice" id="restartNotice">
+          ⚠️ Some settings have been saved. Restart the bot for all changes to take effect.
+        </div>
+
+        <!-- Settings Tabs -->
+        <div class="settings-tabs" id="settingsTabs">
+          <button class="settings-tab active" data-panel="general">
+            <span class="tab-icon">🤖</span>General
+          </button>
+          <button class="settings-tab" data-panel="ai">
+            <span class="tab-icon">🧠</span>AI Features
+          </button>
+          <button class="settings-tab" data-panel="afk">
+            <span class="tab-icon">💤</span>AFK
+          </button>
+          <button class="settings-tab" data-panel="voiceXp">
+            <span class="tab-icon">🔊</span>Voice XP
+          </button>
+          <button class="settings-tab" data-panel="web">
+            <span class="tab-icon">🌐</span>Dashboard
+          </button>
+          <button class="settings-tab" data-panel="debug">
+            <span class="tab-icon">🔧</span>Debug
+          </button>
+          <button class="settings-tab" data-panel="language">
+            <span class="tab-icon">🗣️</span>Language
+          </button>
+          <button class="settings-tab" data-panel="advanced">
+            <span class="tab-icon">📝</span>Advanced
+          </button>
+        </div>
+
+        <!-- GENERAL Panel -->
+        <div class="settings-panel active" id="panel-general"></div>
+
+        <!-- AI Panel -->
+        <div class="settings-panel" id="panel-ai"></div>
+
+        <!-- AFK Panel -->
+        <div class="settings-panel" id="panel-afk"></div>
+
+        <!-- Voice XP Panel -->
+        <div class="settings-panel" id="panel-voiceXp"></div>
+
+        <!-- Web Panel -->
+        <div class="settings-panel" id="panel-web"></div>
+
+        <!-- Debug Panel -->
+        <div class="settings-panel" id="panel-debug"></div>
+
+        <!-- Language Panel (guild-specific) -->
+        <div class="settings-panel" id="panel-language">
+          <div class="setting-group">
+            <div class="setting-group-title">Guild Language</div>
+            <p style="color: #b9bbbe; font-size: 13px; margin-bottom: 16px;">
+              This sets the language for all bot messages in the selected server. Channel names are set during server setup.
+            </p>
+            <div class="lang-grid" id="langGrid">
+              <div class="lang-option" data-lang="en"><span class="flag">🇬🇧</span><span class="lang-name">English</span></div>
+              <div class="lang-option" data-lang="tr"><span class="flag">🇹🇷</span><span class="lang-name">Türkçe</span></div>
+              <div class="lang-option" data-lang="de"><span class="flag">🇩🇪</span><span class="lang-name">Deutsch</span></div>
+              <div class="lang-option" data-lang="es"><span class="flag">🇪🇸</span><span class="lang-name">Español</span></div>
+              <div class="lang-option" data-lang="fr"><span class="flag">🇫🇷</span><span class="lang-name">Français</span></div>
+              <div class="lang-option" data-lang="pt"><span class="flag">🇵🇹</span><span class="lang-name">Português</span></div>
+              <div class="lang-option" data-lang="ru"><span class="flag">🇷🇺</span><span class="lang-name">Русский</span></div>
+              <div class="lang-option" data-lang="ar"><span class="flag">🇸🇦</span><span class="lang-name">العربية</span></div>
+            </div>
+            <div style="margin-top: 16px;">
+              <button class="btn btn-primary" id="saveLangBtn">Save Language</button>
             </div>
           </div>
-
-          <div class="form-group">
-            <label for="languageSelect" style="display: block; margin-bottom: 8px;">Choose Language:</label>
-            <select id="languageSelect" class="guild-selector" style="width: 100%;">
-              <option value="en">🇬🇧 English</option>
-              <option value="tr">🇹🇷 Türkçe</option>
-              <option value="de">🇩🇪 Deutsch</option>
-              <option value="es">🇪🇸 Español</option>
-              <option value="fr">🇫🇷 Français</option>
-              <option value="pt">🇵🇹 Português</option>
-              <option value="ru">🇷🇺 Русский</option>
-              <option value="ar">🇸🇦 العربية</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <button id="changeLanguageBtn" class="btn btn-primary">Change Language</button>
-          </div>
         </div>
 
-        <!-- JSON Editor -->
-        <div class="card">
-          <h2 class="card-title">Guild Configuration</h2>
-          <p class="card-description">Edit the configuration JSON for this guild</p>
-
-          <div class="form-group" style="margin-top: 16px;">
-            <label for="config-editor">Configuration (JSON)</label>
-            <textarea id="config-editor" class="code-editor" required></textarea>
-          </div>
-
-          <div style="display: flex; gap: 12px;">
-            <button class="btn btn-primary" id="save-config-btn">Save Configuration</button>
-            <button class="btn btn-secondary" id="reset-config-btn">Reset to Saved</button>
-          </div>
-
-          <div style="margin-top: 16px;">
-            <p style="color: #b9bbbe; font-size: 12px;">
-              Last saved: <span id="last-saved">Never</span>
+        <!-- Advanced Panel (raw JSON editor) -->
+        <div class="settings-panel" id="panel-advanced">
+          <div class="setting-group">
+            <div class="setting-group-title">Raw Configuration (config.json)</div>
+            <p style="color: #b9bbbe; font-size: 13px; margin-bottom: 12px;">
+              Edit the raw JSON configuration file. Be careful — invalid JSON will not save.
             </p>
+            <textarea id="config-editor" class="code-editor" style="width:100%; min-height:300px; background:#202225; color:#dcddde; border:1px solid #40444b; border-radius:4px; padding:12px; font-family:monospace; font-size:13px; resize:vertical;" required></textarea>
+            <div style="display:flex; gap:12px; margin-top:12px;">
+              <button class="btn btn-primary" id="save-config-btn">Save JSON</button>
+              <button class="btn btn-secondary" id="reset-config-btn">Reset</button>
+            </div>
+            <p style="color:#72767d; font-size:12px; margin-top:8px;">Last saved: <span id="last-saved">Never</span></p>
           </div>
         </div>
 
-        <!-- Environment Variables (Read-only) -->
-        <div class="card">
-          <h2 class="card-title">Environment Variables</h2>
-          <p class="card-description">System configuration (read-only)</p>
-
-          <div class="table-wrapper" style="margin-top: 16px;">
-            <table>
-              <thead>
-                <tr>
-                  <th>Variable</th>
-                  <th>Value</th>
-                </tr>
-              </thead>
-              <tbody id="env-table-body">
-                <tr>
-                  <td colspan="2" style="text-align: center; color: #b9bbbe; padding: 20px;">Loading...</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Configuration Help -->
-        <div class="card">
-          <h2 class="card-title">Configuration Help</h2>
-
-          <div style="color: #b9bbbe; font-size: 13px; line-height: 1.8;">
-            <h3 style="color: #dcddde; font-size: 14px; margin-bottom: 8px;">Common Settings:</h3>
-
-            <p><strong>prefix</strong> - Command prefix (e.g., "!")</p>
-            <p><strong>logging</strong> - Logging channels and settings</p>
-            <p><strong>moderation</strong> - Moderation module configuration</p>
-            <p><strong>leveling</strong> - Experience and leveling settings</p>
-            <p><strong>roles</strong> - Role management configuration</p>
-            <p><strong>automod</strong> - Auto-moderation rules</p>
-
-            <h3 style="color: #dcddde; font-size: 14px; margin-top: 16px; margin-bottom: 8px;">Tips:</h3>
-            <ul style="margin-left: 16px;">
-              <li>Ensure your JSON is valid before saving</li>
-              <li>Changes take effect immediately</li>
-              <li>You can reset to the last saved version anytime</li>
-              <li>Some settings may require a bot restart</li>
-            </ul>
+        <!-- Save Bar -->
+        <div class="save-bar hidden" id="saveBar">
+          <span class="changes-text">⚠️ You have unsaved changes</span>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-secondary" id="discardBtn">Discard</button>
+            <button class="btn btn-primary" id="saveSettingsBtn">Save Settings</button>
           </div>
         </div>
       </div>
@@ -143,176 +396,285 @@
 
   <script src="/js/dashboard.js"></script>
   <script>
-    // Language mapping with flags
-    const languageNames = {
-      'en': '🇬🇧 English',
-      'tr': '🇹🇷 Türkçe',
-      'de': '🇩🇪 Deutsch',
-      'es': '🇪🇸 Español',
-      'fr': '🇫🇷 Français',
-      'pt': '🇵🇹 Português',
-      'ru': '🇷🇺 Русский',
-      'ar': '🇸🇦 العربية'
-    };
+    let settingsData = {};
+    let pendingChanges = {};
+    let originalValues = {};
+    let currentGuildLocale = 'en';
+    let selectedLocale = null;
 
-    let originalConfig = '';
-    let currentLocale = 'en';
+    // ── Tab switching ──────────────────────────────────────────────────
+    document.getElementById('settingsTabs').addEventListener('click', e => {
+      const tab = e.target.closest('.settings-tab');
+      if (!tab) return;
 
-    async function loadConfig() {
+      document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
+
+      tab.classList.add('active');
+      const panel = document.getElementById('panel-' + tab.dataset.panel);
+      if (panel) panel.classList.add('active');
+    });
+
+    // ── Load settings from API ─────────────────────────────────────────
+    async function loadSettings() {
       try {
-        const guildId = getCurrentGuild();
-        if (!guildId) {
-          showToast('Please select a guild', 'warning');
-          return;
+        const [settingsRes, statusRes] = await Promise.all([
+          api('/api/settings'),
+          api('/api/settings/status'),
+        ]);
+
+        settingsData = settingsRes.sections;
+        updateStatusBar(statusRes);
+        renderAllPanels();
+
+        // Also load guild config for the advanced panel
+        loadGuildConfig();
+        loadGuildLanguage();
+      } catch (err) {
+        console.error('Failed to load settings:', err);
+        showToast('Failed to load settings', 'error');
+      }
+    }
+
+    // ── Update top status bar ──────────────────────────────────────────
+    function updateStatusBar(status) {
+      const providerChip = document.getElementById('statusProvider');
+      const providerText = document.getElementById('statusProviderText');
+      if (status.aiChat.configured) {
+        providerChip.className = 'status-chip on';
+        providerText.textContent = 'AI: ' + status.aiChat.provider;
+      } else {
+        providerChip.className = 'status-chip off';
+        providerText.textContent = 'AI: No Key';
+      }
+
+      setStatusChip('statusChat', 'statusChatText', status.aiChat.enabled, 'Chat');
+      setStatusChip('statusMod', 'statusModText', status.aiModeration.enabled, 'Moderation');
+
+      document.getElementById('statusAfkText').textContent = 'AFK: ' + status.afk.timeout + ' min';
+      document.getElementById('statusLangText').textContent = 'Language: ' + status.locale;
+    }
+
+    function setStatusChip(chipId, textId, isOn, label) {
+      const chip = document.getElementById(chipId);
+      const text = document.getElementById(textId);
+      chip.className = isOn ? 'status-chip on' : 'status-chip off';
+      chip.querySelector('.status-dot').className = 'status-dot ' + (isOn ? 'on' : 'off');
+      text.textContent = label + ': ' + (isOn ? 'On' : 'Off');
+    }
+
+    // ── Render settings panels from schema ─────────────────────────────
+    function renderAllPanels() {
+      for (const [sectionKey, section] of Object.entries(settingsData)) {
+        const panel = document.getElementById('panel-' + sectionKey);
+        if (!panel) continue;
+
+        let html = `<div class="setting-group"><div class="setting-group-title">${section.icon} ${section.label}</div>`;
+
+        for (const field of section.fields) {
+          const val = field.value || '';
+          originalValues[field.key] = val;
+
+          html += `<div class="setting-row">`;
+          html += `<div class="setting-label"><strong>${escapeHtml(field.label)}</strong>`;
+          html += `<small>${escapeHtml(field.key)}</small></div>`;
+          html += `<div class="setting-control">`;
+
+          if (field.type === 'toggle') {
+            const checked = val === 'true' ? 'checked' : '';
+            html += `<label class="toggle-switch"><input type="checkbox" data-key="${field.key}" ${checked} onchange="trackChange('${field.key}', this.checked ? 'true' : 'false')"><span class="toggle-slider"></span></label>`;
+          } else if (field.type === 'select') {
+            html += `<select class="setting-select" data-key="${field.key}" onchange="trackChange('${field.key}', this.value)">`;
+            for (const opt of field.options) {
+              const sel = opt === val ? 'selected' : '';
+              html += `<option value="${opt}" ${sel}>${opt}</option>`;
+            }
+            html += `</select>`;
+          } else if (field.type === 'password') {
+            const display = field.masked ? '••••••••' : val;
+            html += `<div class="password-wrapper">`;
+            html += `<input type="password" class="setting-input password-field" data-key="${field.key}" value="${escapeHtml(display)}" placeholder="${escapeHtml(field.placeholder || '')}" onchange="trackChange('${field.key}', this.value)" onfocus="clearMasked(this, '${field.key}')">`;
+            html += `<button class="password-toggle" onclick="togglePassword(this)">👁️</button>`;
+            html += `</div>`;
+            if (field.masked) {
+              html += `<div class="key-status set">✓ Key is set</div>`;
+            } else if (!val) {
+              html += `<div class="key-status unset">⚠ Not configured</div>`;
+            }
+          } else if (field.type === 'number') {
+            const attrs = [];
+            if (field.min !== undefined) attrs.push(`min="${field.min}"`);
+            if (field.max !== undefined) attrs.push(`max="${field.max}"`);
+            if (field.step) attrs.push(`step="${field.step}"`);
+            html += `<input type="number" class="setting-input" data-key="${field.key}" value="${escapeHtml(val || field.default || '')}" ${attrs.join(' ')} placeholder="${escapeHtml(field.default || '')}" onchange="trackChange('${field.key}', this.value)">`;
+          } else {
+            html += `<input type="text" class="setting-input" data-key="${field.key}" value="${escapeHtml(val)}" placeholder="${escapeHtml(field.placeholder || field.default || '')}" onchange="trackChange('${field.key}', this.value)">`;
+          }
+
+          html += `</div></div>`;
         }
 
-        const data = await api(`/api/guilds/${guildId}/config`);
-
-        // Format JSON nicely
-        const editor = document.getElementById('config-editor');
-        originalConfig = JSON.stringify(data.config || {}, null, 2);
-        editor.value = originalConfig;
-
-        // Update last saved timestamp
-        const lastSaved = data.lastSaved ? formatDate(data.lastSaved) : 'Never';
-        document.getElementById('last-saved').textContent = lastSaved;
-
-        // Load environment variables
-        loadEnvironmentVariables(data.environment);
-
-        // Load and display current language
-        if (data.locale) {
-          currentLocale = data.locale;
-          updateLanguageDisplay();
-        }
-      } catch (error) {
-        console.error('Failed to load config:', error);
-        showToast('Failed to load configuration', 'error');
+        html += `</div>`;
+        panel.innerHTML = html;
       }
     }
 
-    function updateLanguageDisplay() {
-      const langDisplay = languageNames[currentLocale] || 'English';
-      document.getElementById('languageSelect').value = currentLocale;
-      document.getElementById('currentLanguageDisplay').innerHTML = langDisplay;
+    // ── Change tracking ────────────────────────────────────────────────
+    function trackChange(key, value) {
+      // If value matches original, remove from pending
+      if (value === originalValues[key]) {
+        delete pendingChanges[key];
+      } else {
+        pendingChanges[key] = value;
+      }
+      updateSaveBar();
     }
 
-    function loadEnvironmentVariables(envVars) {
-      const tbody = document.getElementById('env-table-body');
-      tbody.innerHTML = '';
-
-      if (!envVars || Object.keys(envVars).length === 0) {
-        tbody.innerHTML = '<tr><td colspan="2" style="text-align: center; color: #b9bbbe; padding: 20px;">No environment variables</td></tr>';
-        return;
+    function updateSaveBar() {
+      const bar = document.getElementById('saveBar');
+      if (Object.keys(pendingChanges).length > 0) {
+        bar.classList.remove('hidden');
+      } else {
+        bar.classList.add('hidden');
       }
-
-      // Filter out sensitive variables
-      const sensitiveKeywords = ['TOKEN', 'SECRET', 'PASSWORD', 'KEY', 'CREDENTIAL'];
-      const filteredVars = Object.entries(envVars).filter(([key]) => {
-        return !sensitiveKeywords.some(keyword => key.toUpperCase().includes(keyword));
-      });
-
-      if (filteredVars.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="2" style="text-align: center; color: #b9bbbe; padding: 20px;">No safe variables to display</td></tr>';
-        return;
-      }
-
-      filteredVars.forEach(([key, value]) => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td><strong>${escapeHtml(key)}</strong></td>
-          <td><code style="background-color: #202225; padding: 4px 8px; border-radius: 4px; font-size: 12px;">${escapeHtml(String(value))}</code></td>
-        `;
-        tbody.appendChild(row);
-      });
     }
 
-    // Save configuration
-    document.getElementById('save-config-btn').addEventListener('click', async () => {
+    function clearMasked(input, key) {
+      if (input.value === '••••••••') {
+        input.value = '';
+        input.type = 'text';
+      }
+    }
+
+    function togglePassword(btn) {
+      const input = btn.parentElement.querySelector('input');
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = '🔒';
+      } else {
+        input.type = 'password';
+        btn.textContent = '👁️';
+      }
+    }
+
+    // ── Save settings ──────────────────────────────────────────────────
+    document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
       try {
-        const guildId = getCurrentGuild();
-        if (!guildId) {
-          showToast('Please select a guild', 'warning');
-          return;
-        }
+        if (Object.keys(pendingChanges).length === 0) return;
 
-        const editor = document.getElementById('config-editor');
-        const configText = editor.value.trim();
-
-        // Validate JSON
-        let configObj;
-        try {
-          configObj = JSON.parse(configText);
-        } catch (e) {
-          showToast('Invalid JSON: ' + e.message, 'error');
-          return;
-        }
-
-        // Save
-        await api(`/api/guilds/${guildId}/config`, {
+        const res = await api('/api/settings', {
           method: 'PUT',
-          body: JSON.stringify({ config: configObj }),
+          body: JSON.stringify({ updates: pendingChanges }),
         });
 
-        showToast('Configuration saved successfully', 'success');
-        originalConfig = configText;
+        showToast(res.message || 'Settings saved!', 'success');
+        pendingChanges = {};
+        updateSaveBar();
+        document.getElementById('restartNotice').classList.add('show');
 
-        // Reload config to get updated timestamp
-        loadConfig();
-      } catch (error) {
-        console.error('Failed to save config:', error);
-        showToast('Failed to save configuration', 'error');
+        // Reload to get fresh values
+        await loadSettings();
+      } catch (err) {
+        showToast('Failed to save: ' + err.message, 'error');
       }
     });
 
-    // Reset configuration
-    document.getElementById('reset-config-btn').addEventListener('click', () => {
-      const editor = document.getElementById('config-editor');
-      editor.value = originalConfig;
-      showToast('Configuration reset to last saved version', 'info');
+    document.getElementById('discardBtn').addEventListener('click', () => {
+      pendingChanges = {};
+      updateSaveBar();
+      renderAllPanels();
+      showToast('Changes discarded', 'info');
     });
 
-    // Change language
-    document.getElementById('changeLanguageBtn').addEventListener('click', async () => {
+    // ── Language panel ─────────────────────────────────────────────────
+    async function loadGuildLanguage() {
+      const guildId = getCurrentGuild();
+      if (!guildId) return;
       try {
-        const guildId = getCurrentGuild();
-        if (!guildId) {
-          showToast('Please select a guild', 'warning');
-          return;
-        }
+        const data = await api(`/api/guilds/${guildId}/config`);
+        currentGuildLocale = data.locale || 'en';
+        selectedLocale = currentGuildLocale;
+        updateLangGrid();
+      } catch { /* ignore */ }
+    }
 
-        const selectedLocale = document.getElementById('languageSelect').value;
+    function updateLangGrid() {
+      document.querySelectorAll('.lang-option').forEach(el => {
+        el.classList.toggle('selected', el.dataset.lang === selectedLocale);
+      });
+    }
 
-        const response = await api(`/api/guilds/${guildId}/config/language`, {
+    document.getElementById('langGrid').addEventListener('click', e => {
+      const option = e.target.closest('.lang-option');
+      if (!option) return;
+      selectedLocale = option.dataset.lang;
+      updateLangGrid();
+    });
+
+    document.getElementById('saveLangBtn').addEventListener('click', async () => {
+      if (!selectedLocale) return;
+      const guildId = getCurrentGuild();
+      if (!guildId) { showToast('Select a guild first', 'warning'); return; }
+
+      try {
+        await api(`/api/guilds/${guildId}/config/language`, {
           method: 'POST',
           body: JSON.stringify({ locale: selectedLocale }),
         });
-
-        if (response.success || response.locale) {
-          currentLocale = selectedLocale;
-          updateLanguageDisplay();
-          showToast(`Language changed to ${languageNames[selectedLocale]}`, 'success');
-        }
-      } catch (error) {
-        console.error('Failed to change language:', error);
-        showToast('Failed to change language', 'error');
+        currentGuildLocale = selectedLocale;
+        showToast('Language saved!', 'success');
+        loadSettings();
+      } catch (err) {
+        showToast('Failed: ' + err.message, 'error');
       }
     });
 
-    // Logout handler
-    document.getElementById('logout-btn').addEventListener('click', async () => {
+    // ── Advanced panel (raw JSON) ──────────────────────────────────────
+    let originalConfig = '';
+
+    async function loadGuildConfig() {
+      const guildId = getCurrentGuild();
+      if (!guildId) return;
       try {
-        await api('/api/auth/logout', { method: 'POST' });
-        window.location.href = '/login.html';
-      } catch (error) {
-        window.location.href = '/login.html';
+        const data = await api(`/api/guilds/${guildId}/config`);
+        originalConfig = JSON.stringify(data.config || {}, null, 2);
+        document.getElementById('config-editor').value = originalConfig;
+        document.getElementById('last-saved').textContent = data.lastSaved ? formatDate(data.lastSaved) : 'Never';
+      } catch { /* ignore */ }
+    }
+
+    document.getElementById('save-config-btn').addEventListener('click', async () => {
+      const guildId = getCurrentGuild();
+      if (!guildId) { showToast('Select a guild', 'warning'); return; }
+
+      const text = document.getElementById('config-editor').value.trim();
+      try {
+        const obj = JSON.parse(text);
+        await api(`/api/guilds/${guildId}/config`, {
+          method: 'PUT',
+          body: JSON.stringify({ config: obj }),
+        });
+        showToast('Config saved', 'success');
+        originalConfig = text;
+        loadGuildConfig();
+      } catch (e) {
+        showToast('Invalid JSON: ' + e.message, 'error');
       }
     });
 
-    // Load initial data
-    document.addEventListener('DOMContentLoaded', () => {
-      loadConfig();
+    document.getElementById('reset-config-btn').addEventListener('click', () => {
+      document.getElementById('config-editor').value = originalConfig;
+      showToast('Reset to saved', 'info');
     });
+
+    // ── Logout ─────────────────────────────────────────────────────────
+    document.getElementById('logout-btn').addEventListener('click', async () => {
+      try { await api('/api/auth/logout', { method: 'POST' }); } catch {}
+      window.location.href = '/login.html';
+    });
+
+    // ── Init ───────────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', loadSettings);
   </script>
 </body>
 </html>

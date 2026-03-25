@@ -23,6 +23,7 @@ app.use('/api/', requireAuth);
 app.use('/api/stats', require('./api/stats'));
 app.use('/api/logs', require('./api/logs'));
 app.use('/api/guilds', require('./api/guilds'));
+app.use('/api/settings', require('./api/settings'));
 
 // SPA fallback — serve index.html for non-API, non-file routes
 app.get('*', (req, res) => {
