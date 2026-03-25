@@ -15,14 +15,132 @@ const RATE_LIMIT = parseInt(process.env.AI_CHAT_RATE_LIMIT) || 5; // messages pe
 const RATE_WINDOW = 60000; // 1 minute
 
 /**
- * Build the AI chat system prompt, optionally including server rules
- * @param {string|null} rulesText - The server rules text (or null)
+ * Build a snapshot of the guild for AI context.
+ * Includes: server info, owner, roles, channels, staff, top members, streamers.
+ * @param {import('discord.js').Guild} guild
  * @returns {string}
  */
-function buildAiChatSystemPrompt(rulesText, streamingContext) {
-  let prompt = `You are AiAdminBot AI, a friendly assistant in a Discord server powered by AiAdminBot — an AI-powered administration bot.
+function buildGuildContext(guild) {
+  if (!guild) return '';
 
-You know about all the bot's features and can help users understand them:
+  const lines = [];
+
+  // ── Server basics ──────────────────────────────────────────────────────
+  const owner = guild.members.cache.get(guild.ownerId);
+  const ownerName = owner?.displayName || owner?.user?.username || 'Unknown';
+  lines.push(`Server: "${guild.name}" | Members: ${guild.memberCount} | Owner: ${ownerName}`);
+  if (guild.description) lines.push(`Description: ${guild.description}`);
+
+  // ── Roles (skip @everyone and bot-managed roles) ───────────────────────
+  const roles = guild.roles.cache
+    .filter(r => r.id !== guild.id && !r.managed)
+    .sort((a, b) => b.position - a.position)
+    .first(20);
+
+  if (roles.length > 0) {
+    const roleList = roles.map(r => {
+      const count = r.members.size;
+      return `${r.name} (${count} member${count !== 1 ? 's' : ''})`;
+    }).join(', ');
+    lines.push(`Roles: ${roleList}`);
+  }
+
+  // ── Staff members (anyone with Manage Messages or above) ───────────────
+  const staff = guild.members.cache.filter(m =>
+    !m.user.bot &&
+    (m.permissions.has('ManageMessages') || m.permissions.has('Administrator'))
+  );
+  if (staff.size > 0) {
+    const staffList = staff.map(m => {
+      const topRole = m.roles.highest.name !== '@everyone' ? m.roles.highest.name : '';
+      return `${m.displayName}${topRole ? ` [${topRole}]` : ''}`;
+    }).join(', ');
+    lines.push(`Staff: ${staffList}`);
+  }
+
+  // ── Channels (grouped by category, text and voice only) ────────────────
+  const categories = guild.channels.cache
+    .filter(c => c.type === 4)
+    .sort((a, b) => a.position - b.position);
+
+  const channelLines = [];
+  for (const cat of categories.values()) {
+    const children = guild.channels.cache
+      .filter(c => c.parentId === cat.id && (c.isTextBased() || c.isVoiceBased()))
+      .sort((a, b) => a.position - b.position)
+      .map(c => c.isVoiceBased() ? `🔊${c.name}` : `#${c.name}`);
+    if (children.length > 0) {
+      channelLines.push(`  ${cat.name}: ${children.join(', ')}`);
+    }
+  }
+  // Uncategorized channels
+  const uncategorized = guild.channels.cache
+    .filter(c => !c.parentId && c.type !== 4 && (c.isTextBased() || c.isVoiceBased()))
+    .map(c => c.isVoiceBased() ? `🔊${c.name}` : `#${c.name}`);
+  if (uncategorized.length > 0) {
+    channelLines.unshift(`  (uncategorized): ${uncategorized.join(', ')}`);
+  }
+  if (channelLines.length > 0) {
+    lines.push(`Channels:\n${channelLines.join('\n')}`);
+  }
+
+  // ── Top members by XP ─────────────────────────────────────────────────
+  try {
+    const topMembers = all(
+      'SELECT user_id, level, xp, messages FROM levels WHERE guild_id = ? ORDER BY xp DESC LIMIT 10',
+      [guild.id]
+    );
+    if (topMembers && topMembers.length > 0) {
+      const leaderboard = topMembers.map((row, i) => {
+        const member = guild.members.cache.get(row.user_id);
+        const name = member?.displayName || 'Unknown';
+        return `${i + 1}. ${name} — Level ${row.level} (${row.messages} msgs)`;
+      }).join(', ');
+      lines.push(`Top members: ${leaderboard}`);
+    }
+  } catch {
+    // Leveling data not available
+  }
+
+  // ── Streamers and their platforms ─────────────────────────────────────
+  try {
+    const links = all(
+      'SELECT user_id, platform, platform_url FROM streaming_links WHERE guild_id = ? ORDER BY added_at',
+      [guild.id]
+    );
+    if (links && links.length > 0) {
+      const byUser = {};
+      for (const link of links) {
+        if (!byUser[link.user_id]) byUser[link.user_id] = [];
+        byUser[link.user_id].push(link);
+      }
+      const streamerDescs = [];
+      for (const [userId, userLinks] of Object.entries(byUser)) {
+        const member = guild.members.cache.get(userId);
+        const name = member?.displayName || member?.user?.username || 'Unknown';
+        const isOwner = userId === guild.ownerId;
+        const platforms = userLinks.map(l => `${l.platform}: ${l.platform_url}`).join(', ');
+        streamerDescs.push(`${name}${isOwner ? ' (server owner)' : ''} — ${platforms}`);
+      }
+      lines.push(`Streamers: ${streamerDescs.join('; ')}`);
+    }
+  } catch {
+    // Streaming data not available
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * Build the AI chat system prompt with full server context.
+ * @param {string|null} rulesText - The server rules text (or null)
+ * @param {string} guildContext - Server snapshot from buildGuildContext()
+ * @returns {string}
+ */
+function buildAiChatSystemPrompt(rulesText, guildContext) {
+  let prompt = `You are AiAdminBot AI, a friendly and knowledgeable assistant in a Discord server. You are part of this community and know everything about it.
+
+You know about all the bot's features:
 - Verification: New members verify and get the verified role
 - Role Menus: Members can pick game roles, color roles, and platform roles
 - Moderation: Staff can use /warn, /mute, /kick, /ban, /timeout, /clear. Use /warnings and /mod-history to check records
@@ -32,13 +150,13 @@ You know about all the bot's features and can help users understand them:
 - AI Chat: This channel! Ask me anything
 - /help shows all available commands`;
 
-  // Inject streaming context if available
-  if (streamingContext) {
+  // Inject guild context
+  if (guildContext) {
     prompt += `
 
-=== SERVER STREAMER ===
-${streamingContext}
-=== END STREAMER ===`;
+=== THIS SERVER ===
+${guildContext}
+=== END SERVER ===`;
   }
 
   // Inject server rules if available
@@ -46,8 +164,6 @@ ${streamingContext}
     prompt += `
 
 === SERVER RULES ===
-The following are this server's official rules. You have direct access to these rules and CAN share them with users when asked. Summarize or quote the relevant rules when users ask about them.
-
 ${rulesText}
 === END RULES ===`;
   }
@@ -55,16 +171,17 @@ ${rulesText}
   prompt += `
 
 Guidelines:
+- You ARE part of this server community. When users ask about the server, its members, streamers, staff, channels, or roles, answer from the server context above.
+- When someone asks "who is [name]", check if they are a member, staff, streamer, or the server owner and respond accordingly.
+- When users ask about streamers, be enthusiastic and share their streaming platform links.
 - Respond in the same language the user writes in (Turkish, English, or others)
 - Keep responses concise (under 2000 characters for Discord)
-- Be friendly, fun, and helpful
-- You can help with: general questions, gaming tips, tech support, fun conversations, explaining bot features
-- If users ask about server rules, answer based on the rules above (if available). If rules are not available, direct them to the rules channel.
-- Don't pretend to have access to real-time data, server stats, or the internet
-- If asked about moderation actions or specific user data, explain you can't access that and suggest asking a moderator
-- If a user wants to send a suggestion, feedback, or idea to moderators, tell them to use the /suggest command
-- Use casual, friendly tone appropriate for the community
-- You can use some emojis but don't overdo it`;
+- Be friendly, fun, and helpful — you belong to this community
+- If users ask about server rules, answer based on the rules above. If rules are not available, direct them to the rules channel.
+- You can answer questions about: server info, members, roles, channels, bot features, general questions, gaming tips, fun conversations
+- For private moderation details (specific warnings, bans), suggest asking a moderator
+- If a user wants to send a suggestion, tell them to use /suggest
+- Use casual, friendly tone. Use some emojis but don't overdo it`;
 
   return prompt;
 }
@@ -132,42 +249,16 @@ async function handleMessage(message) {
     // Rules not available, continue without them
   }
 
-  // Build streaming context — find this guild's streamer and their platform links
-  let streamingContext = null;
+  // Build full guild context (server info, members, roles, channels, streamers, leaderboard)
+  let guildContext = '';
   try {
-    const guildId = message.guild?.id;
-    if (guildId) {
-      // Find ALL streaming links for this guild (any user)
-      const links = all(
-        'SELECT user_id, platform, platform_url FROM streaming_links WHERE guild_id = ? ORDER BY added_at',
-        [guildId]
-      );
-      if (links && links.length > 0) {
-        // Group links by user
-        const byUser = {};
-        for (const link of links) {
-          if (!byUser[link.user_id]) byUser[link.user_id] = [];
-          byUser[link.user_id].push(link);
-        }
-
-        const streamerDescs = [];
-        for (const [userId, userLinks] of Object.entries(byUser)) {
-          const member = message.guild.members.cache.get(userId);
-          const name = member?.displayName || member?.user?.username || 'Unknown';
-          const isOwner = userId === message.guild.ownerId;
-          const platformList = userLinks.map(l => `  - ${l.platform}: ${l.platform_url}`).join('\n');
-          streamerDescs.push(`"${name}"${isOwner ? ' (server owner)' : ''} streams on:\n${platformList}`);
-        }
-
-        streamingContext = `This server has the following streamers:\n${streamerDescs.join('\n\n')}\nWhen users ask about any of these streamers, be enthusiastic and share their streaming links. This is their community.`;
-      }
-    }
+    guildContext = buildGuildContext(message.guild);
   } catch {
-    // Streaming context not available, continue without it
+    // Guild context not available, continue without it
   }
 
-  // Build dynamic system prompt with rules and streaming context
-  const systemPrompt = buildAiChatSystemPrompt(rulesText, streamingContext);
+  // Build dynamic system prompt with rules and guild context
+  const systemPrompt = buildAiChatSystemPrompt(rulesText, guildContext);
 
   // Build conversation with history
   const history = getHistory(message.author.id);
