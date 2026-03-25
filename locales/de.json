@@ -463,6 +463,19 @@
     "responseError": "❌ KI konnte nicht antworten. Versuche es später erneut.",
     "rateLimited": "Du sendest zu schnell! Bitte warte {seconds} Sekunden."
   },
+  "aiMemory": {
+    "empty": "Noch keine AI-Erinnerungen für diesen Server gespeichert.",
+    "listTitle": "🧠 AI Community-Erinnerungen",
+    "listFooter": "{count} Erinnerungen gespeichert",
+    "notFound": "Erinnerung #{id} nicht gefunden.",
+    "deletedTitle": "🗑️ Erinnerung gelöscht",
+    "deletedDesc": "Erinnerung #{id} wurde entfernt.",
+    "clearedTitle": "🗑️ Alle Erinnerungen gelöscht",
+    "clearedDesc": "{count} Erinnerungen wurden entfernt.",
+    "limitReached": "Erinnerungslimit erreicht (max. 50). Lösche zuerst alte Erinnerungen.",
+    "addedTitle": "🧠 Erinnerung hinzugefügt",
+    "addedDesc": "AI wird sich jetzt merken: **{memory}**"
+  },
   "time": {
     "days": "{count} Tage",
     "hours": "{count} Stunden",

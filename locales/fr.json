@@ -463,6 +463,19 @@
     "responseError": "❌ L'IA n'a pas pu répondre. Réessaye plus tard.",
     "rateLimited": "Vous envoyez trop vite ! Veuillez attendre {seconds} secondes."
   },
+  "aiMemory": {
+    "empty": "Aucune mémoire AI stockée pour ce serveur.",
+    "listTitle": "🧠 Mémoires Communautaires AI",
+    "listFooter": "{count} mémoires stockées",
+    "notFound": "Mémoire #{id} introuvable.",
+    "deletedTitle": "🗑️ Mémoire supprimée",
+    "deletedDesc": "La mémoire #{id} a été supprimée.",
+    "clearedTitle": "🗑️ Toutes les mémoires supprimées",
+    "clearedDesc": "{count} mémoires ont été supprimées.",
+    "limitReached": "Limite de mémoires atteinte (max 50). Supprimez d'anciennes mémoires d'abord.",
+    "addedTitle": "🧠 Mémoire ajoutée",
+    "addedDesc": "L'AI retiendra maintenant : **{memory}**"
+  },
   "time": {
     "days": "{count} jours",
     "hours": "{count} heures",

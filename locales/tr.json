@@ -365,7 +365,7 @@
     "levelingValue": "`/rank` — Seviye ve XP bilgini gör\n`/leaderboard` — En yüksek seviyeli üyeler\n🔊 Sesli kanallarda saatte 1 XP kazan",
     "setupValue": "`/setup` — Sunucuyu otomatik kur (Owner)\n`/ai-setup` — AI ile sunucu kurulumu\n`/ai-setup-apply` — AI planını uygula\n`/ai-setup-cancel` — AI kurulumu iptal et\n`/language` — Bot dilini değiştir",
     "aiFeatures": "🤖 AI Özellikleri",
-    "aiFeaturesValue": "`/ai-chat status` — AI sohbet durumu\n`/ai-chat reset` — Sohbet geçmişini sıfırla\nAI sohbet kanalında yazarak AI ile konuş",
+    "aiFeaturesValue": "`/ai-chat status` — AI sohbet durumu\n`/ai-chat reset` — Sohbet geçmişini sıfırla\n`/ai-memory list` — AI hafızasını gör\n`/ai-memory add` — AI'ya bir şey öğret\nAI sohbet kanalında yazarak AI ile konuş",
     "verificationValue": "`/verify-setup` — Doğrulama mesajını kanala gönderir",
     "infoValue": "`/help` — Bu mesajı gösterir\n`/ping` — Bot gecikmesini gösterir",
     "suggestFeature": "💡 Öneriler",
@@ -474,6 +474,19 @@
     "historyReset": "✅ AI sohbet geçmişin sıfırlandı!",
     "responseError": "❌ AI yanıt veremedi. Daha sonra tekrar dene.",
     "rateLimited": "Çok hızlı gönderiyorsunuz! Lütfen {seconds} saniye bekleyin."
+  },
+  "aiMemory": {
+    "empty": "Bu sunucu için henüz AI hafızası yok.",
+    "listTitle": "🧠 AI Topluluk Hafızası",
+    "listFooter": "{count} hafıza kayıtlı",
+    "notFound": "#{id} numaralı hafıza bulunamadı.",
+    "deletedTitle": "🗑️ Hafıza Silindi",
+    "deletedDesc": "#{id} numaralı hafıza kaldırıldı.",
+    "clearedTitle": "🗑️ Tüm Hafıza Temizlendi",
+    "clearedDesc": "{count} hafıza kaldırıldı.",
+    "limitReached": "Hafıza limiti doldu (maks 50). Önce eski hafızaları silin.",
+    "addedTitle": "🧠 Hafıza Eklendi",
+    "addedDesc": "AI artık bunu hatırlayacak: **{memory}**"
   },
   "time": {
     "days": "{count} gün",

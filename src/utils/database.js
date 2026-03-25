@@ -121,6 +121,18 @@ async function initDatabase() {
     )
   `);
 
+  db.run(`
+    CREATE TABLE IF NOT EXISTS ai_memories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      guild_id TEXT NOT NULL,
+      key TEXT NOT NULL,
+      value TEXT NOT NULL,
+      taught_by TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(guild_id, key)
+    )
+  `);
+
   // Migration: add voice_minutes column to levels if missing
   try {
     const cols = db.exec('PRAGMA table_info(levels)');

@@ -5,6 +5,7 @@
 module.exports = [
   // AI
   require('./ai/ai-chat'),
+  require('./ai/ai-memory'),
   require('./ai/ai-setup'),
   require('./ai/ai-setup-apply'),
   require('./ai/ai-setup-cancel'),

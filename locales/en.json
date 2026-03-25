@@ -365,7 +365,7 @@
     "levelingValue": "`/rank` — View your level and XP\n`/leaderboard` — Top members by level\n🔊 Earn 1 XP per hour in voice channels",
     "setupValue": "`/setup` — Auto-setup server (Owner)\n`/ai-setup` — AI-guided server setup\n`/ai-setup-apply` — Apply AI plan\n`/ai-setup-cancel` — Cancel AI setup\n`/language` — Change bot language",
     "aiFeatures": "🤖 AI Features",
-    "aiFeaturesValue": "`/ai-chat status` — AI chat status\n`/ai-chat reset` — Reset chat history\nChat with AI in the AI chat channel",
+    "aiFeaturesValue": "`/ai-chat status` — AI chat status\n`/ai-chat reset` — Reset chat history\n`/ai-memory list` — View AI memories\n`/ai-memory add` — Teach AI something\nChat with AI in the AI chat channel",
     "verificationValue": "`/verify-setup` — Send the verification message to a channel",
     "infoValue": "`/help` — Show this message\n`/ping` — Check bot latency",
     "suggestFeature": "💡 Suggestions",
@@ -474,6 +474,19 @@
     "historyReset": "✅ Your AI chat history has been reset!",
     "responseError": "❌ AI could not respond. Try again later.",
     "rateLimited": "You are sending too fast! Please wait {seconds} seconds."
+  },
+  "aiMemory": {
+    "empty": "No AI memories stored for this server yet.",
+    "listTitle": "🧠 AI Community Memories",
+    "listFooter": "{count} memories stored",
+    "notFound": "Memory #{id} not found.",
+    "deletedTitle": "🗑️ Memory Deleted",
+    "deletedDesc": "Memory #{id} has been removed.",
+    "clearedTitle": "🗑️ All Memories Cleared",
+    "clearedDesc": "{count} memories have been removed.",
+    "limitReached": "Memory limit reached (max 50). Delete some old memories first.",
+    "addedTitle": "🧠 Memory Added",
+    "addedDesc": "AI will now remember: **{memory}**"
   },
   "time": {
     "days": "{count} days",

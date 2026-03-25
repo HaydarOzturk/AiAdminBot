@@ -463,6 +463,19 @@
     "responseError": "❌ لم تستطع الذكاء الاصطناعي الرد. حاول لاحقا.",
     "rateLimited": "أنت ترسل بسرعة كبيرة! يرجى الانتظار {seconds} ثوانٍ."
   },
+  "aiMemory": {
+    "empty": "لا توجد ذكريات AI مخزنة لهذا الخادم بعد.",
+    "listTitle": "🧠 ذاكرة مجتمع AI",
+    "listFooter": "{count} ذكريات مخزنة",
+    "notFound": "الذاكرة #{id} غير موجودة.",
+    "deletedTitle": "🗑️ تم حذف الذاكرة",
+    "deletedDesc": "تم حذف الذاكرة #{id}.",
+    "clearedTitle": "🗑️ تم مسح جميع الذكريات",
+    "clearedDesc": "تم حذف {count} ذكريات.",
+    "limitReached": "تم الوصول إلى حد الذاكرة (الحد الأقصى 50). احذف بعض الذكريات القديمة أولاً.",
+    "addedTitle": "🧠 تمت إضافة ذاكرة",
+    "addedDesc": "سيتذكر AI الآن: **{memory}**"
+  },
   "time": {
     "days": "{count} أيام",
     "hours": "{count} ساعات",
