@@ -37,7 +37,7 @@ app.post('/api/restart', (req, res) => {
 });
 
 // SPA fallback — serve index.html for non-API, non-file routes
-app.get('*', (req, res) => {
+app.get('/{*splat}', (req, res) => {
   if (req.path.startsWith('/api/')) {
     return res.status(404).json({ error: 'Not Found' });
   }
