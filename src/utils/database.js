@@ -108,6 +108,19 @@ async function initDatabase() {
     )
   `);
 
+  db.run(`
+    CREATE TABLE IF NOT EXISTS streaming_links (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      guild_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      platform TEXT NOT NULL,
+      platform_handle TEXT NOT NULL,
+      platform_url TEXT NOT NULL,
+      added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(guild_id, user_id, platform)
+    )
+  `);
+
   // Migration: add voice_minutes column to levels if missing
   try {
     const cols = db.exec('PRAGMA table_info(levels)');

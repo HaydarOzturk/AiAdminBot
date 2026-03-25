@@ -40,6 +40,14 @@ const ENV_SCHEMA = {
       { key: 'AI_TIMEOUT_MINUTES', label: 'AI Auto-Timeout Duration (min)', type: 'number', default: '3' },
     ],
   },
+  streaming: {
+    label: 'Streaming',
+    icon: '📺',
+    fields: [
+      { key: 'STREAMING_ENABLED', label: 'Enable Streaming Detection', type: 'toggle', default: 'true' },
+      { key: 'YOUTUBE_API_KEY', label: 'YouTube API Key', type: 'password', placeholder: 'From Google Cloud Console' },
+    ],
+  },
   linkFilter: {
     label: 'Link Filter',
     icon: '🔗',
@@ -269,6 +277,10 @@ router.get('/status', (req, res) => {
       aiModeration: {
         enabled: p('AI_MODERATION_ENABLED') === 'true',
         threshold: parseFloat(p('AI_MOD_CONFIDENCE_THRESHOLD') || '0.8'),
+      },
+      streaming: {
+        enabled: p('STREAMING_ENABLED') !== 'false',
+        youtubeConfigured: !!p('YOUTUBE_API_KEY'),
       },
       linkFilter: {
         enabled: p('LINK_FILTER_ENABLED') === 'true',

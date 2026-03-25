@@ -427,12 +427,27 @@
     "channelTopic": "Los miembros inactivos se mueven aquí automáticamente"
   },
   "streaming": {
-    "announcementsTopic": "Anuncios de transmisiones en vivo",
-    "chatTopic": "Chat durante transmisiones en vivo",
+    "announcementsTopic": "Anuncios de streams en vivo",
+    "chatTopic": "Chat durante los streams",
     "liveTitle": "🔴 ¡{user} está EN VIVO!",
-    "liveDescription": "**{user}** acaba de empezar a transmitir en **{platform}**!\n\n🎮 **{game}**\n📺 **{title}**",
+    "liveDescription": "**{user}** está transmitiendo en **{platform}**!\n\n🎮 **{game}**\n📺 **{title}**",
     "watchNow": "Ver ahora",
-    "liveEnded": "La transmisión terminó. ¡Gracias por ver!"
+    "liveEnded": "El stream terminó. ¡Gracias por ver!",
+    "ownerOnly": "Solo el dueño del servidor puede usar este comando.",
+    "disabled": "La detección de streams está desactivada.",
+    "noLinks": "No hay enlaces de streaming registrados. Usa `/stream-link add` para agregar tus plataformas.",
+    "offline": "Desconectado",
+    "notLive": "Ninguna de tus plataformas está en vivo ahora.",
+    "noChannel": "No se encontró el canal de anuncios de stream. Ejecuta `/setup` primero.",
+    "goLiveDesc": "**{user}** está transmitiendo ahora. ¡Ven a ver y apoyar!",
+    "otherPlatforms": "Otras Plataformas",
+    "everyoneTag": "@everyone 🔴 **{user}** está EN VIVO! ¡Ven a ver!",
+    "announcementSent": "Anuncio publicado en **#{channel}**! En vivo en: {platforms}",
+    "linkAddedTitle": "✅ Enlace agregado",
+    "linkAddedDesc": "Enlace de **{platform}** guardado: {url}",
+    "linkRemovedTitle": "✅ Enlace eliminado",
+    "linkRemovedDesc": "Enlace de **{platform}** eliminado.",
+    "linkListTitle": "📺 Tus enlaces de streaming"
   },
   "aiChat": {
     "statusTitle": "🤖 Estado del Chat IA",

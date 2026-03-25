@@ -33,6 +33,10 @@ module.exports = [
   require('./roles/remove-role'),
   require('./roles/role-menu'),
 
+  // Streaming
+  require('./streaming/go-live'),
+  require('./streaming/stream-link'),
+
   // Setup
   require('./setup/afk-setup'),
   require('./setup/fix-permissions'),

@@ -427,12 +427,27 @@
     "channelTopic": "Неактивные участники автоматически перемещаются сюда"
   },
   "streaming": {
-    "announcementsTopic": "Объявления о прямых трансляциях",
-    "chatTopic": "Чат во время прямых трансляций",
+    "announcementsTopic": "Анонсы прямых трансляций",
+    "chatTopic": "Чат во время трансляций",
     "liveTitle": "🔴 {user} В ЭФИРЕ!",
-    "liveDescription": "**{user}** только что начал трансляцию на **{platform}**!\n\n🎮 **{game}**\n📺 **{title}**",
+    "liveDescription": "**{user}** начал трансляцию на **{platform}**!\n\n🎮 **{game}**\n📺 **{title}**",
     "watchNow": "Смотреть",
-    "liveEnded": "Трансляция завершена. Спасибо за просмотр!"
+    "liveEnded": "Трансляция окончена. Спасибо за просмотр!",
+    "ownerOnly": "Только владелец сервера может использовать эту команду.",
+    "disabled": "Обнаружение трансляций сейчас отключено.",
+    "noLinks": "Нет зарегистрированных ссылок. Используй `/stream-link add` чтобы добавить платформы.",
+    "offline": "Офлайн",
+    "notLive": "Ни одна из твоих платформ сейчас не в эфире.",
+    "noChannel": "Канал анонсов трансляций не найден. Сначала выполни `/setup`.",
+    "goLiveDesc": "**{user}** сейчас в эфире! Приходите смотреть и поддержать!",
+    "otherPlatforms": "Другие платформы",
+    "everyoneTag": "@everyone 🔴 **{user}** В ЭФИРЕ! Приходите смотреть!",
+    "announcementSent": "Анонс опубликован в **#{channel}**! В эфире на: {platforms}",
+    "linkAddedTitle": "✅ Ссылка добавлена",
+    "linkAddedDesc": "Ссылка на **{platform}** сохранена: {url}",
+    "linkRemovedTitle": "✅ Ссылка удалена",
+    "linkRemovedDesc": "Ссылка на **{platform}** удалена.",
+    "linkListTitle": "📺 Ваши ссылки на трансляции"
   },
   "aiChat": {
     "statusTitle": "🤖 Статус ИИ Чата",

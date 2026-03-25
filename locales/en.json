@@ -444,7 +444,22 @@
     "liveTitle": "🔴 {user} is LIVE!",
     "liveDescription": "**{user}** just went live on **{platform}**!\n\n🎮 **{game}**\n📺 **{title}**",
     "watchNow": "Watch Now",
-    "liveEnded": "Stream ended. Thanks for watching!"
+    "liveEnded": "Stream ended. Thanks for watching!",
+    "ownerOnly": "Only the server owner can use this command.",
+    "disabled": "Streaming detection is currently disabled.",
+    "noLinks": "No streaming links registered. Use `/stream-link add` to add your platforms.",
+    "offline": "Offline",
+    "notLive": "None of your platforms are currently live.",
+    "noChannel": "Could not find the stream announcements channel. Run `/setup` first.",
+    "goLiveDesc": "**{user}** is streaming right now! Come watch and support!",
+    "otherPlatforms": "Other Platforms",
+    "everyoneTag": "@everyone 🔴 **{user}** is LIVE! Come watch!",
+    "announcementSent": "Announcement posted in **#{channel}**! Live on: {platforms}",
+    "linkAddedTitle": "✅ Link Added",
+    "linkAddedDesc": "**{platform}** link saved: {url}",
+    "linkRemovedTitle": "✅ Link Removed",
+    "linkRemovedDesc": "**{platform}** link has been removed.",
+    "linkListTitle": "📺 Your Streaming Links"
   },
   "aiChat": {
     "statusTitle": "🤖 AI Chat Status",
