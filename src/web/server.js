@@ -25,6 +25,17 @@ app.use('/api/logs', require('./api/logs'));
 app.use('/api/guilds', require('./api/guilds'));
 app.use('/api/settings', require('./api/settings'));
 
+// Restart endpoint — relies on PM2 to auto-restart the process
+app.post('/api/restart', (req, res) => {
+  console.log('🔄 Restart requested via dashboard');
+  res.json({ success: true, message: 'Bot is restarting...' });
+
+  // Give the response time to flush, then exit — PM2 restarts automatically
+  setTimeout(() => {
+    process.exit(0);
+  }, 500);
+});
+
 // SPA fallback — serve index.html for non-API, non-file routes
 app.get('*', (req, res) => {
   if (req.path.startsWith('/api/')) {

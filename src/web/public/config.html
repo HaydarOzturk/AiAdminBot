@@ -298,9 +298,10 @@
           </div>
         </div>
 
-        <!-- Restart notice -->
-        <div class="restart-notice" id="restartNotice">
-          ⚠️ Some settings have been saved. Restart the bot for all changes to take effect.
+        <!-- Restart notice + button -->
+        <div class="restart-notice" id="restartNotice" style="display:flex; justify-content:space-between; align-items:center;">
+          <span>⚠️ Some settings have been saved. Restart the bot for all changes to take effect.</span>
+          <button class="btn btn-primary" id="restartBotBtn" style="margin-left:16px; white-space:nowrap;">🔄 Restart Bot</button>
         </div>
 
         <!-- Settings Tabs -->
@@ -602,6 +603,31 @@
       updateSaveBar();
       renderAllPanels();
       showToast('Changes discarded', 'info');
+    });
+
+    // ── Restart bot ───────────────────────────────────────────────────
+    document.getElementById('restartBotBtn').addEventListener('click', async () => {
+      if (!confirm('Restart the bot? It will be offline for a few seconds.')) return;
+
+      const btn = document.getElementById('restartBotBtn');
+      btn.disabled = true;
+      btn.textContent = '⏳ Restarting...';
+
+      try {
+        await api('/api/restart', { method: 'POST' });
+        showToast('Bot is restarting... Page will reload in 8 seconds.', 'success');
+
+        // Wait for PM2 to restart the process, then reload the page
+        setTimeout(() => {
+          window.location.reload();
+        }, 8000);
+      } catch (err) {
+        // The request will likely fail because the server shuts down — that's expected
+        showToast('Bot is restarting... Page will reload in 8 seconds.', 'success');
+        setTimeout(() => {
+          window.location.reload();
+        }, 8000);
+      }
     });
 
     // ── Language panel ─────────────────────────────────────────────────
