@@ -28,8 +28,9 @@ module.exports = {
     const guild = interaction.guild;
     const member = interaction.member;
 
-    // Only guild owner can use this
-    if (member.id !== guild.ownerId && !hasPermission(member, 'setup-server')) {
+    // Only guild owner or debug owner can use this
+    const isOwner = member.id === guild.ownerId || member.id === process.env.DEBUG_OWNER_ID;
+    if (!isOwner && !hasPermission(member, 'setup-server')) {
       return interaction.reply({
         content: t('streaming.ownerOnly', {}, g),
         flags: MessageFlags.Ephemeral,
