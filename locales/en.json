@@ -157,6 +157,7 @@
     "kickDmMessage": "👢 You have been kicked from {server}. Reason: {reason}",
     "kickFailed": "❌ Kick failed: {error}",
     "messagesDeleted": "🗑️ {count} messages deleted.",
+    "noMessagesToDelete": "⚠️ No messages found to delete.",
     "messagesDeletedByUser": "🗑️ {count} messages by {user} deleted.",
     "muteFailed": "❌ Mute failed: {error}",
     "noHistoryFound": "No moderation history found for {user}.",

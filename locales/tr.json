@@ -157,6 +157,7 @@
     "kickDmMessage": "👢 {server} sunucusundan atıldınız. Sebep: {reason}",
     "kickFailed": "❌ Atma başarısız: {error}",
     "messagesDeleted": "🗑️ {count} mesaj silindi.",
+    "noMessagesToDelete": "⚠️ Silinecek mesaj bulunamadı.",
     "messagesDeletedByUser": "🗑️ {user} kullanıcısından {count} mesaj silindi.",
     "muteFailed": "❌ Susturma başarısız: {error}",
     "noHistoryFound": "{user} için moderasyon geçmişi bulunamadı.",

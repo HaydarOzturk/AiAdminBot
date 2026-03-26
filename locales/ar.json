@@ -157,6 +157,7 @@
     "kickDmMessage": "👢 تم طردك من {server}. السبب: {reason}",
     "kickFailed": "❌ فشل الطرد: {error}",
     "messagesDeleted": "🗑️ تم حذف {count} رسائل.",
+    "noMessagesToDelete": "⚠️ لم يتم العثور على رسائل للحذف.",
     "messagesDeletedByUser": "🗑️ تم حذف {count} رسائل من {user}.",
     "muteFailed": "❌ فشل الكتم: {error}",
     "noHistoryFound": "لم يتم العثور على سجل إشراف لـ {user}.",

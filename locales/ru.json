@@ -157,6 +157,7 @@
     "kickDmMessage": "👢 Вы были кикнуты с сервера {server}. Причина: {reason}",
     "kickFailed": "❌ Кик не удался: {error}",
     "messagesDeleted": "🗑️ {count} сообщений удалено.",
+    "noMessagesToDelete": "⚠️ Не найдено сообщений для удаления.",
     "messagesDeletedByUser": "🗑️ {count} сообщений от {user} удалено.",
     "muteFailed": "❌ Заглушение не удалось: {error}",
     "noHistoryFound": "История модерации для {user} не найдена.",

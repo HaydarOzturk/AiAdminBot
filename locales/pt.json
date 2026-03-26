@@ -157,6 +157,7 @@
     "kickDmMessage": "👢 Você foi expulso de {server}. Motivo: {reason}",
     "kickFailed": "❌ Expulsão falhou: {error}",
     "messagesDeleted": "🗑️ {count} mensagens excluídas.",
+    "noMessagesToDelete": "⚠️ Nenhuma mensagem encontrada para excluir.",
     "messagesDeletedByUser": "🗑️ {count} mensagens de {user} excluídas.",
     "muteFailed": "❌ Silenciamento falhou: {error}",
     "noHistoryFound": "Nenhum histórico de moderação encontrado para {user}.",
