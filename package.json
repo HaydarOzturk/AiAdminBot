@@ -33,7 +33,8 @@
       "config/*.example.json",
       ".env.example",
       "node_modules/sql.js/dist/sql-wasm.wasm",
-      "src/web/public/**/*"
+      "src/web/public/**/*",
+      "assets/setup-guide/**/*"
     ],
     "targets": [
       "node20-win-x64"

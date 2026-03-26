@@ -25,6 +25,26 @@ app.use('/api/logs', require('./api/logs'));
 app.use('/api/guilds', require('./api/guilds'));
 app.use('/api/settings', require('./api/settings'));
 
+// Invite URL endpoint — generates OAuth2 invite link
+app.get('/api/invite', (req, res) => {
+  const client = req.app.locals.client;
+  const clientId = client?.user?.id || process.env.CLIENT_ID;
+
+  if (!clientId) {
+    return res.status(400).json({ error: 'CLIENT_ID not available' });
+  }
+
+  // Permission 8 = Administrator (the bot needs full perms for server setup)
+  const inviteUrl = `https://discord.com/oauth2/authorize?client_id=${clientId}&permissions=8&scope=bot+applications.commands&integration_type=0`;
+
+  res.json({
+    inviteUrl,
+    clientId,
+    botName: client?.user?.username || 'AiAdminBot',
+    botAvatar: client?.user?.displayAvatarURL?.({ size: 128 }) || null,
+  });
+});
+
 // Restart endpoint — relies on PM2 to auto-restart the process
 app.post('/api/restart', (req, res) => {
   console.log('🔄 Restart requested via dashboard');

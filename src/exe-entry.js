@@ -17,6 +17,15 @@ const path = require('path');
 
 // Determine the directory where the .exe lives (or project root for dev)
 const basePath = process.pkg ? path.dirname(process.execPath) : path.join(__dirname, '..');
+
+// ── Debug log to file (persists even when CLI wizard clears screen) ──────
+const debugLogPath = path.join(basePath, '_setup_debug.log');
+function debugLog(...args) {
+  const line = '[' + new Date().toISOString() + '] ' + args.join(' ') + '\n';
+  try { fs.appendFileSync(debugLogPath, line); } catch { /* ignore */ }
+}
+// Clear previous debug log on start
+try { fs.writeFileSync(debugLogPath, '=== AiAdminBot Setup Debug Log ===\n'); } catch { /* ignore */ }
 const envPath = path.join(basePath, '.env');
 
 // Set working directory to base path so dotenv and relative paths work
@@ -59,6 +68,21 @@ if (process.pkg) {
   }
 }
 
+// ── Copy setup guide images from virtual FS to real FS ──────────────
+if (process.pkg) {
+  try {
+    const guidesBundled = path.join(__dirname, '..', 'assets', 'setup-guide');
+    const guidesReal = path.join(basePath, '_setup_guide');
+
+    if (fs.existsSync(guidesBundled)) {
+      copyDirSync(guidesBundled, guidesReal);
+      debugLog('Extracted setup guide images to:', guidesReal);
+    }
+  } catch (err) {
+    debugLog('Warning: Could not extract setup guide images:', err.message);
+  }
+}
+
 /**
  * Recursively copy a directory from virtual FS to real FS
  */
@@ -93,45 +117,72 @@ if (!fs.existsSync(envPath)) {
   console.log('');
 
   // Try native GUI wizard on Windows, fall back to CLI wizard
+  debugLog('Platform:', process.platform);
+  debugLog('process.pkg:', !!process.pkg);
+  debugLog('Node version:', process.version);
+  debugLog('basePath:', basePath);
+
   if (process.platform === 'win32') {
-    const { runGUI, isPowerShellAvailable } = require('./setup-wizard-gui');
-
-    if (isPowerShellAvailable()) {
-      runGUI().then(success => {
-        if (success && fs.existsSync(envPath)) {
-          console.log('  Starting bot...');
-          console.log('');
-          require('./index');
-
-          // Auto-open dashboard if configured
-          if (process.pkg && process.env.WEB_PORT) {
-            const port = process.env.WEB_PORT || '3000';
-            setTimeout(() => {
-              try {
-                const { exec } = require('child_process');
-                const url = `http://localhost:${port}`;
-                console.log(`\n  Opening dashboard: ${url}\n`);
-                exec(`start ${url}`);
-              } catch { /* ignore */ }
-            }, 3000);
-          }
-        } else {
-          console.log('  Setup not completed. Run the exe again to retry.');
-          if (!process.pkg) process.exit(0);
-          // Keep console open for exe users
-          setTimeout(() => process.exit(0), 5000);
-        }
-      }).catch(err => {
-        console.error('  GUI wizard failed:', err.message);
-        console.log('  Falling back to CLI wizard...');
-        require('./setup-wizard');
-      });
-    } else {
-      // PowerShell not available — use CLI wizard
+    debugLog('Windows detected, loading setup-wizard-gui...');
+    let guiModule;
+    try {
+      guiModule = require('./setup-wizard-gui');
+      debugLog('setup-wizard-gui loaded OK');
+    } catch (loadErr) {
+      debugLog('FAILED to load setup-wizard-gui:', loadErr.message);
+      debugLog('Stack:', loadErr.stack);
+      console.log('  Falling back to CLI wizard...');
       require('./setup-wizard');
+      guiModule = null;
     }
+
+    if (guiModule) {
+      const { runGUI, isPowerShellAvailable } = guiModule;
+
+      debugLog('Checking PowerShell availability...');
+      const psAvailable = isPowerShellAvailable();
+      debugLog('PowerShell available:', psAvailable);
+
+      if (psAvailable) {
+        debugLog('Launching GUI wizard...');
+        runGUI().then(success => {
+          debugLog('GUI wizard finished, success:', success);
+          if (success && fs.existsSync(envPath)) {
+            console.log('  Starting bot...');
+            console.log('');
+            require('./index');
+
+            // Auto-open dashboard if configured
+            if (process.pkg && process.env.WEB_PORT) {
+              const port = process.env.WEB_PORT || '3000';
+              setTimeout(() => {
+                try {
+                  const { exec } = require('child_process');
+                  const url = `http://localhost:${port}`;
+                  console.log(`\n  Opening dashboard: ${url}\n`);
+                  exec(`start ${url}`);
+                } catch { /* ignore */ }
+              }, 3000);
+            }
+          } else {
+            console.log('  Setup not completed. Run the exe again to retry.');
+            if (!process.pkg) process.exit(0);
+            setTimeout(() => process.exit(0), 5000);
+          }
+        }).catch(err => {
+          debugLog('GUI wizard THREW error:', err.message);
+          debugLog('Stack:', err.stack);
+          console.log('  Falling back to CLI wizard...');
+          require('./setup-wizard');
+        });
+      } else {
+        debugLog('PowerShell not available, using CLI wizard');
+        require('./setup-wizard');
+      }
+    } // end if (guiModule)
   } else {
     // Linux/Mac — use CLI wizard
+    console.log('  [DEBUG] Non-Windows platform, using CLI wizard');
     require('./setup-wizard');
   }
 } else {
