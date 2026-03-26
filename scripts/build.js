@@ -20,9 +20,9 @@ const pad = (n) => String(n).padStart(2, '0');
 const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
 
 const TARGETS = {
-  win:   { pkg: 'node18-win-x64',   ext: '.exe' },
-  mac:   { pkg: 'node18-macos-x64', ext: ''     },
-  linux: { pkg: 'node18-linux-x64', ext: ''     },
+  win:   { pkg: 'node20-win-x64',   ext: '.exe' },
+  mac:   { pkg: 'node20-macos-x64', ext: ''     },
+  linux: { pkg: 'node20-linux-x64', ext: ''     },
 };
 
 const arg = (process.argv[2] || 'win').toLowerCase();
