@@ -592,6 +592,12 @@ router.post('/:guildId/moderation/kick', async (req, res) => {
     const member = await guild.members.fetch(userId).catch(() => null);
     if (!member) return res.status(404).json({ error: 'Member not found in server' });
 
+    // Check bot hierarchy — can't kick members with roles at or above bot's highest
+    const botMemberKick = guild.members.me;
+    if (botMemberKick && member.roles.highest.position >= botMemberKick.roles.highest.position) {
+      return res.status(403).json({ error: `Cannot kick ${member.user.tag} — their highest role is at or above the bot's.` });
+    }
+
     // Try DM before kick
     try {
       await member.send(`You have been **kicked** from **${guild.name}**${reason ? ` for: ${reason}` : ''}`);
@@ -797,6 +803,12 @@ router.put('/:guildId/roles/:roleId', async (req, res) => {
     if (!role) return res.status(404).json({ error: 'Role not found' });
     if (role.managed) return res.status(400).json({ error: 'Cannot edit managed/bot roles' });
 
+    // Check bot role hierarchy
+    const botMember = guild.members.me;
+    if (botMember && role.position >= botMember.roles.highest.position) {
+      return res.status(403).json({ error: `Cannot edit "${role.name}" — it is at or above the bot's highest role. Move the bot's role higher in Server Settings.` });
+    }
+
     const updates = {};
     if (req.body.name !== undefined) updates.name = req.body.name;
     if (req.body.color !== undefined) updates.color = req.body.color || null;
@@ -863,10 +875,59 @@ router.delete('/:guildId/roles/:roleId', async (req, res) => {
     if (!role) return res.status(404).json({ error: 'Role not found' });
     if (role.managed) return res.status(400).json({ error: 'Cannot delete managed/bot roles' });
 
+    // Check bot role hierarchy — bot can only delete roles below its own highest role
+    const botMember = guild.members.me;
+    if (botMember && role.position >= botMember.roles.highest.position) {
+      return res.status(403).json({
+        error: `Cannot delete "${role.name}" — it is at position ${role.position}, but the bot's highest role is at position ${botMember.roles.highest.position}. Move the bot's role higher in Server Settings → Roles.`,
+      });
+    }
+
     await role.delete('Deleted via Dashboard');
     res.json({ success: true });
   } catch (err) {
     console.error('API delete role error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /api/guilds/:guildId/roles/bulk-delete
+ * Delete multiple roles at once
+ * Body: { roleIds: string[] }
+ */
+router.post('/:guildId/roles/bulk-delete', async (req, res) => {
+  try {
+    const guild = getGuild(req);
+    if (!guild) return res.status(404).json({ error: 'Guild not found' });
+
+    const { roleIds } = req.body;
+    if (!Array.isArray(roleIds) || roleIds.length === 0) {
+      return res.status(400).json({ error: 'roleIds array is required' });
+    }
+
+    const botMember = guild.members.me;
+    const botHighest = botMember ? botMember.roles.highest.position : 0;
+
+    const results = { deleted: [], failed: [] };
+
+    for (const roleId of roleIds) {
+      const role = guild.roles.cache.get(roleId);
+      if (!role) { results.failed.push({ id: roleId, reason: 'Not found' }); continue; }
+      if (role.managed) { results.failed.push({ id: roleId, name: role.name, reason: 'Managed by integration' }); continue; }
+      if (role.position >= botHighest) { results.failed.push({ id: roleId, name: role.name, reason: 'Role is above bot' }); continue; }
+
+      try {
+        await role.delete('Bulk deleted via Dashboard');
+        results.deleted.push({ id: roleId, name: role.name });
+      } catch (err) {
+        results.failed.push({ id: roleId, name: role.name, reason: err.message });
+      }
+    }
+
+    res.json({ success: true, ...results });
+  } catch (err) {
+    console.error('API bulk-delete roles error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -885,6 +946,12 @@ router.put('/:guildId/roles/:roleId/members/:userId', async (req, res) => {
 
     const role = guild.roles.cache.get(req.params.roleId);
     if (!role) return res.status(404).json({ error: 'Role not found' });
+
+    // Check bot role hierarchy
+    const botMember = guild.members.me;
+    if (botMember && role.position >= botMember.roles.highest.position) {
+      return res.status(403).json({ error: `Cannot assign "${role.name}" — it is at or above the bot's highest role.` });
+    }
 
     await member.roles.add(role);
     res.json({ success: true });
@@ -907,6 +974,12 @@ router.delete('/:guildId/roles/:roleId/members/:userId', async (req, res) => {
 
     const role = guild.roles.cache.get(req.params.roleId);
     if (!role) return res.status(404).json({ error: 'Role not found' });
+
+    // Check bot role hierarchy
+    const botMemberRM = guild.members.me;
+    if (botMemberRM && role.position >= botMemberRM.roles.highest.position) {
+      return res.status(403).json({ error: `Cannot remove "${role.name}" — it is at or above the bot's highest role.` });
+    }
 
     await member.roles.remove(role);
     res.json({ success: true });

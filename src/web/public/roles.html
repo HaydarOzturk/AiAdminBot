@@ -141,6 +141,20 @@
     .save-bar span { font-size: 14px; font-weight: 600; }
     .save-bar .save-actions { display: flex; gap: 8px; }
 
+    /* Multi-select bar */
+    .multi-select-bar {
+      padding: 10px 18px; border-bottom: 1px solid var(--border-color); display: none;
+      align-items: center; justify-content: space-between; background: var(--bg-tertiary);
+    }
+    .multi-select-bar.visible { display: flex; }
+    .multi-select-bar .ms-info { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+    .multi-select-bar .ms-actions { display: flex; gap: 6px; }
+
+    /* Checkbox on role items */
+    .role-item-checkbox { width: 16px; height: 16px; accent-color: var(--accent-primary); cursor: pointer; flex-shrink: 0; display: none; }
+    .multi-select-mode .role-item-checkbox { display: block; }
+    .role-item.checked { background: rgba(239,68,68,0.06); }
+
     /* Color input wrapper */
     .color-input-wrap { display: flex; align-items: center; gap: 12px; }
     .color-input-wrap input[type="color"] { width: 40px; height: 40px; border: none; border-radius: 10px; cursor: pointer; padding: 0; background: none; }
@@ -204,6 +218,14 @@
             <div class="role-list-header">
               <h3>Roles</h3>
               <input type="text" id="role-search" placeholder="Search..." oninput="filterRoles()">
+              <button class="btn btn-secondary btn-small" id="toggle-select-btn" onclick="toggleMultiSelect()" title="Select multiple roles" style="font-size:11px;padding:5px 10px;flex-shrink:0;">Select</button>
+            </div>
+            <div class="multi-select-bar" id="multi-select-bar">
+              <span class="ms-info" id="ms-count">0 selected</span>
+              <div class="ms-actions">
+                <button class="btn btn-secondary btn-small" onclick="clearSelection()" style="font-size:11px;padding:4px 10px;">Clear</button>
+                <button class="btn btn-danger btn-small" onclick="bulkDeleteRoles()" style="font-size:11px;padding:4px 10px;">Delete Selected</button>
+              </div>
             </div>
             <div class="role-list-scroll" id="role-list"></div>
           </div>
@@ -343,6 +365,8 @@
     let selectedRoleId = null;
     let isDirty = false;
     let originalRoleData = null;
+    let multiSelectMode = false;
+    let selectedRoleIds = new Set();
 
     // ── Permission definitions ───────────────────────────────────────────
     const PERM_GROUPS = {
@@ -431,17 +455,34 @@
         return;
       }
 
+      // Toggle multi-select class on the list
+      list.classList.toggle('multi-select-mode', multiSelectMode);
+
       filtered.forEach(role => {
         const div = document.createElement('div');
-        div.className = 'role-item' + (selectedRoleId === role.id ? ' selected' : '');
-        div.onclick = () => selectRole(role.id);
+        const isChecked = selectedRoleIds.has(role.id);
+        div.className = 'role-item' + (selectedRoleId === role.id ? ' selected' : '') + (isChecked ? ' checked' : '');
+
+        if (multiSelectMode) {
+          div.onclick = (e) => {
+            if (e.target.type === 'checkbox') return;
+            toggleRoleSelection(role.id);
+          };
+        } else {
+          div.onclick = () => selectRole(role.id);
+        }
 
         let badges = '';
         if (role.managed) badges += '<span class="role-mini-badge managed">BOT</span>';
         if (role.hoist) badges += '<span class="role-mini-badge">H</span>';
         if (role.mentionable) badges += '<span class="role-mini-badge">@</span>';
 
+        const checkbox = multiSelectMode && !role.managed
+          ? `<input type="checkbox" class="role-item-checkbox" ${isChecked ? 'checked' : ''} onclick="toggleRoleSelection('${role.id}')" style="display:block;">`
+          : '';
+
         div.innerHTML = `
+          ${checkbox}
           <div class="role-color-dot" style="background: ${role.color || '#99aab5'};"></div>
           <div class="role-item-info">
             <div class="role-item-name">${escapeHtml(role.name)}</div>
@@ -697,14 +738,95 @@
 
       try {
         const guildId = getCurrentGuild();
-        await api(`/api/guilds/${guildId}/roles/${selectedRoleId}`, { method: 'DELETE' });
+        const resp = await fetch(`/api/guilds/${guildId}/roles/${selectedRoleId}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+          showToast(data.error || 'Failed to delete role', 'error');
+          return;
+        }
         showToast('Role deleted', 'success');
         selectedRoleId = null;
         isDirty = false;
         document.getElementById('detail-content').style.display = 'none';
         document.getElementById('detail-empty').style.display = '';
         loadRoles();
-      } catch (err) { showToast('Failed to delete role', 'error'); }
+      } catch (err) { showToast('Failed to delete role: ' + err.message, 'error'); }
+    }
+
+    // ── Multi-Select ─────────────────────────────────────────────────────
+    function toggleMultiSelect() {
+      multiSelectMode = !multiSelectMode;
+      selectedRoleIds.clear();
+      const btn = document.getElementById('toggle-select-btn');
+      btn.textContent = multiSelectMode ? 'Cancel' : 'Select';
+      document.getElementById('multi-select-bar').classList.toggle('visible', multiSelectMode);
+      updateSelectionCount();
+      renderRoleList();
+    }
+
+    function toggleRoleSelection(roleId) {
+      if (selectedRoleIds.has(roleId)) {
+        selectedRoleIds.delete(roleId);
+      } else {
+        selectedRoleIds.add(roleId);
+      }
+      updateSelectionCount();
+      renderRoleList();
+    }
+
+    function clearSelection() {
+      selectedRoleIds.clear();
+      updateSelectionCount();
+      renderRoleList();
+    }
+
+    function updateSelectionCount() {
+      document.getElementById('ms-count').textContent = `${selectedRoleIds.size} selected`;
+    }
+
+    async function bulkDeleteRoles() {
+      if (selectedRoleIds.size === 0) { showToast('No roles selected', 'warning'); return; }
+
+      const names = [...selectedRoleIds].map(id => {
+        const r = allRoles.find(x => x.id === id);
+        return r ? r.name : id;
+      });
+
+      if (!confirm(`Delete ${names.length} role(s)?\n\n${names.join(', ')}\n\nThis cannot be undone.`)) return;
+
+      try {
+        const guildId = getCurrentGuild();
+        const resp = await fetch(`/api/guilds/${guildId}/roles/bulk-delete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ roleIds: [...selectedRoleIds] }),
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+          showToast(data.error || 'Bulk delete failed', 'error');
+          return;
+        }
+
+        if (data.deleted?.length > 0) {
+          showToast(`Deleted ${data.deleted.length} role(s)`, 'success');
+        }
+        if (data.failed?.length > 0) {
+          const failNames = data.failed.map(f => `${f.name || f.id}: ${f.reason}`).join('\n');
+          showToast(`${data.failed.length} role(s) failed: ${data.failed.map(f => f.reason).join(', ')}`, 'error');
+        }
+
+        selectedRoleIds.clear();
+        multiSelectMode = false;
+        document.getElementById('toggle-select-btn').textContent = 'Select';
+        document.getElementById('multi-select-bar').classList.remove('visible');
+        selectedRoleId = null;
+        document.getElementById('detail-content').style.display = 'none';
+        document.getElementById('detail-empty').style.display = '';
+        loadRoles();
+      } catch (err) { showToast('Bulk delete failed: ' + err.message, 'error'); }
     }
 
     // ── Create Role ──────────────────────────────────────────────────────
@@ -754,7 +876,7 @@
 
         // Auto-select the new role
         if (result.role?.id) selectRole(result.role.id);
-      } catch (err) { showToast('Failed to create role', 'error'); }
+      } catch (err) { showToast('Failed to create role: ' + (err.message || 'Unknown error'), 'error'); }
     });
 
     // ── Logout ───────────────────────────────────────────────────────────
