@@ -141,9 +141,12 @@ async function checkIdleUsers() {
           // Reset their activity so they don't get moved again immediately if they come back
           lastActivity.delete(key);
         } catch (err) {
-          // Likely missing permissions or user disconnected
-          if (err.code !== 50013) { // Ignore "Missing Permissions" silently
-            console.warn(`AFK move failed for ${state.member.user?.tag}: ${err.message}`);
+          // Silently ignore common Discord errors:
+          // 50013 = Missing Permissions, 10015 = Unknown Webhook (member disconnected),
+          // 50001 = Missing Access, 40032 = Target user not connected to voice
+          const ignoreCodes = [50013, 10015, 50001, 40032];
+          if (!ignoreCodes.includes(err.code)) {
+            console.warn(`AFK move failed for ${state.member?.user?.tag || 'unknown'}: ${err.message}`);
           }
         }
       }

@@ -8,6 +8,10 @@ const config = loadConfig('config.json');
 const CLEAR_INTERVAL = 72 * 60 * 60 * 1000; // 72 hours in ms
 const MAX_DELETE_AGE = 14 * 24 * 60 * 60 * 1000; // Discord only allows bulk delete of messages < 14 days
 
+// References to timers for graceful shutdown
+let _startupTimer = null;
+let _cleanupInterval = null;
+
 /**
  * Start the automatic log channel cleaner.
  * Runs every 72 hours and bulk-deletes messages in all log channels.
@@ -17,10 +21,18 @@ function startLogCleaner(client) {
   console.log('🧹 Log cleaner scheduled (every 72 hours)');
 
   // Run the first cleanup 5 minutes after startup (let everything settle)
-  setTimeout(() => runCleanup(client), 5 * 60 * 1000);
+  _startupTimer = setTimeout(() => runCleanup(client), 5 * 60 * 1000);
 
   // Then every 72 hours
-  setInterval(() => runCleanup(client), CLEAR_INTERVAL);
+  _cleanupInterval = setInterval(() => runCleanup(client), CLEAR_INTERVAL);
+}
+
+/**
+ * Stop the log cleaner timers (call on graceful shutdown)
+ */
+function stopLogCleaner() {
+  if (_startupTimer) { clearTimeout(_startupTimer); _startupTimer = null; }
+  if (_cleanupInterval) { clearInterval(_cleanupInterval); _cleanupInterval = null; }
 }
 
 /**
@@ -78,4 +90,4 @@ async function runCleanup(client) {
   console.log('🧹 Log cleanup complete');
 }
 
-module.exports = { startLogCleaner };
+module.exports = { startLogCleaner, stopLogCleaner };

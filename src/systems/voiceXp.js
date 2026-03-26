@@ -168,7 +168,7 @@ async function awardVoiceXp(client) {
         if (currentLevel > oldLevel && client) {
           try {
             const guild = client.guilds.cache.get(guildId);
-            if (!guild) continue;
+            if (!guild) continue; // Guild no longer available
 
             const leveling = require('./leveling');
             const tier = leveling.getTierForLevel(currentLevel);

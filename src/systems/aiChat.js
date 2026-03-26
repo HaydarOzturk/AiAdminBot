@@ -4,15 +4,31 @@ const { t } = require('../utils/locale');
 const { fetchRules } = require('./rulesReader');
 const { run, get, all } = require('../utils/database');
 
-// Per-user conversation history (userId -> messages[])
+// Per-user conversation history (userId -> { messages[], lastActivityAt })
 // Limited to last 10 messages to keep token usage low on free models
 const conversations = new Map();
 const MAX_HISTORY = 10;
+const CONVERSATION_EXPIRY = 3600000; // 1 hour — auto-delete inactive conversations
 
 // Rate limiting: userId -> { count, resetAt }
 const rateLimits = new Map();
 const RATE_LIMIT = parseInt(process.env.AI_CHAT_RATE_LIMIT) || 5; // messages per minute
 const RATE_WINDOW = 60000; // 1 minute
+
+// Periodic cleanup: remove expired conversations and stale rate limits (every 30 min)
+setInterval(() => {
+  const now = Date.now();
+  for (const [userId, session] of conversations) {
+    if (now - session.lastActivityAt > CONVERSATION_EXPIRY) {
+      conversations.delete(userId);
+    }
+  }
+  for (const [userId, limit] of rateLimits) {
+    if (now > limit.resetAt) {
+      rateLimits.delete(userId);
+    }
+  }
+}, 1800000);
 
 // ── Memory trigger phrases in all supported languages ─────────────────────────
 const MEMORY_TRIGGERS = [
@@ -375,9 +391,11 @@ function checkRateLimit(userId) {
  */
 function getHistory(userId) {
   if (!conversations.has(userId)) {
-    conversations.set(userId, []);
+    conversations.set(userId, { messages: [], lastActivityAt: Date.now() });
   }
-  return conversations.get(userId);
+  const session = conversations.get(userId);
+  session.lastActivityAt = Date.now();
+  return session.messages;
 }
 
 /**

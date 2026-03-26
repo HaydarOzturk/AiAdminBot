@@ -5,8 +5,19 @@ const { createEmbed } = require('../utils/embedBuilder');
 const { t, channelName, setGuildLocale, getLocaleStrings } = require('../utils/locale');
 const { projectPath } = require('../utils/paths');
 
-// Active interview sessions: guildId -> { userId, messages[], step, config }
+// Active interview sessions: guildId -> { userId, messages[], step, config, startedAt }
 const activeSessions = new Map();
+const SESSION_TIMEOUT = 1800000; // 30 minutes — auto-expire abandoned interviews
+
+// Periodic cleanup: remove expired interview sessions (check every 5 min)
+setInterval(() => {
+  const now = Date.now();
+  for (const [guildId, session] of activeSessions) {
+    if (now - session.startedAt > SESSION_TIMEOUT) {
+      activeSessions.delete(guildId);
+    }
+  }
+}, 300000);
 
 function buildSystemPrompt(language) {
   const lang = language === 'tr' ? 'Turkish' : 'English';

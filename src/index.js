@@ -80,6 +80,41 @@ const { initDatabase } = require('./utils/database');
   }
 })();
 
+// ── Graceful shutdown ──────────────────────────────────────────────────────
+// Clean up all timers and connections before PM2/Docker restarts the process.
+let _shuttingDown = false;
+
+function gracefulShutdown(signal) {
+  if (_shuttingDown) return;
+  _shuttingDown = true;
+  console.log(`\n🛑 ${signal} received — shutting down gracefully...`);
+
+  try {
+    // Stop all interval-based systems
+    const { stopAfkTimer } = require('./systems/afkManager');
+    const { stopVoiceXpTimer } = require('./systems/voiceXp');
+    const { stopLogCleaner } = require('./systems/logCleaner');
+    const { cleanup: cleanupStreamAnnouncer } = require('./systems/streamAnnouncer');
+
+    stopAfkTimer();
+    stopVoiceXpTimer();
+    stopLogCleaner();
+    cleanupStreamAnnouncer();
+
+    // Destroy the Discord client connection
+    client.destroy();
+    console.log('✅ Cleanup complete');
+  } catch (err) {
+    console.error('Cleanup error:', err.message);
+  }
+
+  // Give the logger time to flush, then exit
+  setTimeout(() => process.exit(0), 500);
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
 // Handle unhandled errors gracefully — logged to file for debugging
 process.on('unhandledRejection', error => {
   console.error('Unhandled promise rejection:', error);

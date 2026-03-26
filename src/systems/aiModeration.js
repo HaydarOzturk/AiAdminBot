@@ -13,9 +13,17 @@ const AI_TIMEOUT_MINUTES = parseInt(process.env.AI_TIMEOUT_MINUTES) || 3;
 // Set in .env: DEBUG_OWNER_ID=210753202000363521
 const DEBUG_OWNER_ID = process.env.DEBUG_OWNER_ID || null;
 
-// Cache recent checks to avoid re-checking edits (messageId -> result)
+// Cache recent checks to avoid re-checking edits (messageId -> { result, cachedAt })
 const recentChecks = new Map();
 const CACHE_TTL = 300000; // 5 minutes
+
+// Single shared cleanup interval for recentChecks (runs every 5 min)
+setInterval(() => {
+  const now = Date.now();
+  for (const [msgId, entry] of recentChecks) {
+    if (now - entry.cachedAt > CACHE_TTL) recentChecks.delete(msgId);
+  }
+}, CACHE_TTL);
 
 // ── Keyword pre-filter ──────────────────────────────────────────────────────
 // Merges a built-in default list with per-guild custom words from the DB.
@@ -31,9 +39,17 @@ const DEFAULT_BLOCKED = [
   'nigger', 'nigga', 'faggot', 'retard', 'cunt',
 ];
 
-// Per-guild cache: guildId -> Set<string>
+// Per-guild cache: guildId -> { words: Set<string>, cachedAt: number }
 const _guildCache = new Map();
 const GUILD_CACHE_TTL = 600000; // 10 minutes
+
+// Single shared cleanup interval for guild blocklist cache (runs every 10 min)
+setInterval(() => {
+  const now = Date.now();
+  for (const [guildId, entry] of _guildCache) {
+    if (now - entry.cachedAt > GUILD_CACHE_TTL) _guildCache.delete(guildId);
+  }
+}, GUILD_CACHE_TTL);
 
 /**
  * Load config-based overrides (once)
@@ -57,7 +73,8 @@ function getConfigWords() {
  *   defaults + config/moderation.json + DB per-guild words
  */
 function getBlockedWordsForGuild(guildId) {
-  if (_guildCache.has(guildId)) return _guildCache.get(guildId);
+  const cached = _guildCache.get(guildId);
+  if (cached && Date.now() - cached.cachedAt < GUILD_CACHE_TTL) return cached.words;
 
   const words = new Set([
     ...DEFAULT_BLOCKED,
@@ -75,8 +92,7 @@ function getBlockedWordsForGuild(guildId) {
     }
   } catch { /* DB not ready yet */ }
 
-  _guildCache.set(guildId, words);
-  setTimeout(() => _guildCache.delete(guildId), GUILD_CACHE_TTL);
+  _guildCache.set(guildId, { words, cachedAt: Date.now() });
 
   return words;
 }
@@ -245,9 +261,8 @@ async function checkMessage(message) {
 
     if (!result) return;
 
-    // Cache the result
-    recentChecks.set(message.id, result);
-    setTimeout(() => recentChecks.delete(message.id), CACHE_TTL);
+    // Cache the result (cleanup handled by shared interval)
+    recentChecks.set(message.id, { ...result, cachedAt: Date.now() });
 
     if (!result.flagged) return;
     if (result.confidence < CONFIDENCE_THRESHOLD) return;

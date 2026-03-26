@@ -24,6 +24,16 @@ const cooldownMs = levelingConfig.xpCooldown || 60000;
 // In-memory cooldown tracker (userId-guildId -> lastXpTimestamp)
 const cooldowns = new Map();
 
+// Periodic cleanup: remove stale cooldown entries (every 30 min)
+// Prevents unbounded Map growth from users who send one message and leave
+setInterval(() => {
+  const now = Date.now();
+  const staleThreshold = cooldownMs * 2; // Keep entries for 2x cooldown period
+  for (const [key, timestamp] of cooldowns) {
+    if (now - timestamp > staleThreshold) cooldowns.delete(key);
+  }
+}, 1800000);
+
 /**
  * Get today's date string in YYYY-MM-DD format (UTC)
  */

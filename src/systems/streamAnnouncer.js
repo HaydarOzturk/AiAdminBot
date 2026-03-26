@@ -235,8 +235,19 @@ async function announceStreamEnd(guild, member) {
   }
 }
 
+/**
+ * Cleanup all pending timers (call on graceful shutdown)
+ */
+function cleanup() {
+  for (const timerId of pendingEndTimers.values()) {
+    clearTimeout(timerId);
+  }
+  pendingEndTimers.clear();
+}
+
 module.exports = {
   handlePresenceUpdate,
   findAnnouncementChannel,
   activeAnnouncements,
+  cleanup,
 };

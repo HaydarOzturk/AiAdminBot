@@ -25,24 +25,30 @@ module.exports = {
 
       const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
-      // Register globally
+      // Register globally (propagates to all guilds within ~1 hour)
       await rest.put(
         Routes.applicationCommands(client.user.id),
         { body: commands }
       );
       console.log(`🌐 Registered ${commands.length} slash commands globally.`);
 
-      // Also register to each server instantly (no 1-hour wait)
-      for (const guild of client.guilds.cache.values()) {
-        try {
-          await rest.put(
-            Routes.applicationGuildCommands(client.user.id, guild.id),
-            { body: commands }
-          );
-          console.log(`   ⚡ ${guild.name} — commands ready`);
-        } catch (err) {
-          console.warn(`   ⚠️  ${guild.name}: ${err.message}`);
+      // Per-guild instant sync — only for small bot deployments (<20 guilds)
+      // to avoid rate limits. Global registration handles the rest.
+      const guildCount = client.guilds.cache.size;
+      if (guildCount <= 20) {
+        let ok = 0, fail = 0;
+        for (const guild of client.guilds.cache.values()) {
+          try {
+            await rest.put(
+              Routes.applicationGuildCommands(client.user.id, guild.id),
+              { body: commands }
+            );
+            ok++;
+          } catch {
+            fail++;
+          }
         }
+        console.log(`   ⚡ Instant sync: ${ok} guilds ready${fail > 0 ? `, ${fail} failed` : ''}`);
       }
     } catch (err) {
       console.error('⚠️  Failed to auto-deploy commands:', err.message);

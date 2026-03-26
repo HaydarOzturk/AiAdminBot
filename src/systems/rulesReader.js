@@ -5,6 +5,7 @@
  * reads the last 20 messages, and caches the text for use in AI prompts.
  *
  * The cache auto-refreshes every 30 minutes so rule updates are picked up.
+ * Empty/missing results are also cached to prevent unnecessary API calls.
  */
 
 const fs = require('fs');
@@ -12,7 +13,9 @@ const path = require('path');
 const { channelName } = require('../utils/locale');
 const { localesDir } = require('../utils/paths');
 
-// Cache: guildId -> { rules: string, fetchedAt: number }
+// Cache: guildId -> { rules: string|null, fetchedAt: number }
+// IMPORTANT: null results (empty/missing channel) are also cached to avoid
+// repeated API calls and log spam when a rules channel doesn't exist or is empty.
 const _rulesCache = new Map();
 const RULES_CACHE_TTL = 1800000; // 30 minutes
 
@@ -58,17 +61,9 @@ function getRulesChannelNames(guildId = null) {
  */
 function findRulesChannel(guild) {
   const names = getRulesChannelNames(guild.id);
-  const channel = guild.channels.cache.find(
+  return guild.channels.cache.find(
     c => names.has(c.name) && c.isTextBased()
   ) || null;
-
-  if (channel) {
-    console.log(`📜 Found rules channel: #${channel.name} (${channel.id}) in ${guild.name}`);
-  } else {
-    console.log(`📜 No rules channel found in ${guild.name}. Available text channels: ${guild.channels.cache.filter(c => c.isTextBased()).map(c => c.name).join(', ')}`);
-  }
-
-  return channel;
 }
 
 /**
@@ -77,7 +72,7 @@ function findRulesChannel(guild) {
  * @returns {Promise<string|null>} The rules text, or null if not found
  */
 async function fetchRules(guild) {
-  // Check cache first
+  // Check cache first — includes cached null (empty/missing) results
   const cached = _rulesCache.get(guild.id);
   if (cached && Date.now() - cached.fetchedAt < RULES_CACHE_TTL) {
     return cached.rules;
@@ -85,17 +80,18 @@ async function fetchRules(guild) {
 
   const rulesChannel = findRulesChannel(guild);
   if (!rulesChannel) {
-    console.log(`📜 Rules fetch skipped — no rules channel in ${guild.name}`);
+    // Cache the "no channel" result so we don't keep looking
+    _rulesCache.set(guild.id, { rules: null, fetchedAt: Date.now() });
     return null;
   }
 
   try {
     // Fetch last 20 messages from the rules channel (oldest first)
     const messages = await rulesChannel.messages.fetch({ limit: 20 });
-    console.log(`📜 Fetched ${messages.size} messages from #${rulesChannel.name}`);
 
     if (messages.size === 0) {
-      console.log(`📜 Rules channel is empty`);
+      // Cache empty result — will retry after TTL expires
+      _rulesCache.set(guild.id, { rules: null, fetchedAt: Date.now() });
       return null;
     }
 
@@ -130,7 +126,8 @@ async function fetchRules(guild) {
       .join('\n\n');
 
     if (!rulesText || rulesText.trim().length === 0) {
-      console.log(`📜 Rules channel had messages but no extractable text`);
+      // Cache empty result
+      _rulesCache.set(guild.id, { rules: null, fetchedAt: Date.now() });
       return null;
     }
 
@@ -148,7 +145,9 @@ async function fetchRules(guild) {
     console.log(`📜 Cached ${truncated.length} chars of rules for ${guild.name}`);
     return truncated;
   } catch (err) {
-    console.error(`📜 Failed to fetch rules for guild ${guild.name} (${guild.id}):`, err.message);
+    console.error(`📜 Failed to fetch rules for ${guild.name}:`, err.message);
+    // Cache failure so we don't retry immediately
+    _rulesCache.set(guild.id, { rules: null, fetchedAt: Date.now() });
     return null;
   }
 }
