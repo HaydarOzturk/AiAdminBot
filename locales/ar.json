@@ -379,9 +379,9 @@
       "white": "أبيض"
     },
     "platforms": {
-      "twitch": "مشترك Twitch",
-      "youtube": "مشترك YouTube",
-      "kick": "مشترك Kick"
+      "twitch": "متابع Twitch",
+      "youtube": "متابع YouTube",
+      "kick": "متابع Kick"
     }
   },
   "channelNames": {
@@ -490,9 +490,9 @@
     "purple": "بنفسجي",
     "pink": "وردي",
     "orange": "برتقالي",
-    "twitchSub": "مشترك Twitch",
-    "youtubeSub": "مشترك YouTube",
-    "kickSub": "مشترك Kick"
+    "twitchSub": "متابع Twitch",
+    "youtubeSub": "متابع YouTube",
+    "kickSub": "متابع Kick"
   },
   "fixPerms": {
     "commandDesc": "إصلاح أذونات التحقق للخوادم الموجودة",

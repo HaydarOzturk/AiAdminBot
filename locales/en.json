@@ -391,9 +391,9 @@
       "white": "White"
     },
     "platforms": {
-      "twitch": "Twitch Sub",
-      "youtube": "YouTube Sub",
-      "kick": "Kick Sub"
+      "twitch": "Twitch Follower",
+      "youtube": "YouTube Follower",
+      "kick": "Kick Follower"
     }
   },
   "channelNames": {
@@ -502,9 +502,9 @@
     "purple": "Purple",
     "pink": "Pink",
     "orange": "Orange",
-    "twitchSub": "Twitch Sub",
-    "youtubeSub": "YouTube Sub",
-    "kickSub": "Kick Sub"
+    "twitchSub": "Twitch Follower",
+    "youtubeSub": "YouTube Follower",
+    "kickSub": "Kick Follower"
   },
   "fixPerms": {
     "commandDesc": "Fix verification permissions for existing servers",

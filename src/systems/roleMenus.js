@@ -12,8 +12,16 @@ function loadRoleMenuConfig() {
   return loadConfig('role-menus.json');
 }
 
+// Map of old role names to their new names (for migration)
+const ROLE_RENAMES = {
+  'Twitch Sub': 'Twitch Follower',
+  'YouTube Sub': 'YouTube Follower',
+  'Kick Sub': 'Kick Follower',
+};
+
 /**
- * Ensure a role exists in the guild, create it if not
+ * Ensure a role exists in the guild, create it if not.
+ * Also renames legacy roles (e.g. "Twitch Sub" → "Twitch Follower").
  * @param {import('discord.js').Guild} guild
  * @param {string} roleName
  * @param {string} color - Hex color
@@ -23,9 +31,20 @@ async function ensureRole(guild, roleName, color) {
   let role = guild.roles.cache.find(r => r.name === roleName);
 
   if (!role) {
+    // Check if there's a legacy role that should be renamed
+    const legacyName = Object.entries(ROLE_RENAMES).find(([, newName]) => newName === roleName)?.[0];
+    if (legacyName) {
+      const legacyRole = guild.roles.cache.find(r => r.name === legacyName);
+      if (legacyRole) {
+        await legacyRole.edit({ name: roleName, reason: 'Renamed by AdminBot (Sub → Follower)' });
+        console.log(`  🔄 Renamed role: "${legacyName}" → "${roleName}"`);
+        return legacyRole;
+      }
+    }
+
     role = await guild.roles.create({
       name: roleName,
-      colors: { primaryColor: color || '#99aab5' },
+      color: color || '#99aab5',
       reason: 'Auto-created by AdminBot role menu',
     });
     console.log(`  ✅ Created role: ${roleName}`);
@@ -109,8 +128,11 @@ async function handleRoleButton(interaction) {
   const member = interaction.member;
   const guild = interaction.guild;
 
-  // Find the role
-  const role = guild.roles.cache.find(r => r.name === roleName);
+  // Find the role — also check if it was renamed (legacy button support)
+  let role = guild.roles.cache.find(r => r.name === roleName);
+  if (!role && ROLE_RENAMES[roleName]) {
+    role = guild.roles.cache.find(r => r.name === ROLE_RENAMES[roleName]);
+  }
   if (!role) {
     return interaction.reply({
       content: `❌ Role "${roleName}" not found. An admin should run /role-menu again.`,

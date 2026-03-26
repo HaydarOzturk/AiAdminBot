@@ -379,9 +379,9 @@
       "white": "Blanc"
     },
     "platforms": {
-      "twitch": "Abonné Twitch",
-      "youtube": "Abonné YouTube",
-      "kick": "Abonné Kick"
+      "twitch": "Follower Twitch",
+      "youtube": "Follower YouTube",
+      "kick": "Follower Kick"
     }
   },
   "channelNames": {
@@ -490,9 +490,9 @@
     "purple": "Violet",
     "pink": "Rose",
     "orange": "Orange",
-    "twitchSub": "Abo Twitch",
-    "youtubeSub": "Abo YouTube",
-    "kickSub": "Abo Kick"
+    "twitchSub": "Follower Twitch",
+    "youtubeSub": "Follower YouTube",
+    "kickSub": "Follower Kick"
   },
   "fixPerms": {
     "commandDesc": "Corriger les autorisations de vérification pour les serveurs existants",

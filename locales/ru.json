@@ -379,9 +379,9 @@
       "white": "Белый"
     },
     "platforms": {
-      "twitch": "Подписчик Twitch",
-      "youtube": "Подписчик YouTube",
-      "kick": "Подписчик Kick"
+      "twitch": "Фолловер Twitch",
+      "youtube": "Фолловер YouTube",
+      "kick": "Фолловер Kick"
     }
   },
   "channelNames": {
@@ -490,9 +490,9 @@
     "purple": "Фиолетовый",
     "pink": "Розовый",
     "orange": "Оранжевый",
-    "twitchSub": "Подписка Twitch",
-    "youtubeSub": "Подписка YouTube",
-    "kickSub": "Подписка Kick"
+    "twitchSub": "Фолловер Twitch",
+    "youtubeSub": "Фолловер YouTube",
+    "kickSub": "Фолловер Kick"
   },
   "fixPerms": {
     "commandDesc": "Исправить разрешения проверки для существующих серверов",

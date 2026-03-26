@@ -391,9 +391,9 @@
       "white": "Beyaz"
     },
     "platforms": {
-      "twitch": "Twitch Abone",
-      "youtube": "YouTube Abone",
-      "kick": "Kick Abone"
+      "twitch": "Twitch Takipçi",
+      "youtube": "YouTube Takipçi",
+      "kick": "Kick Takipçi"
     }
   },
   "channelNames": {
@@ -502,9 +502,9 @@
     "purple": "Mor",
     "pink": "Pembe",
     "orange": "Turuncu",
-    "twitchSub": "Twitch Abone",
-    "youtubeSub": "YouTube Abone",
-    "kickSub": "Kick Abone"
+    "twitchSub": "Twitch Takipçi",
+    "youtubeSub": "YouTube Takipçi",
+    "kickSub": "Kick Takipçi"
   },
   "fixPerms": {
     "commandDesc": "Mevcut sunucular için doğrulama izinlerini düzelt",

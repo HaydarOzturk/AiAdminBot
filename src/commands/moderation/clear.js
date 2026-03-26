@@ -55,9 +55,12 @@ module.exports = {
         // Never delete pinned messages
         if (pinnedIds.has(m.id) || m.pinned) return false;
 
-        // Never delete bot messages that have components (buttons/selects) — these are
-        // important interactive messages like verification, role menus, etc.
-        if (m.author.bot && m.components && m.components.length > 0) return false;
+        // Protect bot messages with components (buttons/selects like verification,
+        // role menus) ONLY during a general cleanup. If the user specifically targeted
+        // a bot user or used the "bots" filter, they intend to delete these.
+        if (m.author.bot && m.components && m.components.length > 0) {
+          if (!targetUser && filter === 'all') return false;
+        }
 
         // Apply filter option
         if (filter === 'bots' && !m.author.bot) return false;

@@ -19,9 +19,9 @@
     "description": "Which platforms are you active on?",
     "color": "#9146ff",
     "roles": [
-      { "name": "Twitch Sub", "emoji": "🟣", "color": "#9146ff" },
-      { "name": "YouTube Sub", "emoji": "🔴", "color": "#ff0000" },
-      { "name": "Kick Sub", "emoji": "🟢", "color": "#53fc18" }
+      { "name": "Twitch Follower", "emoji": "🟣", "color": "#9146ff" },
+      { "name": "YouTube Follower", "emoji": "🔴", "color": "#ff0000" },
+      { "name": "Kick Follower", "emoji": "🟢", "color": "#53fc18" }
     ]
   },
   "colorRoles": {
