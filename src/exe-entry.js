@@ -92,20 +92,59 @@ if (!fs.existsSync(envPath)) {
   console.log('  No .env file found — starting setup wizard...');
   console.log('');
 
-  // Run setup wizard (it will create .env)
-  require('./setup-wizard');
+  // Try native GUI wizard on Windows, fall back to CLI wizard
+  if (process.platform === 'win32') {
+    const { runGUI, isPowerShellAvailable } = require('./setup-wizard-gui');
+
+    if (isPowerShellAvailable()) {
+      runGUI().then(success => {
+        if (success && fs.existsSync(envPath)) {
+          console.log('  Starting bot...');
+          console.log('');
+          require('./index');
+
+          // Auto-open dashboard if configured
+          if (process.pkg && process.env.WEB_PORT) {
+            const port = process.env.WEB_PORT || '3000';
+            setTimeout(() => {
+              try {
+                const { exec } = require('child_process');
+                const url = `http://localhost:${port}`;
+                console.log(`\n  Opening dashboard: ${url}\n`);
+                exec(`start ${url}`);
+              } catch { /* ignore */ }
+            }, 3000);
+          }
+        } else {
+          console.log('  Setup not completed. Run the exe again to retry.');
+          if (!process.pkg) process.exit(0);
+          // Keep console open for exe users
+          setTimeout(() => process.exit(0), 5000);
+        }
+      }).catch(err => {
+        console.error('  GUI wizard failed:', err.message);
+        console.log('  Falling back to CLI wizard...');
+        require('./setup-wizard');
+      });
+    } else {
+      // PowerShell not available — use CLI wizard
+      require('./setup-wizard');
+    }
+  } else {
+    // Linux/Mac — use CLI wizard
+    require('./setup-wizard');
+  }
 } else {
-  // ── When running as exe, ensure dashboard is enabled ───────────────
+  // ── When running as exe, check dashboard config ───────────────────
   if (process.pkg) {
-    // Load existing .env manually to check WEB_PORT
     const envContent = fs.readFileSync(envPath, 'utf-8');
     const hasWebPort = envContent.match(/^WEB_PORT\s*=/m);
+    const hasWebPassword = envContent.match(/^WEB_PASSWORD\s*=/m);
 
-    if (!hasWebPort) {
-      // Append WEB_PORT to .env so the dashboard starts automatically
-      fs.appendFileSync(envPath, '\n\n# Auto-enabled by exe launcher\nWEB_PORT=3000\nWEB_PASSWORD=admin\n');
-      console.log('  Dashboard enabled on port 3000 (password: admin)');
-      console.log('  Change WEB_PASSWORD in .env for security!');
+    if (hasWebPort && !hasWebPassword) {
+      // Dashboard port is set but no password — warn the user
+      console.log('  ⚠️  Dashboard has no WEB_PASSWORD set in .env!');
+      console.log('  Add WEB_PASSWORD=your_password to .env for security.');
     }
   }
 

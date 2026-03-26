@@ -33,8 +33,30 @@ if (!platforms.every(p => TARGETS[p])) {
   process.exit(1);
 }
 
-const distDir = path.join(__dirname, '..', 'dist');
+const projectDir = path.join(__dirname, '..');
+const distDir = path.join(projectDir, 'dist');
 if (!fs.existsSync(distDir)) fs.mkdirSync(distDir, { recursive: true });
+
+// ── Pre-build: verify all dependencies exist in LOCAL node_modules ────
+// pkg can only bundle modules from the project's own node_modules.
+// If npm hoisted a dependency to a parent directory, pkg won't find it.
+console.log('\n📋 Checking dependencies...');
+const deps = Object.keys(pkg.dependencies || {});
+const missing = deps.filter(dep => {
+  return !fs.existsSync(path.join(projectDir, 'node_modules', dep));
+});
+
+if (missing.length > 0) {
+  console.log(`  ⚠️  Missing from local node_modules: ${missing.join(', ')}`);
+  console.log('  Installing locally...');
+  execSync(`npm install ${missing.join(' ')} --save`, {
+    stdio: 'inherit',
+    cwd: projectDir,
+  });
+  console.log('  ✅ Dependencies installed.');
+} else {
+  console.log('  ✅ All dependencies found.');
+}
 
 for (const platform of platforms) {
   const { pkg: target, ext } = TARGETS[platform];
@@ -45,7 +67,7 @@ for (const platform of platforms) {
 
   execSync(
     `npx pkg . --targets ${target} --output "${outPath}"`,
-    { stdio: 'inherit', cwd: path.join(__dirname, '..') }
+    { stdio: 'inherit', cwd: projectDir }
   );
 
   const size = (fs.statSync(outPath).size / 1024 / 1024).toFixed(1);

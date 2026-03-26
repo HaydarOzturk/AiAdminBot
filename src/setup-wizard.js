@@ -168,7 +168,7 @@ async function run() {
   const basePath = getBasePath();
   const envPath = path.join(basePath, '.env');
 
-  const TOTAL_STEPS = 4;
+  const TOTAL_STEPS = 5;
 
   console.log(`  ${c.white}Welcome! This wizard will help you set up AiAdminBot.${c.reset}`);
   console.log(`  ${c.dim}You'll need a few things ready:${c.reset}`);
@@ -307,18 +307,56 @@ async function run() {
     info('Skipping AI features. You can enable them later in .env');
   }
 
-  // ── STEP 4: Review & Save ──────────────────────────────────────────
-  stepHeader(4, TOTAL_STEPS, 'Review & Save');
+  // ── STEP 4: Web Dashboard ────────────────────────────────────────────
+  stepHeader(4, TOTAL_STEPS, 'Web Dashboard');
+
+  console.log('  The web dashboard lets you manage your bot from a browser.');
+  console.log(`  ${c.dim}Moderation logs, role management, settings, and more.${c.reset}`);
+  console.log('');
+
+  let webPort = '';
+  let webPassword = '';
+
+  const enableDash = await ask(`  ${c.white}Enable web dashboard? (Y/n):${c.reset} `);
+
+  if (enableDash.toLowerCase() !== 'n') {
+    const portInput = await ask(`  ${c.white}Dashboard port (default: 3000):${c.reset} `);
+    webPort = portInput.trim() || '3000';
+
+    console.log('');
+    info('Set a password to protect your dashboard.');
+    info(`${c.dim}Minimum 4 characters. You'll use this to log in.${c.reset}`);
+    console.log('');
+
+    while (true) {
+      webPassword = await ask(`  ${c.white}Dashboard password:${c.reset} `);
+      webPassword = webPassword.trim();
+
+      if (!webPassword || webPassword.length < 4) {
+        warn('Password must be at least 4 characters. Try again.');
+        continue;
+      }
+      break;
+    }
+
+    success(`Dashboard will run on port ${webPort}`);
+  } else {
+    info('Dashboard disabled. You can enable it later in .env');
+  }
+
+  // ── STEP 5: Review & Save ──────────────────────────────────────────
+  stepHeader(5, TOTAL_STEPS, 'Review & Save');
 
   console.log('  Your configuration:');
   console.log('');
-  console.log(`    ${c.cyan}Bot:${c.reset}       ${botUsername || '(token set)'}`);
-  console.log(`    ${c.cyan}Language:${c.reset}   ${locale}`);
-  console.log(`    ${c.cyan}AI Chat:${c.reset}    ${aiChatEnabled ? `${c.green}Enabled${c.reset}` : `${c.dim}Disabled${c.reset}`}`);
-  console.log(`    ${c.cyan}AI Mod:${c.reset}     ${aiModEnabled ? `${c.green}Enabled${c.reset}` : `${c.dim}Disabled${c.reset}`}`);
-  if (openrouterKey.trim()) console.log(`    ${c.cyan}OpenRouter:${c.reset} ${c.green}Configured${c.reset}`);
-  if (geminiKey.trim()) console.log(`    ${c.cyan}Gemini:${c.reset}     ${c.green}Configured${c.reset}`);
-  if (openrouterKey.trim() && geminiKey.trim()) console.log(`    ${c.cyan}Failover:${c.reset}   ${c.green}Enabled${c.reset}`);
+  console.log(`    ${c.cyan}Bot:${c.reset}        ${botUsername || '(token set)'}`);
+  console.log(`    ${c.cyan}Language:${c.reset}    ${locale}`);
+  console.log(`    ${c.cyan}AI Chat:${c.reset}     ${aiChatEnabled ? `${c.green}Enabled${c.reset}` : `${c.dim}Disabled${c.reset}`}`);
+  console.log(`    ${c.cyan}AI Mod:${c.reset}      ${aiModEnabled ? `${c.green}Enabled${c.reset}` : `${c.dim}Disabled${c.reset}`}`);
+  if (openrouterKey.trim()) console.log(`    ${c.cyan}OpenRouter:${c.reset}  ${c.green}Configured${c.reset}`);
+  if (geminiKey.trim()) console.log(`    ${c.cyan}Gemini:${c.reset}      ${c.green}Configured${c.reset}`);
+  if (openrouterKey.trim() && geminiKey.trim()) console.log(`    ${c.cyan}Failover:${c.reset}    ${c.green}Enabled${c.reset}`);
+  console.log(`    ${c.cyan}Dashboard:${c.reset}   ${webPort ? `${c.green}Port ${webPort}${c.reset}` : `${c.dim}Disabled${c.reset}`}`);
   console.log('');
 
   const confirm = await ask(`  ${c.white}Save this configuration? (Y/n):${c.reset} `);
@@ -379,6 +417,10 @@ AI_CHAT_RATE_LIMIT=5
 AI_MODERATION_ENABLED=${aiModEnabled}
 AI_MOD_CONFIDENCE_THRESHOLD=0.8
 AI_TIMEOUT_MINUTES=3
+
+# Web Dashboard
+${webPort ? `WEB_PORT=${webPort}` : '# WEB_PORT=3000'}
+${webPassword ? `WEB_PASSWORD=${webPassword}` : '# WEB_PASSWORD=your_password_here'}
 `;
 
   // Write .env

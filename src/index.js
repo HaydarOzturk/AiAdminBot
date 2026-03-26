@@ -71,8 +71,13 @@ const { initDatabase } = require('./utils/database');
     await client.login(process.env.DISCORD_TOKEN);
 
     // Start web dashboard (optional — only if WEB_PORT is set)
-    const { startWebServer } = require('./web/server');
-    startWebServer(client);
+    try {
+      const { startWebServer } = require('./web/server');
+      startWebServer(client);
+    } catch (webErr) {
+      console.warn('⚠️  Web dashboard could not start:', webErr.message);
+      console.warn('   The bot will continue running without the dashboard.');
+    }
   } catch (error) {
     console.error('❌ Failed to start:', error.message);
     console.error('   Check your DISCORD_TOKEN in .env');
