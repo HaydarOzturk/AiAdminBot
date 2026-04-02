@@ -465,7 +465,11 @@
     "isLiveNow": "şu anda YAYINDA!",
     "platformStatus": "Platform Durumu",
     "linkOnlyMode": "Sadece link modu",
-    "ownerNotFound": "Yayın sahibi bu sunucuda bulunamadı."
+    "ownerNotFound": "Yayın sahibi bu sunucuda bulunamadı.",
+    "autoWatcherStarted": "Otomatik yayın takibi başlatıldı",
+    "autoWatcherStopped": "Otomatik yayın takibi durduruldu",
+    "autoDetectLive": "🔴 {user} {platform} üzerinde canlı yayına başladı!",
+    "autoDetectEnded": "Yayın sona erdi. İzlediğiniz için teşekkürler!"
   },
   "aiChat": {
     "statusTitle": "🤖 AI Sohbet Durumu",

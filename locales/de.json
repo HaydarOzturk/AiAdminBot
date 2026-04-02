@@ -453,7 +453,11 @@
     "isLiveNow": "ist jetzt LIVE!",
     "platformStatus": "Plattform-Status",
     "linkOnlyMode": "Nur-Link-Modus",
-    "ownerNotFound": "Der Stream-Besitzer konnte auf diesem Server nicht gefunden werden."
+    "ownerNotFound": "Der Stream-Besitzer konnte auf diesem Server nicht gefunden werden.",
+    "autoWatcherStarted": "Automatische Stream-Überwachung gestartet",
+    "autoWatcherStopped": "Automatische Stream-Überwachung gestoppt",
+    "autoDetectLive": "🔴 {user} ist auf {platform} live gegangen!",
+    "autoDetectEnded": "Stream beendet. Danke fürs Zuschauen!"
   },
   "aiChat": {
     "statusTitle": "🤖 KI-Chat-Status",

@@ -453,7 +453,11 @@
     "isLiveNow": "сейчас В ЭФИРЕ!",
     "platformStatus": "Статус платформ",
     "linkOnlyMode": "Режим только ссылок",
-    "ownerNotFound": "Владелец стрима не найден на этом сервере."
+    "ownerNotFound": "Владелец стрима не найден на этом сервере.",
+    "autoWatcherStarted": "Автоматическое отслеживание стримов запущено",
+    "autoWatcherStopped": "Автоматическое отслеживание стримов остановлено",
+    "autoDetectLive": "🔴 {user} начал(а) прямой эфир на {platform}!",
+    "autoDetectEnded": "Стрим завершён. Спасибо за просмотр!"
   },
   "aiChat": {
     "statusTitle": "🤖 Статус ИИ Чата",

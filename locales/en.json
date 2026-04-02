@@ -465,7 +465,11 @@
     "isLiveNow": "is LIVE now!",
     "platformStatus": "Platform Status",
     "linkOnlyMode": "Link-only mode",
-    "ownerNotFound": "Could not find the stream owner in this server."
+    "ownerNotFound": "Could not find the stream owner in this server.",
+    "autoWatcherStarted": "Automatic stream watcher started",
+    "autoWatcherStopped": "Automatic stream watcher stopped",
+    "autoDetectLive": "🔴 {user} went live on {platform}!",
+    "autoDetectEnded": "Stream ended. Thanks for watching!"
   },
   "aiChat": {
     "statusTitle": "🤖 AI Chat Status",

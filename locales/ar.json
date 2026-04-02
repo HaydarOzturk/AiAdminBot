@@ -453,7 +453,11 @@
     "isLiveNow": "يبث مباشرة الآن!",
     "platformStatus": "حالة المنصات",
     "linkOnlyMode": "وضع الرابط فقط",
-    "ownerNotFound": "لم يتم العثور على صاحب البث في هذا الخادم."
+    "ownerNotFound": "لم يتم العثور على صاحب البث في هذا الخادم.",
+    "autoWatcherStarted": "بدأت مراقبة البث المباشر التلقائية",
+    "autoWatcherStopped": "توقفت مراقبة البث المباشر التلقائية",
+    "autoDetectLive": "🔴 {user} بدأ البث المباشر على {platform}!",
+    "autoDetectEnded": "انتهى البث. شكراً للمشاهدة!"
   },
   "aiChat": {
     "statusTitle": "🤖 حالة الدردشة الذكية",

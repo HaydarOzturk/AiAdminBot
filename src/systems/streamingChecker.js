@@ -323,6 +323,28 @@ async function checkTwitch(handleOrUrl) {
   };
 }
 
+/**
+ * Resolve a Twitch login name to a numeric broadcaster user ID.
+ * Required for EventSub subscriptions. Returns null on failure.
+ * @param {string} login - The Twitch login name (lowercase)
+ * @returns {Promise<string|null>}
+ */
+async function resolveTwitchUserId(login) {
+  const token = await getTwitchToken();
+  if (!token) return null;
+
+  const data = await fetchJson(
+    `https://api.twitch.tv/helix/users?login=${encodeURIComponent(login)}`,
+    {
+      'Client-ID': process.env.TWITCH_CLIENT_ID,
+      'Authorization': `Bearer ${token}`,
+    }
+  );
+
+  if (data?.data?.[0]?.id) return data.data[0].id;
+  return null;
+}
+
 // ─── YouTube ─────────────────────────────────────────────────────────────────
 
 /**
@@ -457,4 +479,10 @@ module.exports = {
   extractKickSlug,
   extractTwitchLogin,
   parseYouTubeInput,
+  // For streamWatcher.js — Twitch EventSub needs these
+  getTwitchToken,
+  resolveTwitchUserId,
+  // Expose helpers for streamWatcher HTTP calls
+  fetchJson,
+  postForm,
 };

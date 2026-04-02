@@ -453,7 +453,11 @@
     "isLiveNow": "¡está EN VIVO ahora!",
     "platformStatus": "Estado de plataformas",
     "linkOnlyMode": "Modo solo enlace",
-    "ownerNotFound": "No se pudo encontrar al dueño del stream en este servidor."
+    "ownerNotFound": "No se pudo encontrar al dueño del stream en este servidor.",
+    "autoWatcherStarted": "Vigilancia automática de streams iniciada",
+    "autoWatcherStopped": "Vigilancia automática de streams detenida",
+    "autoDetectLive": "🔴 ¡{user} está en vivo en {platform}!",
+    "autoDetectEnded": "Stream terminado. ¡Gracias por ver!"
   },
   "aiChat": {
     "statusTitle": "🤖 Estado del Chat IA",

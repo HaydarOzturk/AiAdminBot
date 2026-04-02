@@ -68,6 +68,18 @@ module.exports = {
     afkManager.initAfkTracking(client);
     afkManager.startAfkTimer(client);
 
+    // Start automatic stream watcher (Twitch EventSub + YouTube/Kick polling)
+    if (process.env.STREAMING_ENABLED !== 'false') {
+      try {
+        const { startStreamWatcher } = require('../systems/streamWatcher');
+        startStreamWatcher(client).catch(err => {
+          console.error('❌ Stream watcher failed to start:', err.message);
+        });
+      } catch (err) {
+        console.warn('⚠️ Stream watcher not available:', err.message);
+      }
+    }
+
     // Auto-sync roles on startup if enabled
     const { loadConfig } = require('../utils/paths');
     try {
