@@ -76,6 +76,32 @@ body {
   margin-bottom: 14px; display: flex; align-items: center; gap: 10px;
 }
 
+.bot-logo {
+  width: 36px; height: 36px; border-radius: 8px;
+  object-fit: cover;
+  filter: drop-shadow(0 0 6px var(--neon-glow));
+}
+
+/* Subtle watermark on main content */
+.main-content {
+  position: relative;
+}
+.main-content::before {
+  content: '';
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 120px;
+  height: 120px;
+  background-image: url('/img/logo.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.04;
+  pointer-events: none;
+  z-index: 0;
+}
+
 .guild-selector {
   width: 100%; padding: 8px 12px; border-radius: 8px;
   background: rgba(0, 240, 255, 0.05);
