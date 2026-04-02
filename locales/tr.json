@@ -465,7 +465,11 @@
     "isLiveNow": "şu anda YAYINDA!",
     "platformStatus": "Platform Durumu",
     "linkOnlyMode": "Sadece link modu",
-    "ownerNotFound": "Yayın sahibi bu sunucuda bulunamadı."
+    "ownerNotFound": "Yayın sahibi bu sunucuda bulunamadı.",
+    "autoWatcherStarted": "🔍 Yayın izleyici başlatıldı — {platforms} her {interval}s kontrol ediliyor",
+    "autoWatcherStopped": "⏹️ Yayın izleyici durduruldu.",
+    "autoDetectLive": "🔴 Otomatik tespit: **{user}** şu anda **{platform}** üzerinde yayında!",
+    "autoDetectEnded": "⚫ Otomatik tespit: **{user}** **{platform}** yayınını sonlandırdı."
   },
   "aiChat": {
     "statusTitle": "🤖 AI Sohbet Durumu",
@@ -604,11 +608,4 @@
     "cancelButton": "İptal",
     "cancelled": "Sunucu sıfırlama iptal edildi.",
     "inProgress": "⏳ Sunucu sıfırlanıyor... Bu biraz sürebilir.",
-    "completeTitle": "✅ Sunucu Sıfırlama Tamamlandı",
-    "channelsDeleted": "Silinen Kanallar",
-    "rolesDeleted": "Silinen Roller",
-    "errors": "Hatalar",
-    "completeFooter": "Yeni bir yapı oluşturmak için /setup veya /ai-setup kullanın",
-    "timedOut": "Sunucu sıfırlama zaman aşımına uğradı."
-  }
-}
+    "comple

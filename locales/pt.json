@@ -453,7 +453,11 @@
     "isLiveNow": "está AO VIVO agora!",
     "platformStatus": "Status das plataformas",
     "linkOnlyMode": "Modo apenas link",
-    "ownerNotFound": "O dono da stream não foi encontrado neste servidor."
+    "ownerNotFound": "O dono da stream não foi encontrado neste servidor.",
+    "autoWatcherStarted": "🔍 Vigia de streams iniciado — verificando {platforms} a cada {interval}s",
+    "autoWatcherStopped": "⏹️ Vigia de streams parado.",
+    "autoDetectLive": "🔴 Detecção automática: **{user}** está ao vivo na **{platform}**!",
+    "autoDetectEnded": "⚫ Detecção automática: **{user}** encerrou a stream na **{platform}**."
   },
   "aiChat": {
     "statusTitle": "🤖 Status do Bate-papo IA",
@@ -604,12 +608,4 @@
     "confirmButton": "Sim, Reiniciar",
     "cancelButton": "Cancelar",
     "cancelled": "Reinício do servidor cancelado.",
-    "inProgress": "⏳ Reiniciando servidor... Isso pode levar um momento.",
-    "completeTitle": "✅ Reinício do Servidor Concluído",
-    "channelsDeleted": "Canais Excluídos",
-    "rolesDeleted": "Papéis Excluídos",
-    "errors": "Erros",
-    "completeFooter": "Use /setup ou /ai-setup para criar uma nova estrutura",
-    "timedOut": "Reinício do servidor expirou."
-  }
-}
+    "inProgress": "⏳ Reiniciando servidor... Isso pode

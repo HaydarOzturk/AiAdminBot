@@ -183,14 +183,38 @@ async function handlePresenceUpdate(oldPresence, newPresence) {
 
 /**
  * Post a stream-start announcement.
+ *
+ * Accepts EITHER a Discord Presence object (from presenceUpdate events)
+ * OR a streamInfo object (from streamWatcher) with shape:
+ *   { url, title, game?, viewers?, platform? }
+ *
+ * @param {import('discord.js').Guild} guild
+ * @param {import('discord.js').GuildMember} member
+ * @param {import('discord.js').Presence|object} presenceOrStreamInfo
+ * @returns {Promise<import('discord.js').Message|null>} The sent message, or null
  */
-async function announceStreamStart(guild, member, presence) {
+async function announceStreamStart(guild, member, presenceOrStreamInfo) {
   try {
     const channel = findAnnouncementChannel(guild);
-    if (!channel) return;
+    if (!channel) return null;
 
-    const streamActivity = presence.activities.find(a => a.type === ActivityType.Streaming);
-    if (!streamActivity) return;
+    let streamActivity;
+
+    // If it has .activities, it's a Discord Presence object
+    if (presenceOrStreamInfo?.activities) {
+      streamActivity = presenceOrStreamInfo.activities.find(a => a.type === ActivityType.Streaming);
+      if (!streamActivity) return null;
+    } else {
+      // It's a streamInfo object from streamWatcher — adapt to the shape buildLiveMessage expects
+      const info = presenceOrStreamInfo;
+      streamActivity = {
+        url: info.url || '',
+        state: info.game || '',
+        details: info.title || '',
+        name: info.platform || 'Live Stream',
+        assets: null,
+      };
+    }
 
     const messagePayload = buildLiveMessage(member, streamActivity, guild.id);
 
@@ -202,8 +226,10 @@ async function announceStreamStart(guild, member, presence) {
     });
 
     console.log(`🔴 Stream announcement posted for ${member.user.tag} in ${guild.name}`);
+    return msg;
   } catch (err) {
     console.error(`Stream announcement failed in ${guild.name}:`, err.message);
+    return null;
   }
 }
 
@@ -250,4 +276,10 @@ module.exports = {
   findAnnouncementChannel,
   activeAnnouncements,
   cleanup,
+  // Reusable building blocks for streamWatcher.js
+  buildLiveMessage,
+  buildEndedMessage,
+  detectPlatform,
+  announceStreamStart,
+  announceStreamEnd,
 };

@@ -453,7 +453,11 @@
     "isLiveNow": "сейчас В ЭФИРЕ!",
     "platformStatus": "Статус платформ",
     "linkOnlyMode": "Режим только ссылок",
-    "ownerNotFound": "Владелец стрима не найден на этом сервере."
+    "ownerNotFound": "Владелец стрима не найден на этом сервере.",
+    "autoWatcherStarted": "🔍 Наблюдатель стримов запущен — опрос {platforms} каждые {interval}с",
+    "autoWatcherStopped": "⏹️ Наблюдатель стримов остановлен.",
+    "autoDetectLive": "🔴 Автообнаружение: **{user}** в эфире на **{platform}**!",
+    "autoDetectEnded": "⚫ Автообнаружение: **{user}** завершил стрим на **{platform}**."
   },
   "aiChat": {
     "statusTitle": "🤖 Статус ИИ Чата",
@@ -609,7 +613,4 @@
     "channelsDeleted": "Удалено Каналов",
     "rolesDeleted": "Удалено Ролей",
     "errors": "Ошибки",
-    "completeFooter": "Используйте /setup или /ai-setup для создания новой структуры",
-    "timedOut": "Время сброса сервера истекло."
-  }
-}
+    "completeF

@@ -465,7 +465,11 @@
     "isLiveNow": "is LIVE now!",
     "platformStatus": "Platform Status",
     "linkOnlyMode": "Link-only mode",
-    "ownerNotFound": "Could not find the stream owner in this server."
+    "ownerNotFound": "Could not find the stream owner in this server.",
+    "autoWatcherStarted": "🔍 Stream watcher started — polling {platforms} every {interval}s",
+    "autoWatcherStopped": "⏹️ Stream watcher stopped.",
+    "autoDetectLive": "🔴 Auto-detected: **{user}** is live on **{platform}**!",
+    "autoDetectEnded": "⚫ Auto-detected: **{user}** ended their **{platform}** stream."
   },
   "aiChat": {
     "statusTitle": "🤖 AI Chat Status",
@@ -602,13 +606,4 @@
     "rolesToDelete": "Roles to Delete",
     "confirmButton": "Yes, Reset",
     "cancelButton": "Cancel",
-    "cancelled": "Server reset cancelled.",
-    "inProgress": "⏳ Resetting server... This may take a moment.",
-    "completeTitle": "✅ Server Reset Complete",
-    "channelsDeleted": "Channels Deleted",
-    "rolesDeleted": "Roles Deleted",
-    "errors": "Errors",
-    "completeFooter": "Use /setup or /ai-setup to create a new structure",
-    "timedOut": "Server reset timed out."
-  }
-}
+    "cancelled": "Server reset ca

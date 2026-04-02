@@ -453,7 +453,11 @@
     "isLiveNow": "يبث مباشرة الآن!",
     "platformStatus": "حالة المنصات",
     "linkOnlyMode": "وضع الرابط فقط",
-    "ownerNotFound": "لم يتم العثور على صاحب البث في هذا الخادم."
+    "ownerNotFound": "لم يتم العثور على صاحب البث في هذا الخادم.",
+    "autoWatcherStarted": "🔍 مراقب البث بدأ — فحص {platforms} كل {interval} ثانية",
+    "autoWatcherStopped": "⏹️ مراقب البث توقف.",
+    "autoDetectLive": "🔴 اكتشاف تلقائي: **{user}** يبث مباشرة على **{platform}**!",
+    "autoDetectEnded": "⚫ اكتشاف تلقائي: **{user}** أنهى البث على **{platform}**."
   },
   "aiChat": {
     "statusTitle": "🤖 حالة الدردشة الذكية",
@@ -607,9 +611,3 @@
     "inProgress": "⏳ جاري إعادة تعيين الخادم... قد يستغرق هذا لحظة.",
     "completeTitle": "✅ اكتملت إعادة تعيين الخادم",
     "channelsDeleted": "القنوات المحذوفة",
-    "rolesDeleted": "الأدوار المحذوفة",
-    "errors": "أخطاء",
-    "completeFooter": "استخدم /setup أو /ai-setup لإنشاء هيكل جديد",
-    "timedOut": "انتهت مهلة إعادة تعيين الخادم."
-  }
-}
