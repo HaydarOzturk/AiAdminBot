@@ -9,6 +9,11 @@ module.exports = [
   require('./ai/ai-setup'),
   require('./ai/ai-setup-apply'),
   require('./ai/ai-setup-cancel'),
+  require('./ai/ai-agent'),
+
+  // Knowledge
+  require('./knowledge/what-did-i-miss'),
+  require('./knowledge/knowledge'),
 
   // Leveling
   require('./leveling/award'),
@@ -16,7 +21,14 @@ module.exports = [
   require('./leveling/rank'),
   require('./leveling/reset-xp'),
 
+  // Community
+  require('./community/starboard'),
+  require('./community/poll'),
+  require('./community/giveaway'),
+  require('./community/custom-command'),
+
   // Moderation
+  require('./moderation/automod'),
   require('./moderation/ban'),
   require('./moderation/blocklist'),
   require('./moderation/clear'),

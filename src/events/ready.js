@@ -80,6 +80,22 @@ module.exports = {
       }
     }
 
+    // Start knowledge base maintenance (message log pruning + summaries)
+    try {
+      const { startKnowledgeMaintenance } = require('../systems/knowledgeBase');
+      startKnowledgeMaintenance(client);
+    } catch (err) {
+      console.warn('⚠️ Knowledge base maintenance failed to start:', err.message);
+    }
+
+    // Restore active giveaway timers
+    try {
+      const { restoreGiveawayTimers } = require('../systems/giveaway');
+      restoreGiveawayTimers(client);
+    } catch (err) {
+      console.warn('⚠️ Giveaway timer restore failed:', err.message);
+    }
+
     // Auto-sync roles on startup if enabled
     const { loadConfig } = require('../utils/paths');
     try {

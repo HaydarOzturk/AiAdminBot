@@ -84,48 +84,23 @@ router.post('/:guildId/award', (req, res) => {
       return res.status(400).json({ error: 'amount must be a number between 1 and 30' });
     }
 
-    // Try to use the leveling system if available
+    // Use the leveling system directly (correct schema, handles level-ups)
     try {
       const levelingSystem = require('../../systems/leveling');
-      if (levelingSystem && levelingSystem.awardXp) {
-        levelingSystem.awardXp(userId, guildId, xpAmount);
-      } else {
-        // Fallback: manual database update
-        const userLevel = db.get(
-          'SELECT * FROM levels WHERE guild_id = ? AND user_id = ?',
-          [guildId, userId]
-        );
-
-        if (userLevel) {
-          db.run(
-            'UPDATE levels SET xp = xp + ?, total_xp = total_xp + ? WHERE guild_id = ? AND user_id = ?',
-            [xpAmount, xpAmount, guildId, userId]
-          );
-        } else {
-          db.run(
-            'INSERT INTO levels (guild_id, user_id, level, xp, total_xp) VALUES (?, ?, ?, ?, ?)',
-            [guildId, userId, 0, xpAmount, xpAmount]
-          );
-        }
-      }
+      levelingSystem.awardXp(userId, guildId, xpAmount);
     } catch (e) {
-      // Fallback: manual database update if leveling system not available
-      const userLevel = db.get(
-        'SELECT * FROM levels WHERE guild_id = ? AND user_id = ?',
-        [guildId, userId]
+      // Fallback: manual database update with correct schema
+      // Use ON CONFLICT to prevent duplicate entries (the old bug)
+      db.run(
+        `INSERT INTO levels (user_id, guild_id, xp, level, messages, voice_minutes, last_xp_at)
+         VALUES (?, ?, 0, 0, 0, 0, ?)
+         ON CONFLICT(user_id, guild_id) DO NOTHING`,
+        [userId, guildId, new Date().toISOString()]
       );
-
-      if (userLevel) {
-        db.run(
-          'UPDATE levels SET xp = xp + ?, total_xp = total_xp + ? WHERE guild_id = ? AND user_id = ?',
-          [xpAmount, xpAmount, guildId, userId]
-        );
-      } else {
-        db.run(
-          'INSERT INTO levels (guild_id, user_id, level, xp, total_xp) VALUES (?, ?, ?, ?, ?)',
-          [guildId, userId, 0, xpAmount, xpAmount]
-        );
-      }
+      db.run(
+        'UPDATE levels SET xp = xp + ?, last_xp_at = ? WHERE user_id = ? AND guild_id = ?',
+        [xpAmount, new Date().toISOString(), userId, guildId]
+      );
     }
 
     return res.json({

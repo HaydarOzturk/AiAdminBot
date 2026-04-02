@@ -1,5 +1,7 @@
 # Environment (contains secrets)
 .env
+.env.test
+.env.production
 
 # User config files (created from .example files)
 config/config.json

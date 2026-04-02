@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Settings - Admin Dashboard</title>
+  <title>Settings - Admin+AI</title>
   <link rel="stylesheet" href="/css/dashboard.css">
   <style>
     /* Settings page styles */
@@ -251,7 +251,7 @@
     <!-- Sidebar -->
     <nav class="sidebar">
       <div class="sidebar-header">
-        <h2 class="bot-title">Admin Bot</h2>
+        <h2 class="bot-title">Admin+AI</h2>
         <select id="guild-selector" class="guild-selector">
           <option value="">Loading guilds...</option>
         </select>
@@ -331,6 +331,9 @@
           <button class="settings-tab" data-panel="debug">
             <span class="tab-icon">🔧</span>Debug
           </button>
+          <button class="settings-tab" data-panel="channels">
+            <span class="tab-icon">📡</span>Channels
+          </button>
           <button class="settings-tab" data-panel="language">
             <span class="tab-icon">🗣️</span>Language
           </button>
@@ -362,6 +365,23 @@
 
         <!-- Debug Panel -->
         <div class="settings-panel" id="panel-debug"></div>
+
+        <!-- Channels Panel -->
+        <div class="settings-panel" id="panel-channels">
+          <div class="setting-group">
+            <div class="setting-group-title">📡 Feature Channels</div>
+            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">
+              These channels are required by various bot features. Green = found in server, Red = missing.
+              Editable channels can be renamed to match your server's naming convention.
+            </p>
+            <div id="channelsList" style="display:flex; flex-direction:column; gap:12px;">
+              <div style="color:var(--text-muted)">Loading...</div>
+            </div>
+            <div style="margin-top: 16px;">
+              <button class="btn btn-primary" id="saveChannelsBtn" style="display:none;">Save Channel Names</button>
+            </div>
+          </div>
+        </div>
 
         <!-- Language Panel (guild-specific) -->
         <div class="settings-panel" id="panel-language">
@@ -716,6 +736,79 @@
     document.getElementById('logout-btn').addEventListener('click', async () => {
       try { await api('/api/auth/logout', { method: 'POST' }); } catch {}
       window.location.href = '/login.html';
+    });
+
+    // ── Channels Panel ──────────────────────────────────────────────────
+    let channelChanges = {};
+
+    async function loadChannels() {
+      try {
+        const data = await api('/api/settings/channels');
+        const container = document.getElementById('channelsList');
+        const saveBtn = document.getElementById('saveChannelsBtn');
+
+        let html = '';
+        for (const ch of data.channels) {
+          const statusClass = ch.found ? 'on' : 'off';
+          const statusIcon = ch.found ? '✅' : '❌';
+          const statusText = ch.found ? `Found in ${escapeHtml(ch.foundIn || 'server')}` : 'Missing';
+          const isEditable = ch.type === 'env' && ch.configKey;
+
+          html += `<div class="setting-row" style="align-items:center;">`;
+          html += `<div class="setting-label" style="flex:1;">`;
+          html += `<strong>${escapeHtml(ch.feature)}</strong>`;
+          html += `<small style="display:block; color:var(--text-muted);">${escapeHtml(ch.description)}</small>`;
+          html += `</div>`;
+          html += `<div style="display:flex; align-items:center; gap:12px; flex:1;">`;
+
+          if (isEditable) {
+            html += `<input type="text" class="setting-input" value="${escapeHtml(ch.currentName)}"
+              data-channel-id="${ch.id}" placeholder="${escapeHtml(ch.id)}"
+              onchange="trackChannelChange('${ch.id}', this.value)"
+              style="max-width:200px;">`;
+          } else {
+            html += `<code style="background:var(--bg-tertiary); padding:4px 10px; border-radius:4px; font-size:13px;">#${escapeHtml(ch.currentName)}</code>`;
+          }
+
+          html += `<span class="status-chip ${statusClass}" style="font-size:12px; padding:4px 10px;">${statusIcon} ${statusText}</span>`;
+          html += `</div></div>`;
+        }
+
+        container.innerHTML = html;
+        saveBtn.style.display = data.channels.some(ch => ch.type === 'env' && ch.configKey) ? 'inline-block' : 'none';
+      } catch (err) {
+        console.error('Failed to load channels:', err);
+      }
+    }
+
+    function trackChannelChange(channelId, value) {
+      channelChanges[channelId] = value;
+    }
+
+    document.getElementById('saveChannelsBtn').addEventListener('click', async () => {
+      if (Object.keys(channelChanges).length === 0) {
+        showToast('No changes to save', 'info');
+        return;
+      }
+      try {
+        await api('/api/settings/channels', {
+          method: 'PUT',
+          body: JSON.stringify({ updates: channelChanges }),
+        });
+        channelChanges = {};
+        showToast('Channel settings saved', 'success');
+        loadChannels();
+      } catch (err) {
+        showToast('Failed to save: ' + err.message, 'error');
+      }
+    });
+
+    // Load channels when switching to the Channels tab
+    document.getElementById('settingsTabs').addEventListener('click', e => {
+      const tab = e.target.closest('.settings-tab');
+      if (tab && tab.dataset.panel === 'channels') {
+        loadChannels();
+      }
     });
 
     // ── Init ───────────────────────────────────────────────────────────

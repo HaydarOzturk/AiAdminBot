@@ -74,6 +74,33 @@ module.exports = {
       console.error('❌ AI setup error:', error.message);
     }
 
+    // ── AI Admin Agent ──────────────────────────────────────────────────
+    try {
+      const agent = require('../agent');
+      const handled = await agent.handleMessage(message);
+      if (handled) return; // Agent handled the message — stop processing
+    } catch (error) {
+      console.error('❌ AI Agent error:', error.message);
+    }
+
+    // ── Custom Commands ────────────────────────────────────────────────
+    try {
+      const customCommands = require('../systems/customCommands');
+      const handled = await customCommands.checkMessage(message);
+      if (handled) return; // Custom command was triggered — stop processing
+    } catch (error) {
+      console.error('❌ Custom commands error:', error.message);
+    }
+
+    // ── Advanced Auto-Moderation ────────────────────────────────────────
+    try {
+      const automod = require('../systems/automod');
+      const blocked = await automod.checkMessage(message);
+      if (blocked) return; // Message was deleted by automod — stop processing
+    } catch (error) {
+      console.error('❌ AutoMod error:', error.message);
+    }
+
     // ── Link Filter ─────────────────────────────────────────────────────
     try {
       const linkFilter = require('../systems/linkFilter');
@@ -102,6 +129,14 @@ module.exports = {
       }
     } catch (error) {
       console.error('❌ AI chat error:', error.message);
+    }
+
+    // ── Message Logging for Knowledge System ─────────────────────────────
+    try {
+      const knowledgeBase = require('../systems/knowledgeBase');
+      knowledgeBase.logMessage(message);
+    } catch {
+      // Silent fail — logging should never block message flow
     }
   },
 };
