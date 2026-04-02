@@ -10,7 +10,7 @@ const db = require('../../utils/database');
 router.get('/:guildId/leaderboard', (req, res) => {
   try {
     const { guildId } = req.params;
-    const { limit = 25 } = req.query;
+    const { limit = 100 } = req.query;
 
     const leaderboard = db.all(
       `SELECT user_id, level, xp, total_xp FROM levels

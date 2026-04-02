@@ -16,6 +16,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const https = require('https');
 const { execSync, spawn } = require('child_process');
 
@@ -28,13 +29,33 @@ function getBasePath() {
 
 const basePath = getBasePath();
 const envPath = path.join(basePath, '.env');
-const tmpResultPath = path.join(basePath, '_setup_result.json');
+// Use system TEMP dir for result file — basePath may contain non-ASCII chars
+// (e.g. Turkish "Masaüstü") which corrupt when embedded in PowerShell scripts
+const tmpResultPath = path.join(os.tmpdir(), '_aiadminbot_setup_result.json');
 
 // ── Debug log to file ────────────────────────────────────────────────────────
 const debugLogPath = path.join(basePath, '_setup_debug.log');
 function debugLog(...args) {
   const line = '[GUI ' + new Date().toISOString() + '] ' + args.join(' ') + '\n';
   try { fs.appendFileSync(debugLogPath, line); } catch { /* ignore */ }
+}
+
+// ── Helper: recursive directory copy ─────────────────────────────────────────
+function copyDirToSync(src, dest) {
+  if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
+  const entries = fs.readdirSync(src, { withFileTypes: true });
+  for (const entry of entries) {
+    const s = path.join(src, entry.name);
+    const d = path.join(dest, entry.name);
+    if (entry.isDirectory()) copyDirToSync(s, d);
+    else {
+      try {
+        if (!fs.existsSync(d) || fs.statSync(s).size !== fs.statSync(d).size) {
+          fs.copyFileSync(s, d);
+        }
+      } catch { fs.copyFileSync(s, d); }
+    }
+  }
 }
 
 // ── Token validation (same as CLI wizard) ────────────────────────────────────
@@ -80,9 +101,10 @@ function validateToken(token) {
 // ── PowerShell Windows Forms Wizard ──────────────────────────────────────────
 
 function generatePowerShellScript(resultPath, guidePath) {
-  // Escape backslashes for PowerShell string
-  const psResultPath = resultPath.replace(/\\/g, '\\\\');
-  const psGuidePath = (guidePath || '').replace(/\\/g, '\\\\');
+  // NOTE: We do NOT embed file paths as string literals in the PS script.
+  // Paths may contain non-ASCII chars (e.g. Turkish "Masaustu") which corrupt
+  // when PowerShell reads the .ps1 file using the system codepage.
+  // Instead, we resolve paths at runtime inside PowerShell.
 
   // Build script as array of lines to avoid JS template literal escaping issues
   // ALL strings must be pure ASCII — PowerShell reads .ps1 with system codepage
@@ -93,6 +115,10 @@ function generatePowerShellScript(resultPath, guidePath) {
   L('Add-Type -AssemblyName System.Drawing');
   L('');
   L('[System.Windows.Forms.Application]::EnableVisualStyles()');
+  L('');
+  L('# Resolve paths at runtime to avoid codepage encoding issues');
+  L('$resultPath = [System.IO.Path]::Combine([System.IO.Path]::GetTempPath(), "_aiadminbot_setup_result.json")');
+  L('$guidePath = [System.IO.Path]::Combine($PSScriptRoot, "_setup_guide")');
   L('');
   L('# Color Palette');
   L('$BgColor       = [System.Drawing.Color]::FromArgb(30, 30, 46)');
@@ -112,8 +138,10 @@ function generatePowerShellScript(resultPath, guidePath) {
   L('$InputFont   = New-Object System.Drawing.Font("Consolas", 11)');
   L('$BtnFont     = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)');
   L('');
-  L('# Setup guide images path');
-  L('$guidePath = "' + psGuidePath + '"');
+  L('# Guide path fallback: if _setup_guide is not next to PS script, check parent');
+  L('if (-not (Test-Path $guidePath)) {');
+  L('  $guidePath = [System.IO.Path]::Combine($PSScriptRoot, "assets", "setup-guide")');
+  L('}');
   L('');
   L('# Main Form');
   L('$form = New-Object System.Windows.Forms.Form');
@@ -641,7 +669,7 @@ function generatePowerShellScript(resultPath, guidePath) {
   L('');
   L('$form.Add_FormClosing({');
   L('  $json = $script:result | ConvertTo-Json -Compress');
-  L('  [System.IO.File]::WriteAllText("' + psResultPath + '", $json)');
+  L('  [System.IO.File]::WriteAllText($resultPath, $json)');
   L('})');
   L('');
   L('# Show first step');
@@ -674,14 +702,22 @@ async function runGUI() {
   debugLog('tmpResultPath:', tmpResultPath);
   console.log('  Launching setup wizard...');
 
-  // Write PowerShell script to temp file
-  const psScriptPath = path.join(basePath, '_setup_wizard.ps1');
+  // Write PowerShell script to TEMP dir to avoid non-ASCII path issues
+  const psScriptPath = path.join(os.tmpdir(), '_aiadminbot_setup_wizard.ps1');
   debugLog('Writing PS script to:', psScriptPath);
-  // Guide images path — _setup_guide next to exe, or assets/setup-guide in dev
-  const guidePath = path.join(basePath, process.pkg ? '_setup_guide' : 'assets/setup-guide');
-  debugLog('Guide images path:', guidePath);
 
-  const psScript = generatePowerShellScript(tmpResultPath, guidePath);
+  // Copy guide images to temp dir so PS can find them via $PSScriptRoot
+  const guideSrc = path.join(basePath, process.pkg ? '_setup_guide' : 'assets/setup-guide');
+  const guideDest = path.join(os.tmpdir(), '_setup_guide');
+  debugLog('Guide images src:', guideSrc, 'dest:', guideDest);
+  try {
+    if (fs.existsSync(guideSrc)) {
+      copyDirToSync(guideSrc, guideDest);
+      debugLog('Guide images copied to temp dir');
+    }
+  } catch (e) { debugLog('Guide copy warning:', e.message); }
+
+  const psScript = generatePowerShellScript(tmpResultPath, null);
   debugLog('PS script length:', psScript.length, 'chars');
   fs.writeFileSync(psScriptPath, psScript, 'utf-8');
   debugLog('PS script written OK');

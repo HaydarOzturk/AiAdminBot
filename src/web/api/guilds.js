@@ -999,7 +999,7 @@ router.delete('/:guildId/roles/:roleId/members/:userId', async (req, res) => {
 router.get('/:guildId/leveling/leaderboard', async (req, res) => {
   try {
     const { guildId } = req.params;
-    const { search, limit = 25 } = req.query;
+    const { search, limit = 100 } = req.query;
     const guild = getGuild(req);
 
     let query = 'SELECT * FROM levels WHERE guild_id = ?';
@@ -1045,14 +1045,20 @@ router.get('/:guildId/leveling/leaderboard', async (req, res) => {
 router.get('/:guildId/leveling/stats', (req, res) => {
   try {
     const { guildId } = req.params;
+    const leveling = require('../../systems/leveling');
 
     const totalUsers = db.get(
       'SELECT COUNT(*) as count FROM levels WHERE guild_id = ?', [guildId]
     )?.count || 0;
 
-    const totalXp = db.get(
-      'SELECT SUM(xp) as total FROM levels WHERE guild_id = ?', [guildId]
-    )?.total || 0;
+    // Calculate true total XP earned (level XP spent + current remainder)
+    const allUsers = db.all(
+      'SELECT level, xp FROM levels WHERE guild_id = ?', [guildId]
+    );
+    let totalXp = 0;
+    for (const u of allUsers) {
+      totalXp += leveling.totalXpForLevel(u.level) + (u.xp || 0);
+    }
 
     const avgLevel = db.get(
       'SELECT AVG(level) as avg FROM levels WHERE guild_id = ?', [guildId]
