@@ -7,7 +7,18 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('afk-setup')
     .setDescription('Create the AFK voice channel with no-speaking permissions (Owner/Admin only)')
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .addIntegerOption(opt =>
+      opt.setName('timeout')
+        .setDescription('AFK timeout in minutes (Discord native)')
+        .addChoices(
+          { name: '1 minute', value: 60 },
+          { name: '5 minutes', value: 300 },
+          { name: '15 minutes', value: 900 },
+          { name: '30 minutes', value: 1800 },
+          { name: '1 hour', value: 3600 },
+        )
+    ),
 
   async execute(interaction) {
     const g = interaction.guild?.id;
@@ -24,7 +35,8 @@ module.exports = {
     await interaction.deferReply();
 
     try {
-      const result = await createAfkChannel(guild);
+      const timeoutSeconds = interaction.options.getInteger('timeout') || 300; // default 5 min
+      const result = await createAfkChannel(guild, timeoutSeconds);
 
       const embed = createEmbed({
         title: result.created ? '💤 AFK Channel Created!' : '💤 AFK Channel',
@@ -50,7 +62,7 @@ module.exports = {
  * @param {import('discord.js').Guild} guild
  * @returns {{ created: boolean, message: string, fields?: Array, channelId?: string }}
  */
-async function createAfkChannel(guild) {
+async function createAfkChannel(guild, timeoutSeconds = 300) {
   const g = guild.id;
 
   // Check if guild already has an AFK channel set
@@ -74,7 +86,7 @@ async function createAfkChannel(guild) {
   if (existingByName) {
     // Channel exists but not set as guild AFK — set it now
     await guild.setAFKChannel(existingByName, 'AFK setup by AdminBot');
-    await guild.setAFKTimeout(600); // 10 minutes
+    await guild.setAFKTimeout(timeoutSeconds);
 
     // Ensure Speak is denied for @everyone
     await existingByName.permissionOverwrites.edit(guild.roles.everyone, {
@@ -85,7 +97,7 @@ async function createAfkChannel(guild) {
 
     return {
       created: false,
-      message: `Found existing **${existingByName.name}** channel and configured it as the AFK channel.\nSpeaking: **Denied for everyone**\nTimeout: **10 minutes**`,
+      message: `Found existing **${existingByName.name}** channel and configured it as the AFK channel.\nSpeaking: **Denied for everyone**\nTimeout: **${timeoutSeconds / 60} minutes**`,
       channelId: existingByName.id,
     };
   }
@@ -129,7 +141,7 @@ async function createAfkChannel(guild) {
     fields: [
       { name: 'Channel', value: `<#${afkChannel.id}>`, inline: true },
       { name: 'Speaking', value: '❌ Denied for everyone', inline: true },
-      { name: 'AFK Timeout', value: '10 minutes', inline: true },
+      { name: 'AFK Timeout', value: `${timeoutSeconds / 60} minutes`, inline: true },
     ],
     channelId: afkChannel.id,
   };
