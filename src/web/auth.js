@@ -107,9 +107,9 @@ function login(req, res) {
   const expiresAt = Date.now() + TOKEN_EXPIRY_MS;
   tokenStore.set(token, expiresAt);
 
-  // Add Secure flag when not on localhost
-  const isLocalhost = req.hostname === 'localhost' || req.hostname === '127.0.0.1';
-  const securePart = isLocalhost ? '' : ' Secure;';
+  // Add Secure flag only when actually using HTTPS
+  const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
+  const securePart = isSecure ? ' Secure;' : '';
   res.setHeader('Set-Cookie',
     `admin_token=${token}; HttpOnly; SameSite=Lax;${securePart} Max-Age=${Math.floor(TOKEN_EXPIRY_MS / 1000)}; Path=/`
   );
