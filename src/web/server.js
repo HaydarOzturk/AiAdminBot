@@ -98,6 +98,27 @@ function startWebServer(client) {
 
   app.locals.client = client;
 
+  // HTTPS support: if WEB_HTTPS_KEY and WEB_HTTPS_CERT are set, use HTTPS
+  const keyPath = process.env.WEB_HTTPS_KEY;
+  const certPath = process.env.WEB_HTTPS_CERT;
+
+  if (keyPath && certPath) {
+    try {
+      const fs = require('fs');
+      const https = require('https');
+      const sslOptions = {
+        key: fs.readFileSync(keyPath),
+        cert: fs.readFileSync(certPath),
+      };
+      https.createServer(sslOptions, app).listen(parseInt(port), () => {
+        console.log(`🔒 Web dashboard running at https://localhost:${port}`);
+      });
+      return;
+    } catch (err) {
+      console.warn(`⚠️ HTTPS failed (${err.message}), falling back to HTTP`);
+    }
+  }
+
   app.listen(parseInt(port), () => {
     console.log(`🌐 Web dashboard running at http://localhost:${port}`);
   });
