@@ -1011,13 +1011,6 @@ router.get('/:guildId/leveling/leaderboard', async (req, res) => {
       params.push(search);
     }
 
-    query += ' ORDER BY level DESC, xp DESC';
-    // Only apply LIMIT if explicitly requested
-    if (limit) {
-      query += ' LIMIT ?';
-      params.push(parseInt(limit));
-    }
-
     const users = db.all(query, params);
 
     // Enrich with usernames and calculate true total XP
@@ -1042,7 +1035,13 @@ router.get('/:guildId/leveling/leaderboard', async (req, res) => {
       });
     }
 
-    res.json({ users: enriched });
+    // Sort by total XP descending so rank always matches displayed XP
+    enriched.sort((a, b) => b.xp - a.xp);
+
+    // Apply limit after sorting if requested
+    const result = limit ? enriched.slice(0, parseInt(limit)) : enriched;
+
+    res.json({ users: result });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

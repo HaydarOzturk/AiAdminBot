@@ -317,6 +317,7 @@ function getUserData(userId, guildId) {
 
   return {
     xp: Math.round(data.xp * 10) / 10,
+    totalXp: Math.round((totalXpForLevel(data.level) + (data.xp || 0)) * 10) / 10,
     level: data.level,
     messages: data.messages || 0,
     voiceMinutes: data.voice_minutes || 0,
