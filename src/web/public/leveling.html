@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Leveling - Admin Dashboard</title>
+  <title>Leveling - Admin+AI</title>
   <link rel="stylesheet" href="/css/dashboard.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <!-- Sidebar -->
     <nav class="sidebar">
       <div class="sidebar-header">
-        <h2 class="bot-title">Admin Bot</h2>
+        <h2 class="bot-title"><img src="/img/logo.png" alt="Logo" class="bot-logo">Admin+AI</h2>
         <select id="guild-selector" class="guild-selector">
           <option value="">Loading guilds...</option>
         </select>
@@ -78,8 +78,12 @@
 
           <form id="award-xp-form">
             <div class="form-group">
-              <label for="xp-user-id">User ID</label>
-              <input type="text" id="xp-user-id" name="userId" required placeholder="Discord user ID">
+              <label for="xp-user-search">Select User</label>
+              <input type="text" id="xp-user-search" placeholder="Search by username..." autocomplete="off" style="margin-bottom: 8px;">
+              <select id="xp-user-id" name="userId" required style="width:100%; padding:10px 14px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:8px; color:var(--text-primary); font-size:13px;">
+                <option value="">-- Select a user --</option>
+              </select>
+              <small style="color: var(--text-muted); display:block; margin-top:4px;">Search for a user above, then select from the dropdown</small>
             </div>
 
             <div class="form-group">
@@ -113,8 +117,10 @@
 
           <form id="reset-user-xp-form">
             <div class="form-group">
-              <label for="reset-user-id">User ID</label>
-              <input type="text" id="reset-user-id" name="userId" required placeholder="Discord user ID">
+              <label for="reset-user-id">Select User</label>
+              <select id="reset-user-id" name="userId" required style="width:100%; padding:10px 14px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:8px; color:var(--text-primary); font-size:13px;">
+                <option value="">-- Select a user --</option>
+              </select>
             </div>
 
             <button type="submit" class="btn btn-danger">Reset User XP</button>
@@ -202,6 +208,9 @@
           tbody.appendChild(row);
         });
 
+        // Populate reset dropdown with leaderboard users
+        populateResetDropdown(data.users);
+
         // Load stats
         loadLevelingStats();
       } catch (error) {
@@ -246,6 +255,49 @@
         document.getElementById('stat-total-messages').textContent = formatNumber(data.totalMessages || 0);
       } catch (error) {
         console.error('Failed to load leveling stats:', error);
+      }
+    }
+
+    // ── User search for Award XP ────────────────────────────────────
+    let searchTimeout = null;
+    document.getElementById('xp-user-search').addEventListener('input', (e) => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => searchUsers(e.target.value), 300);
+    });
+
+    async function searchUsers(query) {
+      const guildId = getCurrentGuild();
+      if (!guildId || !query || query.length < 2) return;
+
+      try {
+        const data = await api(`/api/guilds/${guildId}/members?search=${encodeURIComponent(query)}&limit=15`);
+        const select = document.getElementById('xp-user-id');
+        select.innerHTML = '<option value="">-- Select a user --</option>';
+
+        if (data.members) {
+          data.members.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m.id;
+            opt.textContent = `${m.displayName} (${m.username})`;
+            select.appendChild(opt);
+          });
+        }
+      } catch (err) {
+        console.error('User search failed:', err);
+      }
+    }
+
+    // Populate reset dropdown from leaderboard data
+    function populateResetDropdown(users) {
+      const select = document.getElementById('reset-user-id');
+      select.innerHTML = '<option value="">-- Select a user --</option>';
+      if (users) {
+        users.forEach(u => {
+          const opt = document.createElement('option');
+          opt.value = u.userId;
+          opt.textContent = `${u.username} (Level ${u.level ?? 0}, ${formatNumber(u.xp || 0)} XP)`;
+          select.appendChild(opt);
+        });
       }
     }
 

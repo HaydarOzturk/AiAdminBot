@@ -46,18 +46,17 @@ function todayStr() {
  */
 function getDailyXp(userId, guildId) {
   const date = todayStr();
-  let row = db.get(
+  // Atomic upsert — no race condition
+  db.run(
+    `INSERT INTO daily_xp (user_id, guild_id, date, message_xp, voice_xp)
+     VALUES (?, ?, ?, 0, 0)
+     ON CONFLICT(user_id, guild_id, date) DO NOTHING`,
+    [userId, guildId, date]
+  );
+  return db.get(
     'SELECT * FROM daily_xp WHERE user_id = ? AND guild_id = ? AND date = ?',
     [userId, guildId, date]
   );
-  if (!row) {
-    db.run(
-      'INSERT INTO daily_xp (user_id, guild_id, date, message_xp, voice_xp) VALUES (?, ?, ?, 0, 0)',
-      [userId, guildId, date]
-    );
-    row = { user_id: userId, guild_id: guildId, date, message_xp: 0, voice_xp: 0 };
-  }
-  return row;
 }
 
 /**
@@ -138,19 +137,18 @@ async function processMessage(message) {
   // Cap to remaining daily allowance
   const xpGain = Math.min(rawXpGain, remaining);
 
-  // Get or create user record
-  let userData = db.get(
+  // Ensure user record exists (atomic upsert — no race condition)
+  db.run(
+    `INSERT INTO levels (user_id, guild_id, xp, level, messages, voice_minutes, last_xp_at)
+     VALUES (?, ?, 0, 0, 0, 0, ?)
+     ON CONFLICT(user_id, guild_id) DO NOTHING`,
+    [userId, guildId, new Date().toISOString()]
+  );
+
+  const userData = db.get(
     'SELECT * FROM levels WHERE user_id = ? AND guild_id = ?',
     [userId, guildId]
   );
-
-  if (!userData) {
-    db.run(
-      'INSERT INTO levels (user_id, guild_id, xp, level, messages, voice_minutes, last_xp_at) VALUES (?, ?, 0, 0, 0, 0, ?)',
-      [userId, guildId, new Date().toISOString()]
-    );
-    userData = { xp: 0, level: 0, messages: 0 };
-  }
 
   const oldLevel = userData.level;
   let currentXp = userData.xp + xpGain;
@@ -206,18 +204,18 @@ async function processMessage(message) {
  * @returns {object} { oldLevel, newLevel, xp, tier, tierChanged }
  */
 function awardXp(userId, guildId, amount) {
-  let userData = db.get(
+  // Atomic upsert — no race condition
+  db.run(
+    `INSERT INTO levels (user_id, guild_id, xp, level, messages, voice_minutes, last_xp_at)
+     VALUES (?, ?, 0, 0, 0, 0, ?)
+     ON CONFLICT(user_id, guild_id) DO NOTHING`,
+    [userId, guildId, new Date().toISOString()]
+  );
+
+  const userData = db.get(
     'SELECT * FROM levels WHERE user_id = ? AND guild_id = ?',
     [userId, guildId]
   );
-
-  if (!userData) {
-    db.run(
-      'INSERT INTO levels (user_id, guild_id, xp, level, messages, voice_minutes, last_xp_at) VALUES (?, ?, 0, 0, 0, 0, ?)',
-      [userId, guildId, new Date().toISOString()]
-    );
-    userData = { xp: 0, level: 0, messages: 0 };
-  }
 
   const oldLevel = userData.level;
   let currentXp = userData.xp + amount;

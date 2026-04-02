@@ -62,22 +62,17 @@ function trackLeave(guildId, userId) {
     const minutesSpent = Math.floor((Date.now() - joinTime) / 60000);
     if (minutesSpent > 0) {
       try {
-        // Ensure user row exists
-        const existing = db.get(
-          'SELECT voice_minutes FROM levels WHERE user_id = ? AND guild_id = ?',
-          [userId, guildId]
+        // Atomic upsert then update
+        db.run(
+          `INSERT INTO levels (user_id, guild_id, xp, level, messages, voice_minutes, last_xp_at)
+           VALUES (?, ?, 0, 0, 0, 0, ?)
+           ON CONFLICT(user_id, guild_id) DO NOTHING`,
+          [userId, guildId, new Date().toISOString()]
         );
-        if (existing) {
-          db.run(
-            'UPDATE levels SET voice_minutes = voice_minutes + ? WHERE user_id = ? AND guild_id = ?',
-            [minutesSpent, userId, guildId]
-          );
-        } else {
-          db.run(
-            'INSERT INTO levels (user_id, guild_id, xp, level, messages, voice_minutes, last_xp_at) VALUES (?, ?, 0, 0, 0, ?, ?)',
-            [userId, guildId, minutesSpent, new Date().toISOString()]
-          );
-        }
+        db.run(
+          'UPDATE levels SET voice_minutes = voice_minutes + ? WHERE user_id = ? AND guild_id = ?',
+          [minutesSpent, userId, guildId]
+        );
       } catch (err) {
         console.error(`Failed to save voice minutes for ${userId}:`, err.message);
       }
@@ -114,19 +109,18 @@ async function awardVoiceXp(client) {
         // Cap XP to remaining daily allowance
         const xpToAward = Math.min(VOICE_XP_AMOUNT, remaining);
 
-        // Get or create user record
-        let userData = db.get(
+        // Ensure user record exists (atomic upsert — no race condition)
+        db.run(
+          `INSERT INTO levels (user_id, guild_id, xp, level, messages, voice_minutes, last_xp_at)
+           VALUES (?, ?, 0, 0, 0, 0, ?)
+           ON CONFLICT(user_id, guild_id) DO NOTHING`,
+          [userId, guildId, new Date().toISOString()]
+        );
+
+        const userData = db.get(
           'SELECT * FROM levels WHERE user_id = ? AND guild_id = ?',
           [userId, guildId]
         );
-
-        if (!userData) {
-          db.run(
-            'INSERT INTO levels (user_id, guild_id, xp, level, messages, voice_minutes, last_xp_at) VALUES (?, ?, 0, 0, 0, 0, ?)',
-            [userId, guildId, new Date().toISOString()]
-          );
-          userData = { xp: 0, level: 0, messages: 0 };
-        }
 
         const oldLevel = userData.level;
         let currentXp = userData.xp + xpToAward;
@@ -146,23 +140,17 @@ async function awardVoiceXp(client) {
           [currentXp, currentLevel, intervalMinutes, new Date().toISOString(), userId, guildId]
         );
 
-        // Update daily voice XP counter
-        // Ensure daily_xp row exists
-        const dailyRow = db.get(
-          'SELECT * FROM daily_xp WHERE user_id = ? AND guild_id = ? AND date = ?',
+        // Update daily voice XP counter (atomic upsert)
+        db.run(
+          `INSERT INTO daily_xp (user_id, guild_id, date, message_xp, voice_xp)
+           VALUES (?, ?, ?, 0, 0)
+           ON CONFLICT(user_id, guild_id, date) DO NOTHING`,
           [userId, guildId, date]
         );
-        if (!dailyRow) {
-          db.run(
-            'INSERT INTO daily_xp (user_id, guild_id, date, message_xp, voice_xp) VALUES (?, ?, ?, 0, ?)',
-            [userId, guildId, date, xpToAward]
-          );
-        } else {
-          db.run(
-            'UPDATE daily_xp SET voice_xp = voice_xp + ? WHERE user_id = ? AND guild_id = ? AND date = ?',
-            [xpToAward, userId, guildId, date]
-          );
-        }
+        db.run(
+          'UPDATE daily_xp SET voice_xp = voice_xp + ? WHERE user_id = ? AND guild_id = ? AND date = ?',
+          [xpToAward, userId, guildId, date]
+        );
 
         // Level up notification
         if (currentLevel > oldLevel && client) {

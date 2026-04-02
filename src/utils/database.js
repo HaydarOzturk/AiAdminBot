@@ -133,6 +133,263 @@ async function initDatabase() {
     )
   `);
 
+  // ── New feature tables ────────────────────────────────────────────────────
+
+  // Auto-moderation settings
+  db.run(`
+    CREATE TABLE IF NOT EXISTS automod_settings (
+      guild_id TEXT PRIMARY KEY,
+      anti_spam INTEGER DEFAULT 0,
+      anti_raid INTEGER DEFAULT 0,
+      anti_mention_spam INTEGER DEFAULT 0,
+      anti_caps INTEGER DEFAULT 0,
+      anti_invites INTEGER DEFAULT 0,
+      progressive_punishments INTEGER DEFAULT 1,
+      spam_threshold INTEGER DEFAULT 5,
+      spam_window INTEGER DEFAULT 5,
+      max_mentions INTEGER DEFAULT 5,
+      max_caps_percent INTEGER DEFAULT 70,
+      raid_threshold INTEGER DEFAULT 10,
+      raid_window INTEGER DEFAULT 30
+    )
+  `);
+
+  // Auto-moderation infraction log
+  db.run(`
+    CREATE TABLE IF NOT EXISTS automod_infractions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      guild_id TEXT NOT NULL,
+      infraction_type TEXT NOT NULL,
+      reason TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Starboard settings
+  db.run(`
+    CREATE TABLE IF NOT EXISTS starboard_settings (
+      guild_id TEXT PRIMARY KEY,
+      enabled INTEGER DEFAULT 0,
+      channel_id TEXT,
+      threshold INTEGER DEFAULT 3,
+      emoji TEXT DEFAULT '⭐',
+      self_star INTEGER DEFAULT 0
+    )
+  `);
+
+  // Starboard entries
+  db.run(`
+    CREATE TABLE IF NOT EXISTS starboard_entries (
+      guild_id TEXT NOT NULL,
+      original_message_id TEXT NOT NULL,
+      starboard_message_id TEXT,
+      channel_id TEXT NOT NULL,
+      author_id TEXT NOT NULL,
+      star_count INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (guild_id, original_message_id)
+    )
+  `);
+
+  // Polls
+  db.run(`
+    CREATE TABLE IF NOT EXISTS polls (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      guild_id TEXT NOT NULL,
+      channel_id TEXT NOT NULL,
+      message_id TEXT NOT NULL,
+      creator_id TEXT NOT NULL,
+      question TEXT NOT NULL,
+      options TEXT NOT NULL,
+      ends_at DATETIME,
+      closed INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Poll votes
+  db.run(`
+    CREATE TABLE IF NOT EXISTS poll_votes (
+      poll_message_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      option_index INTEGER NOT NULL,
+      PRIMARY KEY (poll_message_id, user_id)
+    )
+  `);
+
+  // Giveaways
+  db.run(`
+    CREATE TABLE IF NOT EXISTS giveaways (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      guild_id TEXT NOT NULL,
+      channel_id TEXT NOT NULL,
+      message_id TEXT NOT NULL,
+      creator_id TEXT NOT NULL,
+      prize TEXT NOT NULL,
+      winner_count INTEGER DEFAULT 1,
+      ends_at DATETIME,
+      ended INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Giveaway entries
+  db.run(`
+    CREATE TABLE IF NOT EXISTS giveaway_entries (
+      giveaway_message_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      entered_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (giveaway_message_id, user_id)
+    )
+  `);
+
+  // Custom commands
+  db.run(`
+    CREATE TABLE IF NOT EXISTS custom_commands (
+      guild_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      response TEXT NOT NULL,
+      creator_id TEXT NOT NULL,
+      embed_mode INTEGER DEFAULT 0,
+      ai_mode INTEGER DEFAULT 0,
+      uses INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (guild_id, name)
+    )
+  `);
+
+  // ── AI Agent & Knowledge System tables ────────────────────────────────
+
+  // Agent configuration per guild
+  db.run(`
+    CREATE TABLE IF NOT EXISTS agent_settings (
+      guild_id TEXT PRIMARY KEY,
+      enabled INTEGER DEFAULT 0,
+      channel_id TEXT,
+      require_confirmation INTEGER DEFAULT 1,
+      min_permission_level INTEGER DEFAULT 3
+    )
+  `);
+
+  // Multi-turn conversation state
+  db.run(`
+    CREATE TABLE IF NOT EXISTS agent_conversations (
+      id TEXT PRIMARY KEY,
+      guild_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      messages TEXT NOT NULL DEFAULT '[]',
+      pending_action TEXT,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Extended knowledge base
+  db.run(`
+    CREATE TABLE IF NOT EXISTS knowledge_base (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      guild_id TEXT NOT NULL,
+      category TEXT NOT NULL,
+      question TEXT,
+      content TEXT NOT NULL,
+      tags TEXT,
+      taught_by TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Message archive for summaries and search (7-day retention)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS message_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      guild_id TEXT NOT NULL,
+      channel_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      user_name TEXT NOT NULL,
+      content TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Periodic channel digests
+  db.run(`
+    CREATE TABLE IF NOT EXISTS channel_summaries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      guild_id TEXT NOT NULL,
+      channel_id TEXT NOT NULL,
+      summary TEXT NOT NULL,
+      message_count INTEGER NOT NULL,
+      period_start DATETIME NOT NULL,
+      period_end DATETIME NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Migration: clean up levels table
+  // Fixes two bugs:
+  // 1. Old fallback code created duplicate entries for same user+guild
+  // 2. Admins entering usernames instead of IDs in Award XP created ghost entries
+  try {
+    let cleaned = 0;
+
+    // Phase 1: Remove entries where user_id is NOT a valid Discord snowflake
+    // (these are usernames accidentally stored as user_id)
+    const invalidEntries = db.exec(`
+      SELECT rowid, user_id, guild_id, xp FROM levels
+      WHERE user_id NOT GLOB '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]*'
+    `);
+    if (invalidEntries[0] && invalidEntries[0].values.length > 0) {
+      for (const [rowid, userId, guildId, xp] of invalidEntries[0].values) {
+        db.run('DELETE FROM levels WHERE rowid = ?', [rowid]);
+        cleaned++;
+        console.log(`  🗑️ Removed invalid entry: user_id="${userId}" (not a Discord ID, XP=${xp})`);
+      }
+    }
+
+    // Phase 2: Merge true duplicates (same valid user_id + guild_id appearing multiple times)
+    const dupes = db.exec(`
+      SELECT user_id, guild_id, COUNT(*) as cnt
+      FROM levels
+      GROUP BY user_id, guild_id
+      HAVING cnt > 1
+    `);
+    if (dupes[0] && dupes[0].values.length > 0) {
+      for (const [userId, guildId] of dupes[0].values) {
+        const stmt = db.prepare('SELECT rowid, * FROM levels WHERE user_id = ? AND guild_id = ?');
+        stmt.bind([userId, guildId]);
+        const entries = [];
+        while (stmt.step()) entries.push(stmt.getAsObject());
+        stmt.free();
+
+        if (entries.length < 2) continue;
+
+        // Keep the entry with the most activity (messages + voice_minutes)
+        entries.sort((a, b) => ((b.messages || 0) + (b.voice_minutes || 0)) - ((a.messages || 0) + (a.voice_minutes || 0)));
+        const keep = entries[0];
+        const ghosts = entries.slice(1);
+
+        let extraXp = 0;
+        for (const ghost of ghosts) {
+          extraXp += ghost.xp || 0;
+          db.run('DELETE FROM levels WHERE rowid = ?', [ghost.rowid]);
+          cleaned++;
+        }
+
+        if (extraXp > 0) {
+          db.run('UPDATE levels SET xp = xp + ? WHERE rowid = ?', [extraXp, keep.rowid]);
+        }
+      }
+    }
+
+    if (cleaned > 0) {
+      console.log(`🔄 Migration: cleaned ${cleaned} invalid/duplicate entries from levels table`);
+    }
+  } catch (err) {
+    // Safe to ignore on first run when table might not exist yet
+  }
+
   // Migration: add voice_minutes column to levels if missing
   try {
     const cols = db.exec('PRAGMA table_info(levels)');

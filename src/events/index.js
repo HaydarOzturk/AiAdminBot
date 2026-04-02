@@ -8,6 +8,7 @@ module.exports = [
   require('./messageCreate'),
   require('./messageUpdate'),
   require('./messageDelete'),
+  require('./messageReactionAdd'),
   require('./guildMemberAdd'),
   require('./guildMemberRemove'),
   require('./guildMemberUpdate'),

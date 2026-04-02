@@ -17,7 +17,14 @@ function getPermissionLevel(member) {
   // DEBUG_OWNER_ID also gets level 4 (for testing/development)
   if (process.env.DEBUG_OWNER_ID && member.id === process.env.DEBUG_OWNER_ID) return 4;
 
-  // Check role names for permission levels
+  // Check Discord permissions first (most reliable), then fall back to role names
+  const perms = member.permissions;
+  if (perms.has('Administrator')) return 3;
+  if (perms.has('ManageGuild') || perms.has('ManageRoles')) return 3;
+  if (perms.has('BanMembers') || perms.has('KickMembers') || perms.has('ModerateMembers')) return 2;
+  if (perms.has('ManageMessages')) return 2;
+
+  // Also check role names as fallback for custom setups
   const roleNames = member.roles.cache.map(r => r.name.toLowerCase());
 
   if (roleNames.some(r => r.includes('admin'))) return 3;

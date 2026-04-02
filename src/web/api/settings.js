@@ -312,4 +312,108 @@ router.get('/status', (req, res) => {
   }
 });
 
+/**
+ * GET /api/settings/channels
+ * Returns feature-required channels with their status (found/missing in guild)
+ */
+router.get('/channels', (req, res) => {
+  try {
+    const client = req.app.locals.client;
+    const envValues = parseEnvFile();
+    const p = (k) => envValues[k] || process.env[k] || '';
+
+    // Define all feature-required channels
+    const channelDefs = [
+      { id: 'punishment-log', feature: 'Moderation Log', description: 'Where mod actions are logged', configKey: null, type: 'locale' },
+      { id: 'welcome', feature: 'Welcome Messages', description: 'New member greeting channel', configKey: 'WELCOME_CHANNEL', type: 'config' },
+      { id: 'join-leave-log', feature: 'Join/Leave Log', description: 'Member join and leave tracking', configKey: null, type: 'locale' },
+      { id: 'stream-announcements', feature: 'Stream Alerts', description: 'Live stream notifications', configKey: null, type: 'locale' },
+      { id: 'level-up', feature: 'Level Up Messages', description: 'XP level-up announcements', configKey: 'LEVEL_UP_CHANNEL', type: 'config' },
+      { id: 'ai-chat', feature: 'AI Chat', description: 'AI conversation channel', configKey: 'AI_CHAT_CHANNEL', type: 'env', default: 'ai-chat' },
+      { id: 'starboard', feature: 'Starboard', description: 'Starred messages showcase', configKey: null, type: 'db' },
+      { id: 'admin-agent', feature: 'AI Agent', description: 'Natural language admin commands', configKey: null, type: 'db' },
+      { id: 'verify', feature: 'Verification', description: 'Member verification channel', configKey: null, type: 'locale' },
+    ];
+
+    // Check each channel's existence in all guilds
+    const channels = channelDefs.map(def => {
+      let currentName = def.id;
+
+      // Determine current configured name
+      if (def.type === 'env' && def.configKey) {
+        currentName = p(def.configKey) || def.default || def.id;
+      }
+
+      // Check if channel exists in any guild
+      let found = false;
+      let foundIn = null;
+      if (client) {
+        for (const [, guild] of client.guilds.cache) {
+          const ch = guild.channels.cache.find(c => c.name === currentName && c.isTextBased());
+          if (ch) {
+            found = true;
+            foundIn = guild.name;
+            break;
+          }
+        }
+      }
+
+      return {
+        id: def.id,
+        feature: def.feature,
+        description: def.description,
+        currentName,
+        configKey: def.configKey,
+        type: def.type,
+        found,
+        foundIn,
+      };
+    });
+
+    res.json({ channels });
+  } catch (err) {
+    console.error('Channels settings error:', err.message);
+    res.status(500).json({ error: 'Failed to load channel settings' });
+  }
+});
+
+/**
+ * PUT /api/settings/channels
+ * Update channel names. Body: { channelId: newName, ... }
+ */
+router.put('/channels', (req, res) => {
+  try {
+    const { updates } = req.body;
+    if (!updates || typeof updates !== 'object') {
+      return res.status(400).json({ error: 'updates object is required' });
+    }
+
+    // Map channel IDs to their env keys
+    const envMappings = {
+      'ai-chat': 'AI_CHAT_CHANNEL',
+      'level-up': 'LEVEL_UP_CHANNEL',
+      'welcome': 'WELCOME_CHANNEL',
+    };
+
+    const envUpdates = {};
+    for (const [channelId, newName] of Object.entries(updates)) {
+      const envKey = envMappings[channelId];
+      if (envKey && newName && typeof newName === 'string') {
+        // Sanitize channel name (Discord format)
+        const sanitized = newName.toLowerCase().replace(/[^a-z0-9-_]/g, '-').slice(0, 100);
+        envUpdates[envKey] = sanitized;
+      }
+    }
+
+    if (Object.keys(envUpdates).length > 0) {
+      writeEnvFile(envUpdates);
+    }
+
+    res.json({ success: true, message: 'Channel settings updated', updatedKeys: Object.keys(envUpdates) });
+  } catch (err) {
+    console.error('Channel settings update error:', err.message);
+    res.status(500).json({ error: 'Failed to update channel settings' });
+  }
+});
+
 module.exports = router;

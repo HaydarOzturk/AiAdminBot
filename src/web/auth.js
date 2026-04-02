@@ -1,12 +1,29 @@
 const crypto = require('crypto');
 
-const WEB_PASSWORD = process.env.WEB_PASSWORD || 'admin';
+// No default password — dashboard is disabled if WEB_PASSWORD is not set
+const WEB_PASSWORD = process.env.WEB_PASSWORD || null;
+
+// Unique cookie name per port to prevent cross-instance logout
+const COOKIE_NAME = `admin_token_${process.env.WEB_PORT || '3000'}`;
 
 // In-memory token store: token -> expiresAt
 const tokenStore = new Map();
 
 // Token expiration: 7 days
 const TOKEN_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
+
+// Rate limiting: track failed login attempts per IP
+const loginAttempts = new Map(); // ip -> { count, firstAttempt }
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+
+// Cleanup stale rate limit entries every 30 min
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, data] of loginAttempts) {
+    if (now - data.firstAttempt > LOGIN_WINDOW_MS) loginAttempts.delete(ip);
+  }
+}, 1800000);
 
 /**
  * Generate a secure random token
@@ -50,6 +67,25 @@ function validateToken(token) {
  * Login route: POST /api/auth/login
  */
 function login(req, res) {
+  // Dashboard is disabled if no password is configured
+  if (!WEB_PASSWORD) {
+    return res.status(503).json({ error: 'Dashboard password not configured. Set WEB_PASSWORD in .env' });
+  }
+
+  // Rate limiting by IP
+  const ip = req.ip || req.socket?.remoteAddress || 'unknown';
+  const now = Date.now();
+  const attempts = loginAttempts.get(ip);
+
+  if (attempts) {
+    if (now - attempts.firstAttempt > LOGIN_WINDOW_MS) {
+      loginAttempts.delete(ip);
+    } else if (attempts.count >= MAX_LOGIN_ATTEMPTS) {
+      const retryAfter = Math.ceil((LOGIN_WINDOW_MS - (now - attempts.firstAttempt)) / 1000);
+      return res.status(429).json({ error: `Too many login attempts. Try again in ${retryAfter}s` });
+    }
+  }
+
   const { password } = req.body;
 
   if (!password) {
@@ -57,15 +93,28 @@ function login(req, res) {
   }
 
   if (password !== WEB_PASSWORD) {
+    // Track failed attempt
+    const existing = loginAttempts.get(ip);
+    if (existing) {
+      existing.count++;
+    } else {
+      loginAttempts.set(ip, { count: 1, firstAttempt: now });
+    }
     return res.status(401).json({ error: 'Invalid password' });
   }
+
+  // Successful login — clear rate limit
+  loginAttempts.delete(ip);
 
   const token = generateToken();
   const expiresAt = Date.now() + TOKEN_EXPIRY_MS;
   tokenStore.set(token, expiresAt);
 
+  // Add Secure flag only when actually using HTTPS
+  const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
+  const securePart = isSecure ? ' Secure;' : '';
   res.setHeader('Set-Cookie',
-    `admin_token=${token}; HttpOnly; SameSite=Lax; Max-Age=${Math.floor(TOKEN_EXPIRY_MS / 1000)}; Path=/`
+    `${COOKIE_NAME}=${token}; HttpOnly; SameSite=Lax;${securePart} Max-Age=${Math.floor(TOKEN_EXPIRY_MS / 1000)}; Path=/`
   );
 
   return res.json({ success: true, message: 'Logged in' });
@@ -76,10 +125,10 @@ function login(req, res) {
  */
 function logout(req, res) {
   const cookies = parseCookies(req);
-  const token = cookies.admin_token;
+  const token = cookies[COOKIE_NAME];
   if (token) tokenStore.delete(token);
 
-  res.setHeader('Set-Cookie', 'admin_token=; HttpOnly; SameSite=Lax; Max-Age=0; Path=/');
+  res.setHeader('Set-Cookie', `${COOKIE_NAME}=; HttpOnly; SameSite=Lax; Max-Age=0; Path=/`);
   return res.json({ success: true, message: 'Logged out' });
 }
 
@@ -88,7 +137,7 @@ function logout(req, res) {
  */
 function requireAuth(req, res, next) {
   const cookies = parseCookies(req);
-  const token = cookies.admin_token;
+  const token = cookies[COOKIE_NAME];
 
   if (!validateToken(token)) {
     return res.status(401).json({ error: 'Unauthorized' });

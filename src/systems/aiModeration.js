@@ -215,7 +215,12 @@ async function moderateWithRules(content, guild) {
       return { flagged: false, category: 'none', confidence: 0, reason: 'Failed to parse AI response' };
     }
 
-    const parsed = JSON.parse(jsonMatch[0]);
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonMatch[0]);
+    } catch (parseErr) {
+      return { flagged: false, category: 'none', confidence: 0, reason: 'Failed to parse AI JSON response' };
+    }
     return {
       flagged: !!parsed.flagged,
       category: parsed.category || 'none',
@@ -307,7 +312,8 @@ async function checkMessage(message) {
     }
 
     // For high-confidence toxic/threat content: warn + timeout
-    if (result.confidence >= 0.9 && (result.category === 'toxicity' || result.category === 'threat')) {
+    // Use 0.95 threshold for auto-timeout to reduce false positives
+    if (result.confidence >= 0.95 && (result.category === 'toxicity' || result.category === 'threat')) {
       db.run(
         'INSERT INTO warnings (user_id, guild_id, moderator_id, reason) VALUES (?, ?, ?, ?)',
         [message.author.id, guild.id, botUser.id, t('moderation.aiAutoWarningReason', { reason: result.reason }, guild.id)]

@@ -22,6 +22,31 @@ module.exports = {
     const g = member.guild?.id;
     console.log(`👤 New member joined: ${member.user.tag}`);
 
+    // 0. Anti-raid detection
+    try {
+      const automod = require('../systems/automod');
+      const automodSettings = automod.getAutomodSettings(g);
+      if (automodSettings) {
+        const raidResult = automod.trackJoin(g, automodSettings);
+        if (raidResult) {
+          // Alert in punishment log
+          const logChannelName = channelName('punishment-log', g);
+          const logChannel = member.guild.channels.cache.find(c => c.name === logChannelName && c.isTextBased());
+          if (logChannel) {
+            const embed = createEmbed({
+              title: '🚨 ' + t('automod.raidDetected', {}, g),
+              description: t('automod.raidDesc', { count: raidResult.count, window: raidResult.window }, g),
+              color: 'danger',
+              timestamp: true,
+            });
+            await logChannel.send({ embeds: [embed] });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('❌ Anti-raid check error:', error.message);
+    }
+
     // 1. Assign unverified role
     try {
       const unverifiedRole = findRole(

@@ -4,8 +4,18 @@ const { requireAuth, login, logout } = require('./auth');
 
 const app = express();
 
+// Security headers
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.removeHeader('X-Powered-By');
+  next();
+});
+
 // Middleware
-app.use(express.json());
+app.use(express.json({ limit: '100kb' }));
 
 // Static files: use extracted real directory for pkg exe, or bundled path for dev
 const publicDir = process.env.__WEB_PUBLIC_DIR || path.join(__dirname, 'public');
@@ -67,11 +77,11 @@ app.get('/{*splat}', (req, res) => {
   res.sendFile(path.join(publicDir, 'index.html'));
 });
 
-// Error handling
+// Error handling — don't leak implementation details to client
 app.use((err, req, res, next) => {
   console.error('Web server error:', err.message);
   res.status(err.status || 500).json({
-    error: err.message || 'Internal Server Error',
+    error: 'Internal Server Error',
   });
 });
 
@@ -87,6 +97,27 @@ function startWebServer(client) {
   }
 
   app.locals.client = client;
+
+  // HTTPS support: if WEB_HTTPS_KEY and WEB_HTTPS_CERT are set, use HTTPS
+  const keyPath = process.env.WEB_HTTPS_KEY;
+  const certPath = process.env.WEB_HTTPS_CERT;
+
+  if (keyPath && certPath) {
+    try {
+      const fs = require('fs');
+      const https = require('https');
+      const sslOptions = {
+        key: fs.readFileSync(keyPath),
+        cert: fs.readFileSync(certPath),
+      };
+      https.createServer(sslOptions, app).listen(parseInt(port), () => {
+        console.log(`🔒 Web dashboard running at https://localhost:${port}`);
+      });
+      return;
+    } catch (err) {
+      console.warn(`⚠️ HTTPS failed (${err.message}), falling back to HTTP`);
+    }
+  }
 
   app.listen(parseInt(port), () => {
     console.log(`🌐 Web dashboard running at http://localhost:${port}`);

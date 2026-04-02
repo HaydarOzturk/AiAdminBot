@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard - Admin Bot</title>
+  <title>Admin+AI Dashboard</title>
   <link rel="stylesheet" href="/css/dashboard.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <!-- Sidebar -->
     <nav class="sidebar">
       <div class="sidebar-header">
-        <h2 class="bot-title">Admin Bot</h2>
+        <h2 class="bot-title"><img src="/img/logo.png" alt="Logo" class="bot-logo">Admin+AI</h2>
         <select id="guild-selector" class="guild-selector">
           <option value="">Loading guilds...</option>
         </select>
@@ -102,6 +102,39 @@
           </div>
         </div>
 
+        <!-- All Server Members -->
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h2 class="card-title" style="margin-bottom:0;">Server Members</h2>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <input type="text" id="member-search" placeholder="Search members..." style="padding:8px 12px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:8px; color:var(--text-primary); font-size:13px; width:200px;">
+              <label style="display:flex; align-items:center; gap:6px; color:var(--text-muted); font-size:13px; cursor:pointer;">
+                <input type="checkbox" id="filter-active" checked> Active only
+              </label>
+            </div>
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Status</th>
+                  <th>Roles</th>
+                  <th>Joined</th>
+                </tr>
+              </thead>
+              <tbody id="all-members-body">
+                <tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:20px;">Select a guild to view members</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination" id="members-pagination" style="display:none;">
+            <button class="btn btn-secondary btn-small" id="members-prev">Previous</button>
+            <span class="page-info" id="members-page-info">Page 1 of 1</span>
+            <button class="btn btn-secondary btn-small" id="members-next">Next</button>
+          </div>
+        </div>
+
         <!-- Bot Info -->
         <div class="card">
           <h2 class="card-title">Bot Information</h2>
@@ -165,6 +198,87 @@
       }
     }
 
+    // Server members with pagination
+    let currentMemberPage = 1;
+    const MEMBERS_PER_PAGE = 25;
+
+    async function loadMembers(page = 1) {
+      const guildId = getCurrentGuild();
+      const tbody = document.getElementById('all-members-body');
+      const paginationDiv = document.getElementById('members-pagination');
+
+      if (!guildId) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:20px;">Select a guild to view members</td></tr>';
+        paginationDiv.style.display = 'none';
+        return;
+      }
+
+      try {
+        const search = document.getElementById('member-search').value;
+        const searchParam = search ? `&search=${encodeURIComponent(search)}` : '';
+        const data = await api(`/api/guilds/${guildId}/members?limit=${MEMBERS_PER_PAGE}&page=${page}${searchParam}`);
+
+        tbody.innerHTML = '';
+
+        if (!data.members || data.members.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:20px;">No members found</td></tr>';
+          paginationDiv.style.display = 'none';
+          return;
+        }
+
+        data.members.forEach(member => {
+          const joinDate = member.joinedAt ? new Date(member.joinedAt).toLocaleDateString() : '-';
+          const roles = member.roles && member.roles.length > 0 ? member.roles.join(', ') : '-';
+
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td><strong>${escapeHtml(member.displayName || member.username)}</strong><br><small style="color:var(--text-muted);">${escapeHtml(member.username)}</small></td>
+            <td><span class="badge badge-success">Member</span></td>
+            <td style="font-size:12px;">${escapeHtml(roles)}</td>
+            <td>${joinDate}</td>
+          `;
+          tbody.appendChild(row);
+        });
+
+        // Update pagination
+        const pg = data.pagination;
+        if (pg && pg.totalPages > 1) {
+          paginationDiv.style.display = 'flex';
+          document.getElementById('members-page-info').textContent = `Page ${pg.page} of ${pg.totalPages} (${pg.total} members)`;
+          document.getElementById('members-prev').disabled = pg.page <= 1;
+          document.getElementById('members-next').disabled = pg.page >= pg.totalPages;
+          currentMemberPage = pg.page;
+        } else {
+          paginationDiv.style.display = pg && pg.total > 0 ? 'flex' : 'none';
+          if (pg) {
+            document.getElementById('members-page-info').textContent = `${pg.total} members`;
+            document.getElementById('members-prev').disabled = true;
+            document.getElementById('members-next').disabled = true;
+          }
+          currentMemberPage = 1;
+        }
+      } catch (error) {
+        console.error('Failed to load members:', error);
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:20px;">Failed to load members</td></tr>';
+        paginationDiv.style.display = 'none';
+      }
+    }
+
+    // Pagination buttons
+    document.getElementById('members-prev').addEventListener('click', () => {
+      if (currentMemberPage > 1) loadMembers(currentMemberPage - 1);
+    });
+    document.getElementById('members-next').addEventListener('click', () => {
+      loadMembers(currentMemberPage + 1);
+    });
+
+    // Member search with debounce
+    let memberSearchTimeout = null;
+    document.getElementById('member-search').addEventListener('input', () => {
+      clearTimeout(memberSearchTimeout);
+      memberSearchTimeout = setTimeout(() => { currentMemberPage = 1; loadMembers(1); }, 400);
+    });
+
     // Logout handler
     document.getElementById('logout-btn').addEventListener('click', async () => {
       try {
@@ -180,6 +294,7 @@
     // Load stats on page load
     document.addEventListener('DOMContentLoaded', () => {
       loadStats();
+      loadMembers();
       // Refresh stats every 30 seconds
       setInterval(loadStats, 30000);
     });
