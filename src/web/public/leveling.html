@@ -192,7 +192,7 @@
           row.innerHTML = `
             <td><strong>#${idx + 1}</strong></td>
             <td>${escapeHtml(user.username)}</td>
-            <td><strong>${user.level || 1}</strong></td>
+            <td><strong>${user.level ?? 0}</strong></td>
             <td>${formatNumber(user.xp || 0)}</td>
             <td>${formatNumber(user.messageCount || 0)}</td>
             <td>${voiceTimeFormatted}</td>

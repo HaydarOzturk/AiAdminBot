@@ -999,8 +999,9 @@ router.delete('/:guildId/roles/:roleId/members/:userId', async (req, res) => {
 router.get('/:guildId/leveling/leaderboard', async (req, res) => {
   try {
     const { guildId } = req.params;
-    const { search, limit = 100 } = req.query;
+    const { search, limit } = req.query;
     const guild = getGuild(req);
+    const leveling = require('../../systems/leveling');
 
     let query = 'SELECT * FROM levels WHERE guild_id = ?';
     const params = [guildId];
@@ -1010,12 +1011,16 @@ router.get('/:guildId/leveling/leaderboard', async (req, res) => {
       params.push(search);
     }
 
-    query += ' ORDER BY level DESC, xp DESC LIMIT ?';
-    params.push(parseInt(limit));
+    query += ' ORDER BY level DESC, xp DESC';
+    // Only apply LIMIT if explicitly requested
+    if (limit) {
+      query += ' LIMIT ?';
+      params.push(parseInt(limit));
+    }
 
     const users = db.all(query, params);
 
-    // Enrich with usernames from cache
+    // Enrich with usernames and calculate true total XP
     const enriched = [];
     for (const u of users) {
       let username = u.user_id;
@@ -1023,13 +1028,17 @@ router.get('/:guildId/leveling/leaderboard', async (req, res) => {
         const member = guild.members.cache.get(u.user_id);
         if (member) username = member.user.username;
       }
+      const totalXp = leveling.totalXpForLevel(u.level) + (u.xp || 0);
       enriched.push({
         userId: u.user_id,
         username,
         level: u.level,
-        xp: Math.round(u.xp * 10) / 10,
+        xp: Math.round(totalXp * 10) / 10,
+        currentLevelXp: Math.round(u.xp * 10) / 10,
+        xpNeeded: leveling.xpForLevel(u.level),
         messageCount: u.messages,
         voiceMinutes: u.voice_minutes || 0,
+        tier: leveling.getTierForLevel(u.level)?.name || null,
       });
     }
 

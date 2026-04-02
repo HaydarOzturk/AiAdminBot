@@ -10,13 +10,26 @@ const db = require('../../utils/database');
 router.get('/:guildId/leaderboard', (req, res) => {
   try {
     const { guildId } = req.params;
-    const { limit = 100 } = req.query;
+    const { limit } = req.query;
+    const leveling = require('../../systems/leveling');
 
-    const leaderboard = db.all(
-      `SELECT user_id, level, xp, total_xp FROM levels
-       WHERE guild_id = ? ORDER BY level DESC, xp DESC LIMIT ?`,
-      [guildId, parseInt(limit)]
-    );
+    let query = 'SELECT user_id, level, xp FROM levels WHERE guild_id = ? ORDER BY level DESC, xp DESC';
+    const params = [guildId];
+
+    if (limit) {
+      query += ' LIMIT ?';
+      params.push(parseInt(limit));
+    }
+
+    const rows = db.all(query, params);
+
+    const leaderboard = rows.map(r => ({
+      user_id: r.user_id,
+      level: r.level,
+      xp: Math.round((leveling.totalXpForLevel(r.level) + (r.xp || 0)) * 10) / 10,
+      currentLevelXp: Math.round(r.xp * 10) / 10,
+      xpNeeded: leveling.xpForLevel(r.level),
+    }));
 
     return res.json({ leaderboard });
   } catch (error) {
