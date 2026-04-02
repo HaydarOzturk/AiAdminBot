@@ -102,6 +102,30 @@
           </div>
         </div>
 
+        <!-- Active Members -->
+        <div class="card">
+          <h2 class="card-title">Active Members</h2>
+          <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">
+            Members with recent activity (messages or voice) in the selected server
+          </p>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Level</th>
+                  <th>Messages</th>
+                  <th>Voice Time</th>
+                  <th>Last Active</th>
+                </tr>
+              </thead>
+              <tbody id="active-members-body">
+                <tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:20px;">Select a guild to view active members</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <!-- Bot Info -->
         <div class="card">
           <h2 class="card-title">Bot Information</h2>
@@ -165,6 +189,54 @@
       }
     }
 
+    // Load active members for current guild
+    async function loadActiveMembers() {
+      const guildId = getCurrentGuild();
+      const tbody = document.getElementById('active-members-body');
+
+      if (!guildId) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:20px;">Select a guild to view active members</td></tr>';
+        return;
+      }
+
+      try {
+        const data = await api(`/api/guilds/${guildId}/leveling/leaderboard?limit=20`);
+
+        if (!data.users || data.users.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:20px;">No active members yet</td></tr>';
+          return;
+        }
+
+        // Filter to users with actual activity (messages > 0 OR voice > 0)
+        const active = data.users.filter(u => (u.messageCount || 0) > 0 || (u.voiceMinutes || 0) > 0);
+
+        if (active.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:20px;">No active members yet</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = '';
+        active.forEach(user => {
+          const voiceH = Math.floor((user.voiceMinutes || 0) / 60);
+          const voiceM = (user.voiceMinutes || 0) % 60;
+          const lastActive = user.lastXpAt ? new Date(user.lastXpAt).toLocaleDateString() : '-';
+
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td><strong>${escapeHtml(user.username)}</strong></td>
+            <td>${user.level ?? 0}</td>
+            <td>${formatNumber(user.messageCount || 0)}</td>
+            <td>${voiceH}h ${voiceM}m</td>
+            <td>${lastActive}</td>
+          `;
+          tbody.appendChild(row);
+        });
+      } catch (error) {
+        console.error('Failed to load active members:', error);
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:20px;">Failed to load</td></tr>';
+      }
+    }
+
     // Logout handler
     document.getElementById('logout-btn').addEventListener('click', async () => {
       try {
@@ -180,8 +252,10 @@
     // Load stats on page load
     document.addEventListener('DOMContentLoaded', () => {
       loadStats();
+      loadActiveMembers();
       // Refresh stats every 30 seconds
       setInterval(loadStats, 30000);
+      setInterval(loadActiveMembers, 60000);
     });
   </script>
 </body>

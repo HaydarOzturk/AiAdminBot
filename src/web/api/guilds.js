@@ -1097,20 +1097,43 @@ router.get('/:guildId/leveling/stats', (req, res) => {
 /**
  * POST /api/guilds/:guildId/leveling/xp
  * Body: { userId, amount }
+ * userId must be a valid Discord snowflake (numeric ID).
+ * If a username is provided instead, attempts to resolve it to an ID.
  */
-router.post('/:guildId/leveling/xp', (req, res) => {
+router.post('/:guildId/leveling/xp', async (req, res) => {
   try {
     const { guildId } = req.params;
-    const { userId, amount } = req.body;
+    let { userId, amount } = req.body;
 
     if (!userId || !amount || amount <= 0 || amount > 30) {
       return res.status(400).json({ error: 'userId and amount (1-30) are required' });
     }
 
+    // Validate userId is a Discord snowflake (numeric, 17-20 digits)
+    const isSnowflake = /^\d{17,20}$/.test(userId);
+
+    if (!isSnowflake) {
+      // User likely entered a username — try to resolve it
+      const guild = getGuild(req);
+      if (!guild) return res.status(400).json({ error: 'Invalid userId. Please use a numeric Discord user ID, not a username.' });
+
+      // Search guild members by username
+      const members = await guild.members.fetch({ query: userId, limit: 1 });
+      const match = members.first();
+
+      if (!match) {
+        return res.status(400).json({
+          error: `User "${userId}" not found. Please use a numeric Discord user ID (right-click user → Copy User ID).`
+        });
+      }
+
+      userId = match.id; // Replace username with resolved ID
+    }
+
     const leveling = require('../../systems/leveling');
     const result = leveling.awardXp(userId, guildId, amount);
 
-    res.json({ success: true, result });
+    res.json({ success: true, result, resolvedUserId: userId });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

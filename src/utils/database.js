@@ -327,9 +327,28 @@ async function initDatabase() {
     )
   `);
 
-  // Migration: deduplicate levels table entries (fixes web dashboard XP award bug)
-  // The old fallback code in leveling.js used wrong columns, creating ghost duplicates
+  // Migration: clean up levels table
+  // Fixes two bugs:
+  // 1. Old fallback code created duplicate entries for same user+guild
+  // 2. Admins entering usernames instead of IDs in Award XP created ghost entries
   try {
+    let cleaned = 0;
+
+    // Phase 1: Remove entries where user_id is NOT a valid Discord snowflake
+    // (these are usernames accidentally stored as user_id)
+    const invalidEntries = db.exec(`
+      SELECT rowid, user_id, guild_id, xp FROM levels
+      WHERE user_id NOT GLOB '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]*'
+    `);
+    if (invalidEntries[0] && invalidEntries[0].values.length > 0) {
+      for (const [rowid, userId, guildId, xp] of invalidEntries[0].values) {
+        db.run('DELETE FROM levels WHERE rowid = ?', [rowid]);
+        cleaned++;
+        console.log(`  🗑️ Removed invalid entry: user_id="${userId}" (not a Discord ID, XP=${xp})`);
+      }
+    }
+
+    // Phase 2: Merge true duplicates (same valid user_id + guild_id appearing multiple times)
     const dupes = db.exec(`
       SELECT user_id, guild_id, COUNT(*) as cnt
       FROM levels
@@ -337,9 +356,7 @@ async function initDatabase() {
       HAVING cnt > 1
     `);
     if (dupes[0] && dupes[0].values.length > 0) {
-      let merged = 0;
       for (const [userId, guildId] of dupes[0].values) {
-        // Get all entries for this user+guild
         const stmt = db.prepare('SELECT rowid, * FROM levels WHERE user_id = ? AND guild_id = ?');
         stmt.bind([userId, guildId]);
         const entries = [];
@@ -353,21 +370,21 @@ async function initDatabase() {
         const keep = entries[0];
         const ghosts = entries.slice(1);
 
-        // Sum XP from ghost entries into the keeper
         let extraXp = 0;
         for (const ghost of ghosts) {
           extraXp += ghost.xp || 0;
           db.run('DELETE FROM levels WHERE rowid = ?', [ghost.rowid]);
+          cleaned++;
         }
 
         if (extraXp > 0) {
           db.run('UPDATE levels SET xp = xp + ? WHERE rowid = ?', [extraXp, keep.rowid]);
         }
-        merged++;
       }
-      if (merged > 0) {
-        console.log(`🔄 Migration: merged ${merged} duplicate user entries in levels table`);
-      }
+    }
+
+    if (cleaned > 0) {
+      console.log(`🔄 Migration: cleaned ${cleaned} invalid/duplicate entries from levels table`);
     }
   } catch (err) {
     // Safe to ignore on first run when table might not exist yet
