@@ -180,7 +180,6 @@
     "caseNotFound": "#{id} numaralı vaka bulunamadı.",
     "caseTitle": "Vaka",
     "caseType": "İşlem Türü",
-    "moderator": "Moderatör",
     "date": "Tarih",
     "activeWarnings": "Aktif Uyarılar"
   },
@@ -608,4 +607,11 @@
     "cancelButton": "İptal",
     "cancelled": "Sunucu sıfırlama iptal edildi.",
     "inProgress": "⏳ Sunucu sıfırlanıyor... Bu biraz sürebilir.",
-    "comple
+    "completeTitle": "✅ Sunucu Sıfırlama Tamamlandı",
+    "channelsDeleted": "Silinen Kanallar",
+    "rolesDeleted": "Silinen Roller",
+    "errors": "Hatalar",
+    "completeFooter": "Yeni bir yapı oluşturmak için /setup veya /ai-setup kullanın",
+    "timedOut": "Sunucu sıfırlama zaman aşımına uğradı."
+  }
+}

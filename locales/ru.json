@@ -86,7 +86,7 @@
     "user": "Пользователь",
     "moderator": "Модератор",
     "reason": "Причина",
-    "duration": "Продолжительность",
+    "duration": "Длительность",
     "totalWarnings": "Всего Предупреждений",
     "caseId": "ID Случая",
     "banOnlyOwner": "Только владелец сервера может банить участников.",
@@ -180,8 +180,6 @@
     "caseNotFound": "Дело #{id} не найдено.",
     "caseTitle": "Дело",
     "caseType": "Тип Действия",
-    "moderator": "Модератор",
-    "duration": "Длительность",
     "date": "Дата",
     "activeWarnings": "Активные Предупреждения"
   },
@@ -613,4 +611,7 @@
     "channelsDeleted": "Удалено Каналов",
     "rolesDeleted": "Удалено Ролей",
     "errors": "Ошибки",
-    "completeF
+    "completeFooter": "Используйте /setup или /ai-setup для создания новой структуры",
+    "timedOut": "Время сброса сервера истекло."
+  }
+}

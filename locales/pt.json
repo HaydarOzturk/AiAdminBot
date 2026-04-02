@@ -180,8 +180,6 @@
     "caseNotFound": "Caso #{id} não encontrado.",
     "caseTitle": "Caso",
     "caseType": "Tipo de Ação",
-    "moderator": "Moderador",
-    "duration": "Duração",
     "date": "Data",
     "activeWarnings": "Advertências Ativas"
   },
@@ -608,4 +606,12 @@
     "confirmButton": "Sim, Reiniciar",
     "cancelButton": "Cancelar",
     "cancelled": "Reinício do servidor cancelado.",
-    "inProgress": "⏳ Reiniciando servidor... Isso pode
+    "inProgress": "⏳ Reiniciando servidor... Isso pode levar um momento.",
+    "completeTitle": "✅ Reinício do Servidor Concluído",
+    "channelsDeleted": "Canais Excluídos",
+    "rolesDeleted": "Papéis Excluídos",
+    "errors": "Erros",
+    "completeFooter": "Use /setup ou /ai-setup para criar uma nova estrutura",
+    "timedOut": "Reinício do servidor expirou."
+  }
+}

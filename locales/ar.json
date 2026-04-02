@@ -180,8 +180,6 @@
     "caseNotFound": "القضية #{id} غير موجودة.",
     "caseTitle": "قضية",
     "caseType": "نوع الإجراء",
-    "moderator": "المشرف",
-    "duration": "المدة",
     "date": "التاريخ",
     "activeWarnings": "التحذيرات النشطة"
   },
@@ -611,3 +609,9 @@
     "inProgress": "⏳ جاري إعادة تعيين الخادم... قد يستغرق هذا لحظة.",
     "completeTitle": "✅ اكتملت إعادة تعيين الخادم",
     "channelsDeleted": "القنوات المحذوفة",
+    "rolesDeleted": "الأدوار المحذوفة",
+    "errors": "أخطاء",
+    "completeFooter": "استخدم /setup أو /ai-setup لإنشاء هيكل جديد",
+    "timedOut": "انتهت مهلة إعادة تعيين الخادم."
+  }
+}

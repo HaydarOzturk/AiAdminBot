@@ -180,8 +180,6 @@
     "caseNotFound": "Fall #{id} nicht gefunden.",
     "caseTitle": "Fall",
     "caseType": "Aktionstyp",
-    "moderator": "Moderator",
-    "duration": "Dauer",
     "date": "Datum",
     "activeWarnings": "Aktive Verwarnungen"
   },
@@ -608,4 +606,12 @@
     "confirmButton": "Ja, Zurücksetzen",
     "cancelButton": "Abbrechen",
     "cancelled": "Server-Reset abgebrochen.",
-    "inProgress": "⏳ Server wird zurückgesetzt... Dies kann eine
+    "inProgress": "⏳ Server wird zurückgesetzt... Dies kann einen Moment dauern.",
+    "completeTitle": "✅ Server-Reset abgeschlossen",
+    "channelsDeleted": "Gelöschte Kanäle",
+    "rolesDeleted": "Gelöschte Rollen",
+    "errors": "Fehler",
+    "completeFooter": "Verwenden Sie /setup oder /ai-setup für eine neue Struktur",
+    "timedOut": "Server-Reset-Zeitüberschreitung."
+  }
+}

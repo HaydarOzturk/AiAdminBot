@@ -180,7 +180,6 @@
     "caseNotFound": "Case #{id} not found.",
     "caseTitle": "Case",
     "caseType": "Action Type",
-    "moderator": "Moderator",
     "date": "Date",
     "activeWarnings": "Active Warnings"
   },
@@ -606,4 +605,13 @@
     "rolesToDelete": "Roles to Delete",
     "confirmButton": "Yes, Reset",
     "cancelButton": "Cancel",
-    "cancelled": "Server reset ca
+    "cancelled": "Server reset cancelled.",
+    "inProgress": "⏳ Resetting server... This may take a moment.",
+    "completeTitle": "✅ Server Reset Complete",
+    "channelsDeleted": "Channels Deleted",
+    "rolesDeleted": "Roles Deleted",
+    "errors": "Errors",
+    "completeFooter": "Use /setup or /ai-setup to create a new structure",
+    "timedOut": "Server reset timed out."
+  }
+}

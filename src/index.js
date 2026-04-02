@@ -131,4 +131,5 @@ process.on('uncaughtException', error => {
   logFatal(error);
   console.error('Uncaught exception:', error);
   // Give the logger time to flush before exiting
-  setTimeou
+  setTimeout(() => process.exit(1), 1000);
+});

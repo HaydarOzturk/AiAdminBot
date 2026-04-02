@@ -180,8 +180,6 @@
     "caseNotFound": "Cas #{id} introuvable.",
     "caseTitle": "Cas",
     "caseType": "Type d'Action",
-    "moderator": "Modérateur",
-    "duration": "Durée",
     "date": "Date",
     "activeWarnings": "Avertissements Actifs"
   },
@@ -608,4 +606,12 @@
     "confirmButton": "Oui, Réinitialiser",
     "cancelButton": "Annuler",
     "cancelled": "Réinitialisation du serveur annulée.",
-    "inProgress": "⏳ Réinitialisation du serveur... Cela peut prendre un 
+    "inProgress": "⏳ Réinitialisation du serveur... Cela peut prendre un moment.",
+    "completeTitle": "✅ Réinitialisation Terminée",
+    "channelsDeleted": "Canaux Supprimés",
+    "rolesDeleted": "Rôles Supprimés",
+    "errors": "Erreurs",
+    "completeFooter": "Utilisez /setup ou /ai-setup pour créer une nouvelle structure",
+    "timedOut": "Réinitialisation expirée."
+  }
+}
