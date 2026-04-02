@@ -311,12 +311,15 @@ async function checkTwitch(handleOrUrl) {
   });
 
   if (!data?.data?.length) {
+    console.log(`✅ Twitch API for "${login}" → isLive: false`);
     return { isLive: false, title: '', viewers: 0, url: channelUrl };
   }
 
   const stream = data.data[0];
+  const isLive = stream.type === 'live';
+  console.log(`✅ Twitch API for "${login}" → isLive: ${isLive}`);
   return {
-    isLive: stream.type === 'live',
+    isLive,
     title: stream.title || '',
     viewers: stream.viewer_count || 0,
     url: channelUrl,
@@ -324,6 +327,9 @@ async function checkTwitch(handleOrUrl) {
 }
 
 // ─── YouTube ─────────────────────────────────────────────────────────────────
+
+// Cache resolved channel IDs permanently in memory (handle → channelId)
+const _ytChannelIdCache = new Map();
 
 /**
  * Extract YouTube channel ID or handle from a URL or raw input.
@@ -342,27 +348,97 @@ function parseYouTubeInput(input) {
 }
 
 /**
- * Resolve a YouTube handle to a channel ID.
+ * Resolve a YouTube handle to a channel ID (with in-memory cache).
+ * Costs 1 API unit on first call, then free from cache.
  */
 async function resolveYouTubeChannelId(handle, apiKey) {
+  if (_ytChannelIdCache.has(handle)) return _ytChannelIdCache.get(handle);
+
   const url = `https://www.googleapis.com/youtube/v3/channels?part=id&forHandle=${encodeURIComponent(handle)}&key=${apiKey}`;
   const data = await fetchJson(url);
-  if (data?.items?.[0]?.id) return data.items[0].id;
+  if (data?.items?.[0]?.id) {
+    _ytChannelIdCache.set(handle, data.items[0].id);
+    return data.items[0].id;
+  }
   return null;
 }
 
 /**
+ * Free live detection: scrape the channel's /live page for live indicators.
+ * YouTube redirects /@handle/live to the active live stream if one exists.
+ * We look for "isLive":true in the embedded page data — costs 0 API quota.
+ *
+ * @param {string} handle - YouTube handle (without @)
+ * @returns {Promise<{isLive: boolean, title: string, videoId: string}|null>}
+ */
+async function _youTubeScrapeLive(handle) {
+  try {
+    const html = await fetchText(`https://www.youtube.com/@${encodeURIComponent(handle)}/live`, 10000);
+    if (!html) return null;
+
+    // YouTube embeds isLiveBroadcast in JSON-LD or page data
+    const liveMatch = html.match(/"isLiveBroadcast"\s*:\s*true/i)
+                   || html.match(/"isLive"\s*:\s*true/i);
+    if (!liveMatch) {
+      return { isLive: false, title: '', videoId: '' };
+    }
+
+    // Extract video ID from canonical URL or og:url
+    let videoId = '';
+    const vidMatch = html.match(/\/watch\?v=([\w-]{11})/);
+    if (vidMatch) videoId = vidMatch[1];
+
+    // Extract title
+    let title = '';
+    const titleMatch = html.match(/"title"\s*:\s*"([^"]{1,200})"/);
+    if (titleMatch) title = titleMatch[1];
+
+    return { isLive: true, title, videoId };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Check if a YouTube channel is currently live.
+ *
+ * Strategy (quota-friendly):
+ *  1. Free page scrape of /@handle/live (0 API units)
+ *  2. Fallback: search.list API (100 units) — only if scrape fails
+ *
+ * Channel ID resolution is cached, so subsequent polls cost 0-1 units.
  */
 async function checkYouTube(handleOrUrl, platform = 'youtube') {
   const apiKey = process.env.YOUTUBE_API_KEY;
+  const parsed = parseYouTubeInput(handleOrUrl);
+  const handle = parsed.type === 'handle' || parsed.type === 'custom' ? parsed.value : null;
 
+  // ── Strategy 1: Free page scrape ──────────────────────────────────────
+  if (handle) {
+    const scrapeResult = await _youTubeScrapeLive(handle);
+    if (scrapeResult !== null) {
+      const channelUrl = `https://youtube.com/@${handle}`;
+      const liveUrl = scrapeResult.videoId
+        ? `https://youtube.com/watch?v=${scrapeResult.videoId}`
+        : channelUrl;
+
+      console.log(`✅ YouTube scrape for "@${handle}" → isLive: ${scrapeResult.isLive}`);
+      return {
+        isLive: scrapeResult.isLive,
+        title: scrapeResult.title || '',
+        viewers: 0,
+        url: scrapeResult.isLive ? liveUrl : channelUrl,
+      };
+    }
+    console.warn(`⚠️ YouTube scrape failed for "@${handle}" — falling back to API`);
+  }
+
+  // ── Strategy 2: API fallback (search.list — 100 units) ───────────────
   if (!apiKey) {
-    console.warn('⚠️ YOUTUBE_API_KEY not set — skipping YouTube live check');
+    console.warn('⚠️ YOUTUBE_API_KEY not set — skipping YouTube API fallback');
     return { isLive: false, title: '', viewers: 0, url: handleOrUrl };
   }
 
-  const parsed = parseYouTubeInput(handleOrUrl);
   let channelId = parsed.type === 'id' ? parsed.value : await resolveYouTubeChannelId(parsed.value, apiKey);
 
   if (!channelId) {
@@ -373,12 +449,14 @@ async function checkYouTube(handleOrUrl, platform = 'youtube') {
   const data = await fetchJson(searchUrl);
 
   if (!data?.items?.length) {
+    console.log(`✅ YouTube API for "${channelId}" → isLive: false`);
     return { isLive: false, title: '', viewers: 0, url: `https://youtube.com/channel/${channelId}` };
   }
 
   const live = data.items[0];
   const videoId = live.id?.videoId || '';
 
+  console.log(`✅ YouTube API for "${channelId}" → isLive: true`);
   return {
     isLive: true,
     title: live.snippet?.title || '',

@@ -14,8 +14,6 @@ const { enableFileLogging, logFatal } = require('./utils/logger');
 enableFileLogging();
 
 const { Client, GatewayIntentBits, Partials } = require('discord.js');
-const { loadCommands } = require('./handlers/commandHandler');
-const { loadEvents } = require('./handlers/eventHandler');
 const { loadLocale } = require('./utils/locale');
 
 console.log(`🛡️  AiAdminBot v${require('../package.json').version} starting...`);
@@ -30,8 +28,12 @@ for (const envVar of requiredEnv) {
   }
 }
 
-// Initialize locale
+// Initialize locale BEFORE loading commands — command builders call t() at require time
 loadLocale();
+
+// Load handlers after locale is ready (commandHandler requires all command files on import)
+const { loadCommands } = require('./handlers/commandHandler');
+const { loadEvents } = require('./handlers/eventHandler');
 
 // Create client with required intents
 const client = new Client({

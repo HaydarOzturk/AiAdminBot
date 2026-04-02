@@ -38,6 +38,8 @@ const {
 
 const POLL_INTERVAL_MS = (parseInt(process.env.STREAM_WATCHER_POLL_INTERVAL_SECONDS) || 120) * 1000;
 const CONFIRMATION_DELAY_MS = (parseInt(process.env.STREAM_WATCHER_CONFIRMATION_DELAY_SECONDS) || 60) * 1000;
+// YouTube uses a longer interval to conserve API quota (search.list = 100 units/call, daily limit = 10k)
+const YT_POLL_INTERVAL_MS = (parseInt(process.env.STREAM_WATCHER_YT_POLL_INTERVAL_SECONDS) || 600) * 1000;
 
 // ─── Internal state ─────────────────────────────────────────────────────────
 
@@ -46,6 +48,7 @@ let _client = null;
 
 // Polling
 let _pollInterval = null;
+let _lastYouTubePoll = 0; // timestamp of last YouTube poll
 
 // Confirmation timers: Map<"guildId|userId|platform", timeoutId>
 const _confirmationTimers = new Map();
@@ -76,7 +79,7 @@ async function startStreamWatcher(client) {
   _startPolling();
 
   console.log('✅ Stream watcher running');
-  console.log(`   Polling interval: ${POLL_INTERVAL_MS / 1000}s`);
+  console.log(`   Polling interval: ${POLL_INTERVAL_MS / 1000}s (Twitch/Kick), ${YT_POLL_INTERVAL_MS / 1000}s (YouTube)`);
   console.log(`   Confirmation delay: ${CONFIRMATION_DELAY_MS / 1000}s`);
   console.log('   Platforms: Twitch, YouTube, Kick (all via polling)');
 }
@@ -115,6 +118,7 @@ function getStreamWatcherStatus() {
     polling: {
       active: !!_pollInterval,
       intervalMs: POLL_INTERVAL_MS,
+      youtubeIntervalMs: YT_POLL_INTERVAL_MS,
       confirmationDelayMs: CONFIRMATION_DELAY_MS,
     },
     streams: {
@@ -173,8 +177,15 @@ async function _pollGuild(guild) {
   const pollableLinks = links.filter(l => pollPlatforms.includes(l.platform));
   if (pollableLinks.length === 0) return;
 
+  // Check if YouTube is due for a poll (separate longer interval)
+  const now = Date.now();
+  const ytDue = (now - _lastYouTubePoll) >= YT_POLL_INTERVAL_MS;
+  if (ytDue) _lastYouTubePoll = now;
+
   // Check each platform individually for state transition detection
   for (const link of pollableLinks) {
+    // Skip YouTube if it's not time for a YouTube poll yet
+    if ((link.platform === 'youtube' || link.platform === 'youtube-shorts') && !ytDue) continue;
     try {
       const result = await _checkSinglePlatform(link);
       const key = `${guild.id}|${streamOwnerId}|${link.platform}`;
