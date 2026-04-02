@@ -128,8 +128,10 @@
               </tbody>
             </table>
           </div>
-          <div style="margin-top:12px; text-align:center;">
-            <button class="btn btn-secondary btn-small" id="load-more-members" style="display:none;">Load More</button>
+          <div class="pagination" id="members-pagination" style="display:none;">
+            <button class="btn btn-secondary btn-small" id="members-prev">Previous</button>
+            <span class="page-info" id="members-page-info">Page 1 of 1</span>
+            <button class="btn btn-secondary btn-small" id="members-next">Next</button>
           </div>
         </div>
 
@@ -196,75 +198,86 @@
       }
     }
 
-    // Load all server members
-    let memberOffset = 0;
-    const MEMBER_LIMIT = 25;
+    // Server members with pagination
+    let currentMemberPage = 1;
+    const MEMBERS_PER_PAGE = 25;
 
-    async function loadMembers(append = false) {
+    async function loadMembers(page = 1) {
       const guildId = getCurrentGuild();
       const tbody = document.getElementById('all-members-body');
-      const loadMoreBtn = document.getElementById('load-more-members');
+      const paginationDiv = document.getElementById('members-pagination');
 
       if (!guildId) {
         tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:20px;">Select a guild to view members</td></tr>';
+        paginationDiv.style.display = 'none';
         return;
       }
 
       try {
         const search = document.getElementById('member-search').value;
         const searchParam = search ? `&search=${encodeURIComponent(search)}` : '';
-        const data = await api(`/api/guilds/${guildId}/members?limit=${MEMBER_LIMIT}${searchParam}`);
+        const data = await api(`/api/guilds/${guildId}/members?limit=${MEMBERS_PER_PAGE}&page=${page}${searchParam}`);
 
-        if (!append) {
-          tbody.innerHTML = '';
-          memberOffset = 0;
-        }
+        tbody.innerHTML = '';
 
         if (!data.members || data.members.length === 0) {
-          if (!append) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:20px;">No members found</td></tr>';
-          }
-          loadMoreBtn.style.display = 'none';
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:20px;">No members found</td></tr>';
+          paginationDiv.style.display = 'none';
           return;
         }
 
         data.members.forEach(member => {
-          if (member.bot) return; // Skip bots
-
-          const joinDate = '-';
-          const statusBadge = member.bot
-            ? '<span class="badge badge-info">Bot</span>'
-            : '<span class="badge badge-success">Member</span>';
-          const roles = member.roles ? member.roles.slice(0, 3).join(', ') : '-';
+          const joinDate = member.joinedAt ? new Date(member.joinedAt).toLocaleDateString() : '-';
+          const roles = member.roles && member.roles.length > 0 ? member.roles.join(', ') : '-';
 
           const row = document.createElement('tr');
           row.innerHTML = `
             <td><strong>${escapeHtml(member.displayName || member.username)}</strong><br><small style="color:var(--text-muted);">${escapeHtml(member.username)}</small></td>
-            <td>${statusBadge}</td>
+            <td><span class="badge badge-success">Member</span></td>
             <td style="font-size:12px;">${escapeHtml(roles)}</td>
             <td>${joinDate}</td>
           `;
           tbody.appendChild(row);
         });
 
-        memberOffset += data.members.length;
-        loadMoreBtn.style.display = data.members.length >= MEMBER_LIMIT ? 'inline-block' : 'none';
+        // Update pagination
+        const pg = data.pagination;
+        if (pg && pg.totalPages > 1) {
+          paginationDiv.style.display = 'flex';
+          document.getElementById('members-page-info').textContent = `Page ${pg.page} of ${pg.totalPages} (${pg.total} members)`;
+          document.getElementById('members-prev').disabled = pg.page <= 1;
+          document.getElementById('members-next').disabled = pg.page >= pg.totalPages;
+          currentMemberPage = pg.page;
+        } else {
+          paginationDiv.style.display = pg && pg.total > 0 ? 'flex' : 'none';
+          if (pg) {
+            document.getElementById('members-page-info').textContent = `${pg.total} members`;
+            document.getElementById('members-prev').disabled = true;
+            document.getElementById('members-next').disabled = true;
+          }
+          currentMemberPage = 1;
+        }
       } catch (error) {
         console.error('Failed to load members:', error);
-        if (!append) {
-          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:20px;">Failed to load members</td></tr>';
-        }
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:20px;">Failed to load members</td></tr>';
+        paginationDiv.style.display = 'none';
       }
     }
 
-    // Member search
+    // Pagination buttons
+    document.getElementById('members-prev').addEventListener('click', () => {
+      if (currentMemberPage > 1) loadMembers(currentMemberPage - 1);
+    });
+    document.getElementById('members-next').addEventListener('click', () => {
+      loadMembers(currentMemberPage + 1);
+    });
+
+    // Member search with debounce
     let memberSearchTimeout = null;
     document.getElementById('member-search').addEventListener('input', () => {
       clearTimeout(memberSearchTimeout);
-      memberSearchTimeout = setTimeout(() => loadMembers(false), 400);
+      memberSearchTimeout = setTimeout(() => { currentMemberPage = 1; loadMembers(1); }, 400);
     });
-
-    document.getElementById('load-more-members').addEventListener('click', () => loadMembers(true));
 
     // Logout handler
     document.getElementById('logout-btn').addEventListener('click', async () => {

@@ -31,27 +31,56 @@ router.get('/:guildId/members', async (req, res) => {
     const guild = getGuild(req);
     if (!guild) return res.status(404).json({ error: 'Guild not found' });
 
-    const { search = '', limit = 25 } = req.query;
-    let members;
+    const { search = '', limit = 50, page = 1 } = req.query;
+    const pageNum = Math.max(1, parseInt(page) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit) || 50));
+
+    let allMembers;
 
     if (search) {
-      members = await guild.members.fetch({ query: search, limit: parseInt(limit) });
+      allMembers = await guild.members.fetch({ query: search, limit: limitNum });
+      allMembers = [...allMembers.values()];
     } else {
-      // Return cached members (fetching all is expensive)
-      members = guild.members.cache;
+      // Fetch all members (Discord.js caches them after first fetch)
+      if (guild.members.cache.size < guild.memberCount) {
+        try {
+          await guild.members.fetch();
+        } catch {
+          // Fallback to cache if fetch fails
+        }
+      }
+      allMembers = [...guild.members.cache.values()];
     }
 
-    const list = [...members.values()]
-      .slice(0, parseInt(limit))
-      .map(m => ({
-        id: m.id,
-        username: m.user.username,
-        displayName: m.displayName,
-        avatar: m.user.displayAvatarURL({ size: 32 }),
-        bot: m.user.bot,
-      }));
+    // Sort: non-bots first, then by display name
+    allMembers.sort((a, b) => {
+      if (a.user.bot !== b.user.bot) return a.user.bot ? 1 : -1;
+      return a.displayName.localeCompare(b.displayName);
+    });
 
-    res.json({ members: list });
+    // Filter out bots
+    const nonBots = allMembers.filter(m => !m.user.bot);
+
+    // Paginate
+    const totalMembers = nonBots.length;
+    const totalPages = Math.ceil(totalMembers / limitNum);
+    const offset = (pageNum - 1) * limitNum;
+    const paginated = nonBots.slice(offset, offset + limitNum);
+
+    const list = paginated.map(m => ({
+      id: m.id,
+      username: m.user.username,
+      displayName: m.displayName,
+      avatar: m.user.displayAvatarURL({ size: 32 }),
+      bot: m.user.bot,
+      joinedAt: m.joinedAt?.toISOString() || null,
+      roles: m.roles.cache.filter(r => r.name !== '@everyone').map(r => r.name).slice(0, 3),
+    }));
+
+    res.json({
+      members: list,
+      pagination: { page: pageNum, limit: limitNum, total: totalMembers, totalPages },
+    });
   } catch (err) {
     console.error('API members error:', err.message);
     res.status(500).json({ error: err.message });
