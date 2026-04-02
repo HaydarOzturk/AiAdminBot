@@ -1,7 +1,7 @@
 {
   "name": "aiadminbot",
-  "version": "1.4.0",
-  "description": "AI-powered Discord server administration bot with verification, moderation, roles, logging, leveling, and server setup automation.",
+  "version": "1.5.0",
+  "description": "AI-powered Discord server administration bot with automatic stream detection, web dashboard, multi-language support, leveling, and moderation tools.",
   "main": "src/index.js",
   "bin": "src/exe-entry.js",
   "scripts": {

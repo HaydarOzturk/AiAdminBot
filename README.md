@@ -1,14 +1,14 @@
-# AiAdminBot v1.4.0
+# AiAdminBot v1.5.0
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-green.svg)](https://nodejs.org)
 [![discord.js](https://img.shields.io/badge/discord.js-v14-5865F2.svg)](https://discord.js.org)
 
-AI-powered Discord server administration bot with a full web dashboard, multi-language support, leveling system, and moderation tools.
+AI-powered Discord server administration bot with a full web dashboard, automatic stream detection, multi-language support, leveling system, and moderation tools.
 
 ## Features
 
-### Discord Bot Commands (33 slash commands)
+### Discord Bot Commands (37 slash commands)
 
 **Moderation** — ban, kick, mute, timeout, warn, warnings, clear, blocklist, mod-history, mod-stats, case
 
@@ -16,11 +16,45 @@ AI-powered Discord server administration bot with a full web dashboard, multi-la
 
 **Leveling** — rank, leaderboard, award (owner-only, max 30 XP), reset-xp (user or server)
 
-**Setup** — setup (auto-create channels, roles, verification), fix-permissions, language, template-export, template-import, server-reset
+**Setup** — setup (auto-create channels, roles, verification), fix-permissions, language, template-export, template-import, server-reset, afk-setup
 
-**AI** — ai-chat, ai-setup, ai-setup-apply, ai-setup-cancel (Google Gemini or OpenRouter)
+**Streaming** — go-live (manual live check), stream-link (manage platform links)
+
+**AI** — ai-chat, ai-setup, ai-setup-apply, ai-setup-cancel, ai-memory (Google Gemini or OpenRouter)
 
 **Utility** — help, ping, suggest, sync, verify
+
+### Automatic Stream Watcher
+
+The bot automatically detects when registered streamers go live on Twitch, YouTube, or Kick — no manual commands needed.
+
+**How it works:**
+
+- Polls Twitch (Helix API) and Kick (OAuth + legacy fallback) every 2 minutes
+- Polls YouTube every 10 minutes using a free page-scrape method first, falling back to the Data API v3 only if scraping fails — this keeps daily API quota usage near zero
+- When a stream is detected, a 60-second confirmation window re-checks the platform to filter out false positives and brief test streams
+- Posts a rich embed in the `stream-announcements` channel with stream title, game, platform, and a "Watch Now" link button
+- When the stream ends, edits the announcement to "Stream ended"
+- Four layers of duplicate prevention ensure only one announcement per stream session, even if multiple platforms detect the same person going live simultaneously
+- Works alongside the manual `/go-live` command and Discord Presence-based detection without conflicts
+
+**Configuration (all optional):**
+
+```env
+STREAM_WATCHER_POLL_INTERVAL_SECONDS=120        # Twitch/Kick poll interval (default: 120)
+STREAM_WATCHER_YT_POLL_INTERVAL_SECONDS=600     # YouTube poll interval (default: 600)
+STREAM_WATCHER_CONFIRMATION_DELAY_SECONDS=60    # Confirmation delay (default: 60)
+STREAMING_ENABLED=false                          # Disable stream watcher entirely
+```
+
+### Live Stream Announcements (Presence-based)
+
+- Automatically detects when the **guild owner** starts streaming via Discord Presence updates (Twitch, YouTube, Kick)
+- Posts a rich embed in the `stream-announcements` channel with stream title, game, platform, and a "Watch Now" link button
+- When the stream ends, edits the announcement to "Stream ended"
+- 30-second debounce to prevent flicker from unstable presence updates
+- Streaming category (`stream-announcements` + `stream-chat`) created during server setup
+- All channel names and messages are multi-language (locale keys)
 
 ### Web Dashboard
 
@@ -39,15 +73,6 @@ A full admin panel accessible at `http://your-server:PORT` with password authent
 **Config** — Language selector (8 languages with flags), JSON configuration editor, environment variables viewer (read-only, secrets hidden)
 
 **Logs** — Real-time log viewer with level filtering (Error, Warn, Info, Debug), auto-refresh mode, line count selector, download logs
-
-### Live Stream Announcements
-
-- Automatically detects when the **guild owner** starts streaming (Twitch, YouTube, Kick)
-- Posts a rich embed in the `stream-announcements` channel with stream title, game, platform, and a "Watch Now" link button
-- When the stream ends, edits the announcement to "Stream ended"
-- 30-second debounce to prevent flicker from unstable presence updates
-- Streaming category (`stream-announcements` + `stream-chat`) created during server setup
-- All channel names and messages are multi-language (locale keys)
 
 ### AFK Channel
 
@@ -87,10 +112,7 @@ npm install
 cp .env.example .env
 # Edit .env with your DISCORD_TOKEN and settings
 
-# Deploy slash commands (first time only)
-npm run deploy
-
-# Start
+# Start (slash commands auto-deploy on boot)
 npm start
 ```
 
@@ -123,8 +145,21 @@ OPENROUTER_API_KEY=your_key      # OpenRouter
 AI_CHAT_ENABLED=false
 AI_MODERATION_ENABLED=false
 
+# Streaming API Keys
+TWITCH_CLIENT_ID=your_id         # Twitch API (from dev.twitch.tv)
+TWITCH_CLIENT_SECRET=your_secret
+YOUTUBE_API_KEY=your_key         # YouTube Data API v3 (from Google Cloud Console)
+KICK_CLIENT_ID=your_id           # Kick API (optional — legacy API works without keys)
+KICK_CLIENT_SECRET=your_secret
+
+# Stream Watcher
+STREAM_WATCHER_POLL_INTERVAL_SECONDS=120     # Twitch/Kick interval (default: 120)
+STREAM_WATCHER_YT_POLL_INTERVAL_SECONDS=600  # YouTube interval (default: 600)
+STREAM_WATCHER_CONFIRMATION_DELAY_SECONDS=60 # Confirmation delay (default: 60)
+STREAMING_ENABLED=true                        # Set false to disable
+
 # AFK Channel
-AFK_TIMEOUT_MINUTES=10              # Minutes before idle users are moved (default: 10)
+AFK_TIMEOUT_MINUTES=10           # Minutes before idle users are moved (default: 10)
 
 # Web Dashboard
 WEB_PORT=3000                    # Set to enable dashboard
@@ -135,17 +170,34 @@ WEB_PASSWORD=your_password       # Dashboard login password
 
 ```
 src/
-  commands/          # 33 slash commands in 7 categories
-    ai/              # AI chat and setup commands
+  commands/          # 37 slash commands in 9 categories
+    ai/              # AI chat, setup, and memory commands
     leveling/        # rank, leaderboard, award, reset-xp
     moderation/      # ban, kick, warn, timeout, clear, blocklist...
     roles/           # give-role, remove-role, role-menu
-    setup/           # server setup, language, templates, permissions
+    setup/           # server setup, language, templates, permissions, afk
+    streaming/       # go-live, stream-link
     utility/         # help, ping, suggest, sync
     verification/    # verify command
   events/            # Discord event handlers
   handlers/          # Command and event loaders
-  systems/           # Core systems (leveling, voiceXp, serverSetup...)
+  systems/           # Core systems
+    afkManager.js    # Idle voice user detection and AFK channel
+    aiChat.js        # AI conversation engine (Gemini/OpenRouter)
+    aiModeration.js  # AI-powered content moderation
+    aiSetup.js       # AI-assisted server setup wizard
+    leveling.js      # XP and level system
+    linkFilter.js    # URL/link blocking in chat
+    logCleaner.js    # Periodic log file cleanup
+    roleMenus.js     # Reaction/button role menus
+    rulesReader.js   # Server rules parsing
+    serverSetup.js   # One-click server setup automation
+    streamAnnouncer.js   # Presence-based stream announcements
+    streamWatcher.js     # Automatic stream polling (Twitch/YouTube/Kick)
+    streamingChecker.js  # Platform API integrations (4-strategy Kick fallback)
+    templateManager.js   # Server template export/import
+    verification.js  # Member verification system
+    voiceXp.js       # Voice channel XP tracking
   utils/             # Database, locale, logger, paths
   web/               # Express web dashboard
     api/             # REST API routes (guilds, stats, logs)
@@ -194,7 +246,7 @@ Dashboard access requires port forwarding (e.g. port 3000 in firewall/security l
 
 ## Database
 
-SQLite via sql.js (in-memory with disk persistence). Tables: warnings, levels, mod_actions, verified_users, blocked_words, guild_settings, daily_xp.
+SQLite via sql.js (in-memory with disk persistence). Tables: warnings, levels, mod_actions, verified_users, blocked_words, guild_settings, daily_xp, streaming_links.
 
 ## License
 
