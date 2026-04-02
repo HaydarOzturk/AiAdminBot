@@ -244,6 +244,28 @@ pm2 startup
 
 Dashboard access requires port forwarding (e.g. port 3000 in firewall/security list).
 
+## Troubleshooting
+
+**"Failed to start: Used disallowed intents"**
+
+The bot requires three Privileged Gateway Intents that must be manually enabled in the Discord Developer Portal. Go to [discord.com/developers/applications](https://discord.com/developers/applications), select your application, navigate to **Bot**, scroll down to **Privileged Gateway Intents**, and enable **Presence Intent**, **Server Members Intent**, and **Message Content Intent**. Save your changes and restart the bot. Without these, the bot cannot detect streaming activity, manage server members, or read message content for AI moderation.
+
+**"Missing locale key: ..." warnings on startup**
+
+These warnings appear when the bot's locale files are loaded after the command handler has already built the slash commands. This was fixed in v1.5.0 by loading locale strings before importing command handlers. If you still see these after updating, run `pm2 flush <botname>` to clear old log entries, then restart — the warnings are likely leftover from a previous run.
+
+**`git pull` fails with "Your local changes would be overwritten"**
+
+This typically happens with `package-lock.json` or `package.json` when the server's installed dependencies differ from the repository. Stash the local changes first with `git stash push -m "local changes"`, then run `git pull origin main` and restart.
+
+**Stream watcher starts but no platforms are being checked**
+
+Verify that the stream owner has platform links registered via the `/stream-link` command. The watcher only polls platforms that have saved links in the database. Also check that API credentials are set in `.env`: `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` for Twitch, `YOUTUBE_API_KEY` for YouTube. Kick works without credentials using the legacy API fallback.
+
+**YouTube quota exceeded (HTTP 403 from YouTube Data API)**
+
+The YouTube Data API v3 has a daily quota of 10,000 units. The bot uses a free page-scrape method as its primary detection strategy, only falling back to the API when scraping fails. If you're still hitting quota limits, increase the YouTube poll interval by setting `STREAM_WATCHER_YT_POLL_INTERVAL_SECONDS` to a higher value in your `.env` (default is 600 seconds / 10 minutes).
+
 ## Database
 
 SQLite via sql.js (in-memory with disk persistence). Tables: warnings, levels, mod_actions, verified_users, blocked_words, guild_settings, daily_xp, streaming_links.
