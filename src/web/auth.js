@@ -3,6 +3,9 @@ const crypto = require('crypto');
 // No default password — dashboard is disabled if WEB_PASSWORD is not set
 const WEB_PASSWORD = process.env.WEB_PASSWORD || null;
 
+// Unique cookie name per port to prevent cross-instance logout
+const COOKIE_NAME = `admin_token_${process.env.WEB_PORT || '3000'}`;
+
 // In-memory token store: token -> expiresAt
 const tokenStore = new Map();
 
@@ -111,7 +114,7 @@ function login(req, res) {
   const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
   const securePart = isSecure ? ' Secure;' : '';
   res.setHeader('Set-Cookie',
-    `admin_token=${token}; HttpOnly; SameSite=Lax;${securePart} Max-Age=${Math.floor(TOKEN_EXPIRY_MS / 1000)}; Path=/`
+    `${COOKIE_NAME}=${token}; HttpOnly; SameSite=Lax;${securePart} Max-Age=${Math.floor(TOKEN_EXPIRY_MS / 1000)}; Path=/`
   );
 
   return res.json({ success: true, message: 'Logged in' });
@@ -122,10 +125,10 @@ function login(req, res) {
  */
 function logout(req, res) {
   const cookies = parseCookies(req);
-  const token = cookies.admin_token;
+  const token = cookies[COOKIE_NAME];
   if (token) tokenStore.delete(token);
 
-  res.setHeader('Set-Cookie', 'admin_token=; HttpOnly; SameSite=Lax; Max-Age=0; Path=/');
+  res.setHeader('Set-Cookie', `${COOKIE_NAME}=; HttpOnly; SameSite=Lax; Max-Age=0; Path=/`);
   return res.json({ success: true, message: 'Logged out' });
 }
 
@@ -134,7 +137,7 @@ function logout(req, res) {
  */
 function requireAuth(req, res, next) {
   const cookies = parseCookies(req);
-  const token = cookies.admin_token;
+  const token = cookies[COOKIE_NAME];
 
   if (!validateToken(token)) {
     return res.status(401).json({ error: 'Unauthorized' });
