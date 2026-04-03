@@ -50,7 +50,7 @@ module.exports = {
       }
 
       await polls.createPoll(
-        { ...interaction, reply: (opts) => interaction.editReply(opts) },
+        interaction,
         suggestion.question,
         suggestion.options.slice(0, 5),
         duration

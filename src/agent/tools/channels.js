@@ -74,6 +74,50 @@ module.exports = [
     },
   },
   {
+    name: 'move_channel',
+    description: 'Move a channel to a different category',
+    category: 'channels',
+    requiredPermission: 3,
+    destructive: false,
+    parameters: {
+      channel: { type: 'string', description: 'Channel name or ID to move', required: true },
+      category: { type: 'string', description: 'Target category name to move the channel into', required: true },
+    },
+    async execute(guild, invoker, params) {
+      const channel = guild.channels.cache.get(params.channel) ||
+        guild.channels.cache.find(c => c.type !== ChannelType.GuildCategory && c.name.toLowerCase() === params.channel.toLowerCase());
+      if (!channel) return { success: false, message: `Channel "${params.channel}" not found` };
+
+      const category = guild.channels.cache.find(
+        c => c.type === ChannelType.GuildCategory && c.name.toLowerCase() === params.category.toLowerCase()
+      );
+      if (!category) return { success: false, message: `Category "${params.category}" not found` };
+
+      await channel.setParent(category.id, { reason: 'Moved by AI Agent' });
+      return { success: true, message: `Moved #${channel.name} to category "${category.name}"` };
+    },
+  },
+  {
+    name: 'rename_channel',
+    description: 'Rename a channel',
+    category: 'channels',
+    requiredPermission: 3,
+    destructive: false,
+    parameters: {
+      channel: { type: 'string', description: 'Channel name or ID to rename', required: true },
+      newName: { type: 'string', description: 'New name for the channel', required: true },
+    },
+    async execute(guild, invoker, params) {
+      const channel = guild.channels.cache.get(params.channel) ||
+        guild.channels.cache.find(c => c.type !== ChannelType.GuildCategory && c.name.toLowerCase() === params.channel.toLowerCase());
+      if (!channel) return { success: false, message: `Channel "${params.channel}" not found` };
+
+      const oldName = channel.name;
+      await channel.setName(params.newName, 'Renamed by AI Agent');
+      return { success: true, message: `Renamed #${oldName} to #${channel.name}` };
+    },
+  },
+  {
     name: 'list_channels',
     description: 'List all server channels grouped by category',
     category: 'channels',

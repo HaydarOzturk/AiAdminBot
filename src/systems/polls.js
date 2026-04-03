@@ -60,20 +60,30 @@ async function createPoll(interaction, question, options, durationMinutes = 0) {
     rows.push(row);
   }
 
-  const reply = await interaction.reply({ embeds: [embed], components: rows, fetchReply: true });
+  let message;
+  if (interaction.deferred || interaction.replied) {
+    message = await interaction.editReply({ embeds: [embed], components: rows });
+  } else {
+    const response = await interaction.reply({ embeds: [embed], components: rows, withResponse: true });
+    message = response.resource?.message;
+    if (!message) {
+      // Fallback for older discord.js versions
+      message = await interaction.fetchReply();
+    }
+  }
 
   // Save to DB
   const endsAt = durationMinutes > 0 ? new Date(Date.now() + durationMinutes * 60000).toISOString() : null;
   db.run(
     `INSERT INTO polls (guild_id, channel_id, message_id, creator_id, question, options, ends_at)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [g, interaction.channel.id, reply.id, interaction.user.id, question, JSON.stringify(options), endsAt]
+    [g, interaction.channel.id, message.id, interaction.user.id, question, JSON.stringify(options), endsAt]
   );
 
   // Set timer if timed
   if (durationMinutes > 0) {
-    const timer = setTimeout(() => closePoll(reply.id, g, interaction.client), durationMinutes * 60000);
-    pollTimers.set(reply.id, timer);
+    const timer = setTimeout(() => closePoll(message.id, g, interaction.client), durationMinutes * 60000);
+    pollTimers.set(message.id, timer);
   }
 }
 
