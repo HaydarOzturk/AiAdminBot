@@ -516,9 +516,15 @@
                   <input type="text" id="edit-ch-topic" maxlength="1024">
                 </div>
 
-                <div class="form-group" id="edit-ch-nsfw-group" style="display: flex; align-items: center; gap: 8px;">
-                  <input type="checkbox" id="edit-ch-nsfw">
-                  <label for="edit-ch-nsfw" style="margin: 0; cursor: pointer;">NSFW Channel</label>
+                <div class="form-group" id="edit-ch-nsfw-group">
+                  <label class="toggle-option" for="edit-ch-nsfw" style="cursor:pointer; display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--bg-tertiary); border:1px solid var(--border-subtle); border-radius:8px;">
+                    <input type="checkbox" id="edit-ch-nsfw" style="display:none;">
+                    <span class="toggle-check" style="width:18px; height:18px; border-radius:4px; border:2px solid var(--border-color); display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all 0.15s;"></span>
+                    <div>
+                      <div style="font-size:13px; font-weight:500; color:var(--text-primary);">🔞 NSFW Channel</div>
+                      <div style="font-size:11px; color:var(--text-muted);">Age-restricted content</div>
+                    </div>
+                  </label>
                 </div>
 
                 <button type="submit" class="btn btn-success">Save Changes</button>
@@ -944,11 +950,12 @@
       rolesList.innerHTML = '';
       allRoles.filter(r => r.name !== '@everyone').forEach(r => {
         const label = document.createElement('label');
-        label.style.cssText = 'display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; font-size: 13px; color: var(--text-secondary);';
+        label.className = 'cb-label';
         label.innerHTML = `
-          <input type="checkbox" value="${r.id}" class="private-role-checkbox">
-          <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: ${r.color || '#99aab5'};"></span>
-          ${escapeHtml(r.name)}
+          <input type="checkbox" value="${r.id}" class="private-role-checkbox styled-checkbox">
+          <span class="cb-visual"></span>
+          <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${r.color || '#99aab5'}; flex-shrink:0;"></span>
+          <span>${escapeHtml(r.name)}</span>
         `;
         rolesList.appendChild(label);
       });
