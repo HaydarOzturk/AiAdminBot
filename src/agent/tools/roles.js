@@ -1,3 +1,5 @@
+const { findRole, notFoundMsg } = require('../fuzzyMatch');
+
 module.exports = [
   {
     name: 'give_role',
@@ -13,8 +15,8 @@ module.exports = [
       const member = await guild.members.fetch(params.userId).catch(() => null);
       if (!member) return { success: false, message: 'User not found' };
 
-      const role = guild.roles.cache.find(r => r.name.toLowerCase() === params.roleName.toLowerCase());
-      if (!role) return { success: false, message: `Role "${params.roleName}" not found` };
+      const { match: role, suggestions } = findRole(guild, params.roleName);
+      if (!role) return { success: false, message: notFoundMsg('Role', params.roleName, suggestions) };
 
       await member.roles.add(role);
       return { success: true, message: `Gave role "${role.name}" to ${member.user.tag}` };
@@ -34,8 +36,8 @@ module.exports = [
       const member = await guild.members.fetch(params.userId).catch(() => null);
       if (!member) return { success: false, message: 'User not found' };
 
-      const role = guild.roles.cache.find(r => r.name.toLowerCase() === params.roleName.toLowerCase());
-      if (!role) return { success: false, message: `Role "${params.roleName}" not found` };
+      const { match: role, suggestions } = findRole(guild, params.roleName);
+      if (!role) return { success: false, message: notFoundMsg('Role', params.roleName, suggestions) };
 
       await member.roles.remove(role);
       return { success: true, message: `Removed role "${role.name}" from ${member.user.tag}` };

@@ -1,4 +1,5 @@
 const kb = require('../../systems/knowledgeBase');
+const { findChannel, notFoundMsg } = require('../fuzzyMatch');
 
 module.exports = [
   {
@@ -59,9 +60,9 @@ module.exports = [
       let channelId = params.channelId;
 
       if (channelId && !channelId.match(/^\d+$/)) {
-        const ch = guild.channels.cache.find(c => c.name === channelId);
+        const { match: ch, suggestions } = findChannel(guild, channelId);
         if (ch) channelId = ch.id;
-        else return { success: false, message: `Channel "${params.channelId}" not found` };
+        else return { success: false, message: notFoundMsg('Channel', params.channelId, suggestions) };
       }
 
       const summary = await kb.getChannelSummary(guild.id, channelId || guild.systemChannelId, hours);

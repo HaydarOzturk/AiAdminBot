@@ -44,7 +44,21 @@ module.exports = {
 
       await interaction.deferReply();
 
-      const suggestion = await polls.aiSuggestPoll(topic);
+      // Build server context for AI
+      const members = interaction.guild.members.cache
+        .filter(m => !m.user.bot)
+        .map(m => m.displayName || m.user.username)
+        .slice(0, 50);
+      const channels = interaction.guild.channels.cache
+        .filter(c => c.type === 0) // text channels
+        .map(c => c.name)
+        .slice(0, 30);
+      const roles = interaction.guild.roles.cache
+        .filter(r => r.name !== '@everyone')
+        .map(r => r.name)
+        .slice(0, 20);
+
+      const suggestion = await polls.aiSuggestPoll(topic, { members, channels, roles });
       if (!suggestion || !suggestion.question || !suggestion.options?.length) {
         return interaction.editReply({ content: t('polls.aiGenerateFailed', {}, g) || 'AI could not generate a poll. Try again or create one manually.' });
       }
