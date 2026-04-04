@@ -217,6 +217,27 @@
     }
     .setup-card-actions .btn-icon:hover { background: var(--bg-tertiary); color: var(--text-primary); }
     .setup-card-actions .btn-icon.danger:hover { background: rgba(239,68,68,0.1); color: var(--accent-danger); border-color: var(--accent-danger); }
+    .setup-ch-chip.custom { background: rgba(99,102,241,0.1); color: #818cf8; border: 1px dashed rgba(99,102,241,0.3); }
+    .setup-ch-chip.custom:hover { background: rgba(99,102,241,0.15); }
+    .setup-add-form {
+      display: flex; gap: 6px; align-items: center; margin-top: 8px;
+      padding: 10px 12px; background: var(--bg-tertiary); border-radius: 10px; border: 1px solid var(--border-color);
+    }
+    .setup-add-form input {
+      flex: 1; background: var(--bg-secondary); border: 1px solid var(--border-color);
+      color: var(--text-primary); padding: 6px 10px; border-radius: 6px; font-size: 12px;
+      outline: none;
+    }
+    .setup-add-form input:focus { border-color: var(--accent-primary); }
+    .setup-add-form select {
+      background: var(--bg-secondary); border: 1px solid var(--border-color);
+      color: var(--text-primary); padding: 6px 8px; border-radius: 6px; font-size: 12px;
+      outline: none; cursor: pointer;
+    }
+    .setup-add-form .btn { padding: 6px 12px; font-size: 12px; }
+    .setup-add-form .btn-cancel {
+      background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px; padding: 2px 6px;
+    }
   </style>
 </head>
 <body>
@@ -1090,7 +1111,8 @@
 
         const chipsHtml = g.channels.map(ch => {
           const icon = ch.type === 'voice' ? '🔊' : '#';
-          const cls = ch.exists ? 'exists' : 'missing';
+          const isCustom = ch.isDefault === false;
+          const cls = ch.exists ? (isCustom ? 'exists custom' : 'exists') : 'missing';
           const deleteBtn = ch.exists ? `<span class="chip-delete" onclick="event.stopPropagation();deleteSetupChannel('${key}','${escapeHtml(ch.name)}')" title="Delete channel">×</span>` : '';
           return `<span class="setup-ch-chip ${cls}"><span class="ch-icon">${icon}</span>${escapeHtml(ch.name)}${deleteBtn}</span>`;
         }).join('');
@@ -1113,8 +1135,17 @@
               ? `<span style="color:#57f287;font-size:13px;font-weight:600;">✓ All channels ready</span>`
               : `<button class="btn btn-primary" onclick="createChannelGroup('${key}', this)">${isPartial ? 'Create Missing' : 'Create'}</button>`
             }
-            ${hasAny ? `<button class="btn btn-outline" onclick="addChannelToGroup('${key}')">+ Add Channel</button>` : ''}
+            ${hasAny ? `<button class="btn btn-outline" onclick="showAddChannelForm('${key}')">+ Add Channel</button>` : ''}
             ${extraInfo ? `<span class="setup-card-extra">${extraInfo}</span>` : ''}
+          </div>
+          <div class="setup-add-form" id="add-form-${key}" style="display:none;">
+            <input type="text" id="add-name-${key}" placeholder="Channel name..." onkeydown="if(event.key==='Enter')submitAddChannel('${key}')">
+            <select id="add-type-${key}">
+              <option value="text"># Text</option>
+              <option value="voice">🔊 Voice</option>
+            </select>
+            <button class="btn btn-primary" onclick="submitAddChannel('${key}')">Create</button>
+            <button class="btn-cancel" onclick="hideAddChannelForm('${key}')" title="Cancel">×</button>
           </div>
         `;
 
@@ -1195,32 +1226,49 @@
       }
     }
 
-    function addChannelToGroup(groupKey) {
-      const g = setupStatusCache?.[groupKey];
-      if (!g) return;
+    function showAddChannelForm(groupKey) {
+      const form = document.getElementById(`add-form-${groupKey}`);
+      if (!form) return;
+      form.style.display = 'flex';
+      const input = document.getElementById(`add-name-${groupKey}`);
+      if (input) { input.value = ''; input.focus(); }
+    }
 
-      const name = prompt(`Enter name for new channel in "${g.label}":`);
-      if (!name || !name.trim()) return;
+    function hideAddChannelForm(groupKey) {
+      const form = document.getElementById(`add-form-${groupKey}`);
+      if (form) form.style.display = 'none';
+    }
 
-      const type = prompt('Channel type? (text or voice)', 'text');
-      if (type !== 'text' && type !== 'voice') { showToast('Type must be "text" or "voice"', 'warning'); return; }
-
+    async function submitAddChannel(groupKey) {
       const guildId = getCurrentGuild();
       if (!guildId) return;
 
-      // Create channel in the group's category
-      api(`/api/guilds/${guildId}/channels`, {
-        method: 'POST',
-        body: JSON.stringify({
-          name: name.trim(),
-          type: type === 'voice' ? 2 : 0,
-          parentName: g.categoryName,
-        }),
-      }).then(() => {
-        showToast(`Created #${name.trim()} in ${g.label}`, 'success');
+      const g = setupStatusCache?.[groupKey];
+      if (!g) return;
+
+      const nameInput = document.getElementById(`add-name-${groupKey}`);
+      const typeSelect = document.getElementById(`add-type-${groupKey}`);
+      const name = nameInput?.value?.trim();
+      const type = typeSelect?.value || 'text';
+
+      if (!name) { showToast('Enter a channel name', 'warning'); nameInput?.focus(); return; }
+
+      try {
+        await api(`/api/guilds/${guildId}/channels`, {
+          method: 'POST',
+          body: JSON.stringify({
+            name,
+            type: type === 'voice' ? 2 : 0,
+            parentName: g.categoryName,
+          }),
+        });
+        showToast(`Created #${name} in ${g.label}`, 'success');
+        hideAddChannelForm(groupKey);
         loadQuickSetupStatus();
         loadChannels();
-      }).catch(err => showToast('Failed: ' + (err.message || 'Unknown error'), 'error'));
+      } catch (err) {
+        showToast('Failed: ' + (err.message || 'Unknown error'), 'error');
+      }
     }
 
     // ── Init ──────────────────────────────────────────────────────────────

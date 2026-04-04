@@ -1356,15 +1356,34 @@ router.get('/:guildId/setup/channel-status', (req, res) => {
         name: ch.name,
         type: ch.type,
         exists: channelNames.some(n => n === ch.name.toLowerCase()),
+        isDefault: true,
       }));
 
       const existingCount = expectedChannels.filter(c => c.exists).length;
       const totalCount = expectedChannels.length;
 
-      // Check if category exists
-      const catExists = guild.channels.cache.some(
+      // Check if category exists and find custom channels in it
+      const category = guild.channels.cache.find(
         c => c.type === 4 && c.name.toLowerCase() === catCfg.name.toLowerCase()
       );
+      const catExists = !!category;
+
+      // Find custom channels (in this category but not in the default list)
+      if (category) {
+        const defaultNames = new Set(catCfg.channels.map(ch => ch.name.toLowerCase()));
+        const customChannels = guild.channels.cache.filter(
+          c => c.parentId === category.id && !defaultNames.has(c.name.toLowerCase())
+        );
+        for (const ch of customChannels.values()) {
+          expectedChannels.push({
+            name: ch.name,
+            type: ch.type === 2 ? 'voice' : 'text',
+            exists: true,
+            isDefault: false,
+            id: ch.id,
+          });
+        }
+      }
 
       // Special AFK check: also verify guild.afkChannelId is set
       let afkConfigured = false;
