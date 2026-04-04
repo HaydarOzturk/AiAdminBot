@@ -96,6 +96,16 @@ module.exports = {
       console.warn('⚠️ Giveaway timer restore failed:', err.message);
     }
 
+    // Seed role menus from JSON config into DB for each guild
+    try {
+      const { seedMenusFromConfig } = require('../systems/roleMenus');
+      for (const guild of client.guilds.cache.values()) {
+        seedMenusFromConfig(guild.id);
+      }
+    } catch (err) {
+      console.warn('⚠️ Role menu seeding failed:', err.message);
+    }
+
     // Auto-sync roles on startup if enabled
     const { loadConfig } = require('../utils/paths');
     try {

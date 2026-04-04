@@ -1023,6 +1023,229 @@ router.delete('/:guildId/roles/:roleId/members/:userId', async (req, res) => {
 });
 
 // ══════════════════════════════════════════════════════════════════════════
+// ROLE MENUS
+// ══════════════════════════════════════════════════════════════════════════
+
+const roleMenus = require('../../systems/roleMenus');
+
+/** List all role menus for a guild */
+router.get('/:guildId/role-menus', (req, res) => {
+  try {
+    const menus = roleMenus.getMenusForGuild(req.params.guildId);
+    res.json({ menus });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/** Seed role menus from JSON config */
+router.post('/:guildId/role-menus/seed', (req, res) => {
+  try {
+    roleMenus.seedMenusFromConfig(req.params.guildId);
+    const menus = roleMenus.getMenusForGuild(req.params.guildId);
+    res.json({ success: true, menus });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/** Create a new role menu */
+router.post('/:guildId/role-menus', (req, res) => {
+  try {
+    const { slug, title, description, color, singleSelect, requiredRoleId } = req.body;
+    if (!slug || !title) return res.status(400).json({ error: 'slug and title are required' });
+
+    const safeSlug = slug.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+
+    if (roleMenus.getMenuBySlug(req.params.guildId, safeSlug)) {
+      return res.status(409).json({ error: `Menu with slug "${safeSlug}" already exists` });
+    }
+
+    const menuId = roleMenus.createMenu(req.params.guildId, {
+      slug: safeSlug, title, description, color, singleSelect, requiredRoleId,
+    });
+    const menu = roleMenus.getMenuWithItems(menuId);
+    res.json({ menu });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/** Get a single role menu with items */
+router.get('/:guildId/role-menus/:menuId', (req, res) => {
+  try {
+    const menu = roleMenus.getMenuWithItems(parseInt(req.params.menuId, 10));
+    if (!menu || menu.guild_id !== req.params.guildId) {
+      return res.status(404).json({ error: 'Menu not found' });
+    }
+    // Attach published messages
+    menu.messages = roleMenus.getPublishedMessages(menu.id, req.params.guildId);
+    res.json({ menu });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/** Update a role menu's settings */
+router.put('/:guildId/role-menus/:menuId', (req, res) => {
+  try {
+    const menuId = parseInt(req.params.menuId, 10);
+    const menu = roleMenus.getMenuWithItems(menuId);
+    if (!menu || menu.guild_id !== req.params.guildId) {
+      return res.status(404).json({ error: 'Menu not found' });
+    }
+
+    const fields = {};
+    if (req.body.title != null) fields.title = req.body.title;
+    if (req.body.description != null) fields.description = req.body.description;
+    if (req.body.color != null) fields.color = req.body.color;
+    if (req.body.singleSelect != null) fields.single_select = req.body.singleSelect ? 1 : 0;
+    if (req.body.requiredRoleId !== undefined) fields.required_role_id = req.body.requiredRoleId || null;
+
+    roleMenus.updateMenu(menuId, fields);
+    res.json({ menu: roleMenus.getMenuWithItems(menuId) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/** Delete a role menu */
+router.delete('/:guildId/role-menus/:menuId', (req, res) => {
+  try {
+    const menuId = parseInt(req.params.menuId, 10);
+    const menu = roleMenus.getMenuWithItems(menuId);
+    if (!menu || menu.guild_id !== req.params.guildId) {
+      return res.status(404).json({ error: 'Menu not found' });
+    }
+    roleMenus.deleteMenu(menuId);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/** Add a role item to a menu */
+router.post('/:guildId/role-menus/:menuId/items', (req, res) => {
+  try {
+    const menuId = parseInt(req.params.menuId, 10);
+    const menu = roleMenus.getMenuWithItems(menuId);
+    if (!menu || menu.guild_id !== req.params.guildId) {
+      return res.status(404).json({ error: 'Menu not found' });
+    }
+    if (roleMenus.getMenuItemCount(menuId) >= 25) {
+      return res.status(400).json({ error: 'Maximum 25 roles per menu (Discord button limit)' });
+    }
+
+    const { roleName, emoji, color, position } = req.body;
+    if (!roleName) return res.status(400).json({ error: 'roleName is required' });
+
+    if (menu.items.some(i => i.role_name.toLowerCase() === roleName.toLowerCase())) {
+      return res.status(409).json({ error: `Role "${roleName}" already exists in this menu` });
+    }
+
+    const itemId = roleMenus.addMenuItem(menuId, { roleName, emoji, color, position });
+    res.json({ itemId, menu: roleMenus.getMenuWithItems(menuId) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/** Update a role item */
+router.put('/:guildId/role-menus/:menuId/items/:itemId', (req, res) => {
+  try {
+    const menuId = parseInt(req.params.menuId, 10);
+    const menu = roleMenus.getMenuWithItems(menuId);
+    if (!menu || menu.guild_id !== req.params.guildId) {
+      return res.status(404).json({ error: 'Menu not found' });
+    }
+
+    const itemId = parseInt(req.params.itemId, 10);
+    if (!menu.items.some(i => i.id === itemId)) {
+      return res.status(404).json({ error: 'Item not found in this menu' });
+    }
+
+    const fields = {};
+    if (req.body.roleName != null) fields.role_name = req.body.roleName;
+    if (req.body.emoji != null) fields.emoji = req.body.emoji;
+    if (req.body.color != null) fields.color = req.body.color;
+    if (req.body.position != null) fields.position = req.body.position;
+
+    roleMenus.updateMenuItem(itemId, fields);
+    res.json({ menu: roleMenus.getMenuWithItems(menuId) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/** Remove a role item from a menu */
+router.delete('/:guildId/role-menus/:menuId/items/:itemId', (req, res) => {
+  try {
+    const menuId = parseInt(req.params.menuId, 10);
+    const menu = roleMenus.getMenuWithItems(menuId);
+    if (!menu || menu.guild_id !== req.params.guildId) {
+      return res.status(404).json({ error: 'Menu not found' });
+    }
+
+    const itemId = parseInt(req.params.itemId, 10);
+    if (!menu.items.some(i => i.id === itemId)) {
+      return res.status(404).json({ error: 'Item not found in this menu' });
+    }
+
+    roleMenus.removeMenuItem(itemId);
+    res.json({ success: true, menu: roleMenus.getMenuWithItems(menuId) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/** Publish a menu to a Discord channel */
+router.post('/:guildId/role-menus/:menuId/publish', async (req, res) => {
+  try {
+    const menuId = parseInt(req.params.menuId, 10);
+    const menu = roleMenus.getMenuWithItems(menuId);
+    if (!menu || menu.guild_id !== req.params.guildId) {
+      return res.status(404).json({ error: 'Menu not found' });
+    }
+
+    const { channelId } = req.body;
+    if (!channelId) return res.status(400).json({ error: 'channelId is required' });
+
+    const guild = getGuild(req);
+    if (!guild) return res.status(404).json({ error: 'Guild not found' });
+
+    const channel = await guild.channels.fetch(channelId);
+    if (!channel) return res.status(404).json({ error: 'Channel not found' });
+
+    const message = await roleMenus.sendRoleMenuById(channel, menuId);
+    res.json({ success: true, messageId: message.id, channelId: channel.id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/** List published message locations for a menu */
+router.get('/:guildId/role-menus/:menuId/messages', (req, res) => {
+  try {
+    const menuId = parseInt(req.params.menuId, 10);
+    const messages = roleMenus.getPublishedMessages(menuId, req.params.guildId);
+    res.json({ messages });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/** Unpublish (delete) a published menu message */
+router.delete('/:guildId/role-menus/:menuId/messages/:msgId', async (req, res) => {
+  try {
+    const client = getClient(req);
+    await roleMenus.unpublishMessage(client, parseInt(req.params.msgId, 10));
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════════════
 // LEVELING
 // ══════════════════════════════════════════════════════════════════════════
 

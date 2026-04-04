@@ -44,7 +44,7 @@ module.exports = [
   // Roles
   require('./roles/give-role'),
   require('./roles/remove-role'),
-  require('./roles/role-menu'),
+  require('./roles/publish-roles'),
 
   // Streaming
   require('./streaming/go-live'),

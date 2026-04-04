@@ -327,6 +327,52 @@ async function initDatabase() {
     )
   `);
 
+  // ── Role Menu System tables ────────────────────────────────────────────
+
+  // Role menu definitions per guild
+  db.run(`
+    CREATE TABLE IF NOT EXISTS role_menus (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      guild_id TEXT NOT NULL,
+      slug TEXT NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT,
+      color TEXT DEFAULT '#5865f2',
+      single_select INTEGER DEFAULT 0,
+      required_role_id TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(guild_id, slug)
+    )
+  `);
+
+  // Roles within a menu
+  db.run(`
+    CREATE TABLE IF NOT EXISTS role_menu_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      menu_id INTEGER NOT NULL,
+      role_name TEXT NOT NULL,
+      role_id TEXT,
+      emoji TEXT,
+      color TEXT DEFAULT '#99aab5',
+      position INTEGER DEFAULT 0,
+      UNIQUE(menu_id, role_name)
+    )
+  `);
+
+  // Tracks where menus are published (for update/cleanup)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS role_menu_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      menu_id INTEGER NOT NULL,
+      guild_id TEXT NOT NULL,
+      channel_id TEXT NOT NULL,
+      message_id TEXT NOT NULL,
+      published_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(guild_id, message_id)
+    )
+  `);
+
   db.run(`
     CREATE TABLE IF NOT EXISTS channel_mappings (
       guild_id TEXT NOT NULL,

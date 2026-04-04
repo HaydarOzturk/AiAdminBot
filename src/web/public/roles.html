@@ -176,6 +176,65 @@
     .preset-btn { font-size: 11px; padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-secondary); cursor: pointer; transition: all 0.15s; font-weight: 600; font-family: inherit; }
     .preset-btn:hover { background: rgba(249,115,22,0.06); border-color: var(--accent-primary); color: var(--text-primary); }
     .preset-btn.active { background: rgba(249,115,22,0.1); border-color: var(--accent-primary); color: var(--accent-primary); box-shadow: 0 0 0 1px rgba(249,115,22,0.2); }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 2px solid var(--border-color); padding-bottom: 0; }
+    .tab { font-size: 14px; font-weight: 600; padding: 10px 20px; border: none; background: none; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s; font-family: inherit; }
+    .tab:hover { color: var(--text-primary); background: var(--bg-tertiary); border-radius: 8px 8px 0 0; }
+    .tab.active { color: var(--accent-primary); border-bottom-color: var(--accent-primary); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* ── Role Menu tab styles ─────────────────────────── */
+    .menu-layout { display: grid; grid-template-columns: 320px 1fr; gap: 20px; min-height: calc(100vh - 200px); }
+    @media (max-width: 900px) { .menu-layout { grid-template-columns: 1fr; } }
+
+    .menu-item {
+      display: flex; align-items: center; gap: 10px; padding: 12px 14px;
+      border-radius: 10px; cursor: pointer; transition: all 0.15s; margin-bottom: 2px;
+    }
+    .menu-item:hover { background: var(--bg-tertiary); }
+    .menu-item.selected { background: rgba(249,115,22,0.08); border-left: 3px solid var(--accent-primary); padding-left: 11px; }
+    .menu-item-info { flex: 1; min-width: 0; }
+    .menu-item-title { font-size: 14px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .menu-item-meta { font-size: 11px; color: var(--text-muted); display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .menu-detail-section { margin-bottom: 24px; }
+    .menu-detail-section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 10px; }
+    .menu-form-group { margin-bottom: 14px; }
+    .menu-form-group label { font-size: 13px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px; }
+    .menu-form-group input[type="text"], .menu-form-group textarea, .menu-form-group select {
+      width: 100%; font-size: 13px; padding: 8px 12px; border-radius: 8px;
+      border: 1px solid var(--border-color); background: var(--bg-tertiary);
+      font-family: inherit; color: var(--text-primary); transition: border-color 0.2s;
+    }
+    .menu-form-group input:focus, .menu-form-group textarea:focus, .menu-form-group select:focus { outline: none; border-color: var(--accent-primary); }
+    .menu-form-group textarea { resize: vertical; min-height: 60px; }
+
+    .menu-role-item {
+      display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+      border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 6px;
+      background: var(--bg-card); transition: all 0.15s;
+    }
+    .menu-role-item:hover { border-color: var(--accent-primary); }
+    .menu-role-emoji { font-size: 18px; width: 24px; text-align: center; }
+    .menu-role-name { flex: 1; font-size: 13px; font-weight: 500; color: var(--text-primary); }
+    .menu-role-color { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border-color); flex-shrink: 0; }
+    .menu-role-remove { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px; padding: 2px 6px; border-radius: 4px; }
+    .menu-role-remove:hover { background: rgba(239,68,68,0.1); color: var(--accent-danger); }
+
+    .published-item {
+      display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+      border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 6px;
+      background: var(--bg-card); font-size: 13px;
+    }
+    .published-item .channel-name { flex: 1; color: var(--text-primary); font-weight: 500; }
+    .published-item .pub-date { color: var(--text-muted); font-size: 11px; }
+
+    .publish-row { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+    .publish-row select { flex: 1; }
+
+    .menu-actions-bar { display: flex; gap: 8px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-color); }
   </style>
 </head>
 <body>
@@ -209,10 +268,19 @@
     <div class="main-content">
       <div class="content-header">
         <h1 class="content-title">Role Management</h1>
-        <button class="btn btn-primary" onclick="showCreatePanel()">+ New Role</button>
+        <div id="header-actions">
+          <button class="btn btn-primary" id="header-btn-new-role" onclick="showCreatePanel()">+ New Role</button>
+          <button class="btn btn-primary" id="header-btn-new-menu" onclick="showCreateMenuPanel()" style="display:none;">+ New Menu</button>
+        </div>
       </div>
 
       <div class="content-area">
+        <div class="tabs">
+          <button class="tab active" onclick="switchTab('roles')">Roles</button>
+          <button class="tab" onclick="switchTab('menus')">Role Menus</button>
+        </div>
+
+        <div id="tab-roles" class="tab-content active">
         <div class="roles-layout">
           <!-- Left: Role List -->
           <div class="role-list-panel">
@@ -356,6 +424,138 @@
             </div>
           </div>
         </div>
+        </div><!-- /tab-roles -->
+
+        <div id="tab-menus" class="tab-content">
+          <div class="menu-layout">
+            <!-- Left: Menu List -->
+            <div class="role-list-panel">
+              <div class="role-list-header">
+                <h3>Menus</h3>
+                <input type="text" id="menu-search" placeholder="Search..." oninput="filterMenus()">
+              </div>
+              <div class="role-list-scroll" id="menu-list">
+                <div style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px;">Loading menus...</div>
+              </div>
+            </div>
+
+            <!-- Right: Menu Detail -->
+            <div class="role-detail-panel" id="menu-detail-panel">
+              <!-- Empty state -->
+              <div id="menu-detail-empty" class="detail-empty">
+                <div class="icon">📋</div>
+                <h2 style="color: var(--text-primary); margin-bottom: 8px;">Select a Menu</h2>
+                <p style="font-size: 13px;">Click a role menu to view and edit its settings, roles, and published locations.</p>
+              </div>
+
+              <!-- Menu Editor -->
+              <div id="menu-detail-content" style="display: none;" class="role-detail-content">
+                <div class="role-detail-header">
+                  <div class="role-detail-color" id="md-color" style="background: #5865f2;"></div>
+                  <div class="role-detail-title">
+                    <h2 id="md-title-display">Menu Title</h2>
+                    <div class="meta-row">
+                      <span id="md-slug"></span>
+                      <span id="md-item-count"></span>
+                    </div>
+                  </div>
+                  <div class="role-detail-actions">
+                    <button class="btn btn-danger btn-small" onclick="deleteMenuAction()">Delete</button>
+                  </div>
+                </div>
+
+                <!-- Settings -->
+                <div class="menu-detail-section">
+                  <div class="menu-detail-section-title">Settings</div>
+                  <div class="menu-form-group">
+                    <label>Title</label>
+                    <input type="text" id="md-title" placeholder="Menu title">
+                  </div>
+                  <div class="menu-form-group">
+                    <label>Description</label>
+                    <textarea id="md-description" placeholder="Description shown in the embed"></textarea>
+                  </div>
+                  <div class="menu-form-group">
+                    <label>Color</label>
+                    <div class="color-input-wrap">
+                      <input type="color" id="md-color-picker" value="#5865f2">
+                      <span class="color-hex" id="md-color-hex">#5865f2</span>
+                    </div>
+                  </div>
+                  <div class="props-grid">
+                    <div class="prop-card">
+                      <label for="md-single-select"><span class="prop-icon">1️⃣</span> Single select</label>
+                      <label class="toggle"><input type="checkbox" id="md-single-select"><span class="toggle-slider"></span></label>
+                    </div>
+                    <div class="prop-card">
+                      <label><span class="prop-icon">🔒</span> Required role</label>
+                      <select id="md-required-role" style="max-width:180px;font-size:12px;padding:4px 8px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-tertiary);color:var(--text-primary);font-family:inherit;">
+                        <option value="">None (anyone)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Roles in this menu -->
+                <div class="menu-detail-section">
+                  <div class="menu-detail-section-title">Roles <span id="md-roles-count" class="count"></span></div>
+                  <div id="md-roles-list"></div>
+                  <div style="margin-top: 10px; padding: 12px; border: 1px dashed var(--border-color); border-radius: 8px;">
+                    <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Add a role</div>
+                    <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                      <input type="text" id="md-add-role-name" placeholder="Role name" style="flex:1;min-width:120px;font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-tertiary);color:var(--text-primary);font-family:inherit;">
+                      <input type="text" id="md-add-role-emoji" placeholder="Emoji" style="width:60px;font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-tertiary);color:var(--text-primary);">
+                      <input type="color" id="md-add-role-color" value="#99aab5" style="width:32px;height:32px;border:none;border-radius:6px;cursor:pointer;padding:0;background:none;">
+                      <button class="btn btn-primary btn-small" onclick="addMenuItemAction()" style="font-size:12px;padding:6px 12px;">Add</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Published Locations -->
+                <div class="menu-detail-section">
+                  <div class="menu-detail-section-title">Published Locations <span id="md-pub-count" class="count"></span></div>
+                  <div id="md-published-list"></div>
+                  <div class="publish-row">
+                    <select id="md-publish-channel" style="font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-tertiary);color:var(--text-primary);font-family:inherit;">
+                      <option value="">Select channel...</option>
+                    </select>
+                    <button class="btn btn-primary btn-small" onclick="publishMenuAction()" style="font-size:12px;padding:6px 12px;">Publish</button>
+                  </div>
+                </div>
+
+                <!-- Save / Actions -->
+                <div class="menu-actions-bar">
+                  <button class="btn btn-primary" onclick="saveMenuAction()">Save Changes</button>
+                  <button class="btn btn-secondary" onclick="seedFromConfigAction()">Seed from Config</button>
+                </div>
+              </div>
+
+              <!-- Create Menu Panel -->
+              <div id="menu-create-panel" style="display: none;" class="role-detail-content">
+                <div class="role-detail-header">
+                  <div class="role-detail-color" style="background: #5865f2;"></div>
+                  <div class="role-detail-title">
+                    <h2>Create New Role Menu</h2>
+                    <div class="meta-row"><span>Set up a self-assign role menu</span></div>
+                  </div>
+                  <button class="btn btn-secondary btn-small" onclick="hideCreateMenuPanel()">Cancel</button>
+                </div>
+                <form id="create-menu-form" class="create-form">
+                  <div class="form-group">
+                    <label>Slug (unique ID, no spaces)</label>
+                    <input type="text" id="cm-slug" required placeholder="e.g. game-roles, color-roles">
+                  </div>
+                  <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" id="cm-title" required placeholder="e.g. 🎮 Game Roles">
+                  </div>
+                  <button type="submit" class="btn btn-primary" style="width: 100%;">Create Menu</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div><!-- /tab-menus -->
+
       </div>
     </div>
   </div>
@@ -887,6 +1087,354 @@
     document.getElementById('logout-btn').addEventListener('click', async () => {
       try { await api('/api/auth/logout', { method: 'POST' }); } catch {}
       window.location.href = '/login.html';
+    });
+
+    // ── Tab Switching ─────────────────────────────────────���─────────────
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      document.getElementById('tab-' + tabName).classList.add('active');
+      document.querySelector(`.tab[onclick="switchTab('${tabName}')"]`).classList.add('active');
+
+      // Toggle header buttons
+      document.getElementById('header-btn-new-role').style.display = tabName === 'roles' ? '' : 'none';
+      document.getElementById('header-btn-new-menu').style.display = tabName === 'menus' ? '' : 'none';
+
+      if (tabName === 'menus' && allMenus.length === 0) loadMenus();
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // ROLE MENUS TAB
+    // ══════════════════════════════════════════════════════════════════════
+
+    let allMenus = [];
+    let selectedMenuId = null;
+    let selectedMenuData = null;
+    let allChannels = [];
+
+    async function loadMenus() {
+      try {
+        const guildId = getCurrentGuild();
+        if (!guildId) return;
+        const data = await api(`/api/guilds/${guildId}/role-menus`);
+        allMenus = data.menus || [];
+        renderMenuList();
+      } catch (err) {
+        console.error('Failed to load menus:', err);
+        showToast('Failed to load role menus', 'error');
+      }
+    }
+
+    function filterMenus() { renderMenuList(); }
+
+    function renderMenuList() {
+      const list = document.getElementById('menu-list');
+      const search = (document.getElementById('menu-search')?.value || '').toLowerCase();
+      const filtered = search ? allMenus.filter(m => m.title.toLowerCase().includes(search) || m.slug.toLowerCase().includes(search)) : allMenus;
+
+      list.innerHTML = '';
+      if (filtered.length === 0) {
+        list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px;">No menus found. Click "+ New Menu" to create one.</div>';
+        return;
+      }
+
+      filtered.forEach(menu => {
+        const div = document.createElement('div');
+        div.className = 'menu-item' + (selectedMenuId === menu.id ? ' selected' : '');
+        div.onclick = () => selectMenu(menu.id);
+
+        let badges = '';
+        if (menu.single_select) badges += '<span class="role-mini-badge">1:1</span>';
+        if (menu.required_role_id) badges += '<span class="role-mini-badge managed">REQ</span>';
+
+        div.innerHTML = `
+          <div class="menu-item-info">
+            <div class="menu-item-title">${escapeHtml(menu.title)}</div>
+            <div class="menu-item-meta">
+              <span>${escapeHtml(menu.slug)}</span>
+              <span>${menu.item_count || 0} roles</span>
+            </div>
+          </div>
+          <div class="role-item-badges">${badges}</div>
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    async function selectMenu(menuId) {
+      selectedMenuId = menuId;
+      renderMenuList();
+
+      const guildId = getCurrentGuild();
+      if (!guildId) return;
+
+      try {
+        const data = await api(`/api/guilds/${guildId}/role-menus/${menuId}`);
+        selectedMenuData = data.menu;
+
+        document.getElementById('menu-detail-empty').style.display = 'none';
+        document.getElementById('menu-create-panel').style.display = 'none';
+        document.getElementById('menu-detail-content').style.display = 'block';
+
+        // Fill fields
+        document.getElementById('md-title-display').textContent = selectedMenuData.title;
+        document.getElementById('md-slug').textContent = selectedMenuData.slug;
+        document.getElementById('md-item-count').textContent = `${selectedMenuData.items?.length || 0} roles`;
+        document.getElementById('md-title').value = selectedMenuData.title;
+        document.getElementById('md-description').value = selectedMenuData.description || '';
+        document.getElementById('md-color-picker').value = selectedMenuData.color || '#5865f2';
+        document.getElementById('md-color-hex').textContent = selectedMenuData.color || '#5865f2';
+        document.getElementById('md-color').style.background = selectedMenuData.color || '#5865f2';
+        document.getElementById('md-single-select').checked = !!selectedMenuData.single_select;
+
+        // Load guild roles for required-role dropdown
+        await loadRequiredRoleDropdown(selectedMenuData.required_role_id);
+
+        // Render items
+        renderMenuItems(selectedMenuData.items || []);
+
+        // Render published messages
+        renderPublishedMessages(selectedMenuData.messages || []);
+
+        // Load channels for publish dropdown
+        await loadChannelDropdown();
+      } catch (err) {
+        showToast('Failed to load menu details', 'error');
+      }
+    }
+
+    async function loadRequiredRoleDropdown(currentRoleId) {
+      const select = document.getElementById('md-required-role');
+      select.innerHTML = '<option value="">None (anyone)</option>';
+      try {
+        const guildId = getCurrentGuild();
+        const data = await api(`/api/guilds/${guildId}/roles`);
+        (data.roles || []).forEach(r => {
+          const opt = document.createElement('option');
+          opt.value = r.id;
+          opt.textContent = r.name;
+          if (r.id === currentRoleId) opt.selected = true;
+          select.appendChild(opt);
+        });
+      } catch {}
+    }
+
+    async function loadChannelDropdown() {
+      const select = document.getElementById('md-publish-channel');
+      select.innerHTML = '<option value="">Select channel...</option>';
+      try {
+        const guildId = getCurrentGuild();
+        const data = await api(`/api/guilds/${guildId}/channels`);
+        allChannels = data.channels || [];
+        allChannels.filter(c => c.type === 0).forEach(ch => {
+          const opt = document.createElement('option');
+          opt.value = ch.id;
+          opt.textContent = '#' + ch.name;
+          select.appendChild(opt);
+        });
+      } catch {}
+    }
+
+    function renderMenuItems(items) {
+      const container = document.getElementById('md-roles-list');
+      document.getElementById('md-roles-count').textContent = `(${items.length}/25)`;
+      container.innerHTML = '';
+
+      items.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'menu-role-item';
+        div.innerHTML = `
+          <span class="menu-role-emoji">${item.emoji || '▪️'}</span>
+          <span class="menu-role-name">${escapeHtml(item.role_name)}</span>
+          <div class="menu-role-color" style="background: ${item.color || '#99aab5'};"></div>
+          <button class="menu-role-remove" onclick="removeMenuItemAction(${item.id})" title="Remove">&times;</button>
+        `;
+        container.appendChild(div);
+      });
+
+      if (items.length === 0) {
+        container.innerHTML = '<div style="padding:12px;text-align:center;color:var(--text-muted);font-size:13px;">No roles added yet</div>';
+      }
+    }
+
+    function renderPublishedMessages(messages) {
+      const container = document.getElementById('md-published-list');
+      document.getElementById('md-pub-count').textContent = `(${messages.length})`;
+      container.innerHTML = '';
+
+      messages.forEach(msg => {
+        const ch = allChannels.find(c => c.id === msg.channel_id);
+        const div = document.createElement('div');
+        div.className = 'published-item';
+        div.innerHTML = `
+          <span class="channel-name">#${ch ? escapeHtml(ch.name) : msg.channel_id}</span>
+          <span class="pub-date">${msg.published_at ? formatDate(msg.published_at) : ''}</span>
+          <button class="btn btn-danger btn-small" onclick="unpublishMessageAction(${msg.id})" style="font-size:11px;padding:3px 8px;">Unpublish</button>
+        `;
+        container.appendChild(div);
+      });
+
+      if (messages.length === 0) {
+        container.innerHTML = '<div style="padding:12px;text-align:center;color:var(--text-muted);font-size:13px;">Not published anywhere yet</div>';
+      }
+    }
+
+    // ── Menu CRUD actions ────────────────────────────────────────────────
+
+    async function saveMenuAction() {
+      if (!selectedMenuId) return;
+      const guildId = getCurrentGuild();
+
+      const body = {
+        title: document.getElementById('md-title').value,
+        description: document.getElementById('md-description').value,
+        color: document.getElementById('md-color-picker').value,
+        singleSelect: document.getElementById('md-single-select').checked,
+        requiredRoleId: document.getElementById('md-required-role').value || null,
+      };
+
+      try {
+        await api(`/api/guilds/${guildId}/role-menus/${selectedMenuId}`, {
+          method: 'PUT',
+          body: JSON.stringify(body),
+        });
+        showToast('Menu saved', 'success');
+        await loadMenus();
+        selectMenu(selectedMenuId);
+      } catch (err) {
+        showToast('Failed to save: ' + (err.message || 'Unknown error'), 'error');
+      }
+    }
+
+    async function deleteMenuAction() {
+      if (!selectedMenuData) return;
+      if (!await showConfirm(`Delete "${selectedMenuData.title}"? Published messages will stop working.`, { title: 'Delete Menu', danger: true })) return;
+
+      const guildId = getCurrentGuild();
+      try {
+        await api(`/api/guilds/${guildId}/role-menus/${selectedMenuId}`, { method: 'DELETE' });
+        showToast('Menu deleted', 'success');
+        selectedMenuId = null;
+        selectedMenuData = null;
+        document.getElementById('menu-detail-content').style.display = 'none';
+        document.getElementById('menu-detail-empty').style.display = '';
+        await loadMenus();
+      } catch (err) { showToast('Failed to delete: ' + err.message, 'error'); }
+    }
+
+    async function addMenuItemAction() {
+      if (!selectedMenuId) return;
+      const guildId = getCurrentGuild();
+
+      const roleName = document.getElementById('md-add-role-name').value.trim();
+      if (!roleName) { showToast('Enter a role name', 'warning'); return; }
+
+      const emoji = document.getElementById('md-add-role-emoji').value.trim() || null;
+      const color = document.getElementById('md-add-role-color').value;
+
+      try {
+        await api(`/api/guilds/${guildId}/role-menus/${selectedMenuId}/items`, {
+          method: 'POST',
+          body: JSON.stringify({ roleName, emoji, color }),
+        });
+        document.getElementById('md-add-role-name').value = '';
+        document.getElementById('md-add-role-emoji').value = '';
+        showToast(`Added "${roleName}"`, 'success');
+        await selectMenu(selectedMenuId);
+      } catch (err) { showToast('Failed: ' + (err.message || err.error || 'Error'), 'error'); }
+    }
+
+    async function removeMenuItemAction(itemId) {
+      if (!selectedMenuId) return;
+      const guildId = getCurrentGuild();
+
+      try {
+        await api(`/api/guilds/${guildId}/role-menus/${selectedMenuId}/items/${itemId}`, { method: 'DELETE' });
+        showToast('Role removed', 'success');
+        await selectMenu(selectedMenuId);
+      } catch (err) { showToast('Failed: ' + err.message, 'error'); }
+    }
+
+    async function publishMenuAction() {
+      if (!selectedMenuId) return;
+      const channelId = document.getElementById('md-publish-channel').value;
+      if (!channelId) { showToast('Select a channel', 'warning'); return; }
+
+      const guildId = getCurrentGuild();
+      try {
+        await api(`/api/guilds/${guildId}/role-menus/${selectedMenuId}/publish`, {
+          method: 'POST',
+          body: JSON.stringify({ channelId }),
+        });
+        showToast('Menu published!', 'success');
+        await selectMenu(selectedMenuId);
+      } catch (err) { showToast('Failed to publish: ' + (err.message || err.error || 'Error'), 'error'); }
+    }
+
+    async function unpublishMessageAction(msgId) {
+      if (!selectedMenuId) return;
+      if (!await showConfirm('Unpublish this message? It will be deleted from the channel.', { title: 'Unpublish', warning: true })) return;
+
+      const guildId = getCurrentGuild();
+      try {
+        await api(`/api/guilds/${guildId}/role-menus/${selectedMenuId}/messages/${msgId}`, { method: 'DELETE' });
+        showToast('Unpublished', 'success');
+        await selectMenu(selectedMenuId);
+      } catch (err) { showToast('Failed: ' + err.message, 'error'); }
+    }
+
+    async function seedFromConfigAction() {
+      const guildId = getCurrentGuild();
+      if (!guildId) return;
+      try {
+        await api(`/api/guilds/${guildId}/role-menus/seed`, { method: 'POST' });
+        showToast('Seeded from config', 'success');
+        await loadMenus();
+      } catch (err) { showToast('Seed failed: ' + err.message, 'error'); }
+    }
+
+    // ── Create Menu ──────────────────────────────────────────────────────
+
+    function showCreateMenuPanel() {
+      selectedMenuId = null;
+      selectedMenuData = null;
+      renderMenuList();
+      document.getElementById('menu-detail-empty').style.display = 'none';
+      document.getElementById('menu-detail-content').style.display = 'none';
+      document.getElementById('menu-create-panel').style.display = 'block';
+    }
+
+    function hideCreateMenuPanel() {
+      document.getElementById('menu-create-panel').style.display = 'none';
+      document.getElementById('menu-detail-empty').style.display = '';
+    }
+
+    document.getElementById('create-menu-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const guildId = getCurrentGuild();
+      if (!guildId) { showToast('Select a guild first', 'warning'); return; }
+
+      const slug = document.getElementById('cm-slug').value.trim();
+      const title = document.getElementById('cm-title').value.trim();
+
+      try {
+        const result = await api(`/api/guilds/${guildId}/role-menus`, {
+          method: 'POST',
+          body: JSON.stringify({ slug, title }),
+        });
+        showToast(`Menu "${title}" created`, 'success');
+        document.getElementById('create-menu-form').reset();
+        hideCreateMenuPanel();
+        await loadMenus();
+        if (result.menu?.id) selectMenu(result.menu.id);
+      } catch (err) { showToast('Failed: ' + (err.message || err.error || 'Error'), 'error'); }
+    });
+
+    // Color picker sync
+    document.getElementById('md-color-picker').addEventListener('input', () => {
+      const v = document.getElementById('md-color-picker').value;
+      document.getElementById('md-color-hex').textContent = v;
+      document.getElementById('md-color').style.background = v;
     });
 
     // ── Init ─────────────────────────────────────────────────────────────
