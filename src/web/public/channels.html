@@ -174,9 +174,9 @@
     .setup-card.partial  { border-left-color: var(--accent-warning); }
     .setup-card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
     .setup-card-icon { font-size: 26px; }
-    .setup-card-title { font-size: 16px; font-weight: 700; color: var(--text-primary); }
+    .setup-card-title { font-size: 16px; font-weight: 700; color: var(--text-primary); flex: 1; }
     .setup-card-status {
-      margin-left: auto; font-size: 11px; font-weight: 600; padding: 4px 12px;
+      font-size: 11px; font-weight: 600; padding: 4px 12px;
       border-radius: 12px; white-space: nowrap;
     }
     .setup-card-status.active { background: rgba(34,197,94,0.1); color: var(--accent-success); }
@@ -187,13 +187,36 @@
     .setup-ch-chip {
       font-size: 11px; padding: 4px 10px; border-radius: 8px;
       display: flex; align-items: center; gap: 4px; font-weight: 500;
+      cursor: default; position: relative;
     }
     .setup-ch-chip.exists  { background: rgba(34,197,94,0.08); color: var(--accent-success); }
     .setup-ch-chip.missing { background: var(--bg-tertiary); color: var(--text-muted); }
     .setup-ch-chip .ch-icon { font-size: 12px; }
-    .setup-card-footer { display: flex; align-items: center; gap: 10px; }
-    .setup-card-footer .btn { font-size: 13px; padding: 8px 18px; }
+    .setup-ch-chip .chip-delete {
+      display: none; cursor: pointer; margin-left: 4px; font-size: 13px; opacity: 0.6;
+      color: var(--accent-danger); font-weight: 700;
+    }
+    .setup-ch-chip.exists:hover .chip-delete { display: inline; }
+    .setup-ch-chip.exists:hover { background: rgba(34,197,94,0.15); }
+    .setup-card-footer { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .setup-card-footer .btn { font-size: 12px; padding: 6px 14px; }
     .setup-card-extra { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+    .btn-danger { background: var(--accent-danger); color: #fff; border: none; border-radius: 8px; cursor: pointer; }
+    .btn-danger:hover { filter: brightness(1.1); }
+    .btn-outline {
+      background: transparent; color: var(--text-secondary); border: 1px solid var(--border-color);
+      border-radius: 8px; cursor: pointer;
+    }
+    .btn-outline:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+    .setup-card-actions { display: flex; gap: 6px; margin-left: auto; }
+    .setup-card-actions .btn-icon {
+      background: transparent; border: 1px solid var(--border-color); color: var(--text-muted);
+      width: 30px; height: 30px; border-radius: 8px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-size: 14px;
+      transition: all 0.15s;
+    }
+    .setup-card-actions .btn-icon:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+    .setup-card-actions .btn-icon.danger:hover { background: rgba(239,68,68,0.1); color: var(--accent-danger); border-color: var(--accent-danger); }
   </style>
 </head>
 <body>
@@ -1055,6 +1078,7 @@
 
         const isComplete = g.complete;
         const isPartial = !isComplete && g.existingCount > 0;
+        const hasAny = g.existingCount > 0;
         const statusClass = isComplete ? 'complete' : isPartial ? 'partial' : '';
         const statusLabel = isComplete ? 'Active' : isPartial ? `${g.existingCount}/${g.totalCount}` : 'Missing';
         const statusBadge = isComplete ? 'active' : isPartial ? 'partial-status' : 'missing';
@@ -1067,7 +1091,8 @@
         const chipsHtml = g.channels.map(ch => {
           const icon = ch.type === 'voice' ? '🔊' : '#';
           const cls = ch.exists ? 'exists' : 'missing';
-          return `<span class="setup-ch-chip ${cls}"><span class="ch-icon">${icon}</span>${escapeHtml(ch.name)}</span>`;
+          const deleteBtn = ch.exists ? `<span class="chip-delete" onclick="event.stopPropagation();deleteSetupChannel('${key}','${escapeHtml(ch.name)}')" title="Delete channel">×</span>` : '';
+          return `<span class="setup-ch-chip ${cls}"><span class="ch-icon">${icon}</span>${escapeHtml(ch.name)}${deleteBtn}</span>`;
         }).join('');
 
         const card = document.createElement('div');
@@ -1077,14 +1102,18 @@
             <span class="setup-card-icon">${g.icon}</span>
             <span class="setup-card-title">${escapeHtml(g.label)}</span>
             <span class="setup-card-status ${statusBadge}">${statusLabel}</span>
+            ${hasAny ? `<div class="setup-card-actions">
+              <button class="btn-icon danger" onclick="deleteChannelGroup('${key}')" title="Delete all channels in this group">🗑</button>
+            </div>` : ''}
           </div>
           <div class="setup-card-desc">${escapeHtml(g.description)}</div>
           <div class="setup-card-channels">${chipsHtml}</div>
           <div class="setup-card-footer">
             ${isComplete
-              ? '<span style="color:#57f287;font-size:13px;font-weight:600;">✓ All channels ready</span>'
+              ? `<span style="color:#57f287;font-size:13px;font-weight:600;">✓ All channels ready</span>`
               : `<button class="btn btn-primary" onclick="createChannelGroup('${key}', this)">${isPartial ? 'Create Missing' : 'Create'}</button>`
             }
+            ${hasAny ? `<button class="btn btn-outline" onclick="addChannelToGroup('${key}')">+ Add Channel</button>` : ''}
             ${extraInfo ? `<span class="setup-card-extra">${extraInfo}</span>` : ''}
           </div>
         `;
@@ -1112,7 +1141,6 @@
           : result.message || 'Channels already exist';
 
         showToast(msg, 'success');
-        // Refresh both views
         loadQuickSetupStatus();
         loadChannels();
       } catch (err) {
@@ -1120,6 +1148,79 @@
         btn.disabled = false;
         btn.textContent = originalText;
       }
+    }
+
+    async function deleteChannelGroup(groupKey) {
+      const guildId = getCurrentGuild();
+      if (!guildId) return;
+
+      const g = setupStatusCache?.[groupKey];
+      const label = g?.label || groupKey;
+      if (!confirm(`Delete ALL channels in "${label}"? This will remove ${g?.existingCount || 0} channel(s) and the category.`)) return;
+
+      try {
+        const result = await api(`/api/guilds/${guildId}/setup/channel-group`, {
+          method: 'DELETE',
+          body: JSON.stringify({ group: groupKey, deleteCategory: true }),
+        });
+        showToast(`Deleted ${result.deleted} channel(s) from ${label}`, 'success');
+        loadQuickSetupStatus();
+        loadChannels();
+      } catch (err) {
+        showToast('Failed: ' + (err.message || 'Unknown error'), 'error');
+      }
+    }
+
+    async function deleteSetupChannel(groupKey, channelName) {
+      const guildId = getCurrentGuild();
+      if (!guildId) return;
+
+      if (!confirm(`Delete #${channelName}?`)) return;
+
+      try {
+        // Find the channel ID from the guild's channel list
+        const channelsData = await api(`/api/guilds/${guildId}/channels`);
+        const ch = channelsData.find(c => c.name.toLowerCase() === channelName.toLowerCase());
+        if (!ch) { showToast('Channel not found', 'error'); return; }
+
+        await api(`/api/guilds/${guildId}/setup/channel`, {
+          method: 'DELETE',
+          body: JSON.stringify({ channelId: ch.id }),
+        });
+        showToast(`Deleted #${channelName}`, 'success');
+        loadQuickSetupStatus();
+        loadChannels();
+      } catch (err) {
+        showToast('Failed: ' + (err.message || 'Unknown error'), 'error');
+      }
+    }
+
+    function addChannelToGroup(groupKey) {
+      const g = setupStatusCache?.[groupKey];
+      if (!g) return;
+
+      const name = prompt(`Enter name for new channel in "${g.label}":`);
+      if (!name || !name.trim()) return;
+
+      const type = prompt('Channel type? (text or voice)', 'text');
+      if (type !== 'text' && type !== 'voice') { showToast('Type must be "text" or "voice"', 'warning'); return; }
+
+      const guildId = getCurrentGuild();
+      if (!guildId) return;
+
+      // Create channel in the group's category
+      api(`/api/guilds/${guildId}/channels`, {
+        method: 'POST',
+        body: JSON.stringify({
+          name: name.trim(),
+          type: type === 'voice' ? 2 : 0,
+          parentName: g.categoryName,
+        }),
+      }).then(() => {
+        showToast(`Created #${name.trim()} in ${g.label}`, 'success');
+        loadQuickSetupStatus();
+        loadChannels();
+      }).catch(err => showToast('Failed: ' + (err.message || 'Unknown error'), 'error'));
     }
 
     // ── Init ──────────────────────────────────────────────────────────────
