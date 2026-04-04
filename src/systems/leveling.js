@@ -10,16 +10,12 @@ const config = loadConfig('config.json');
 const levelingConfig = config.leveling || {};
 const tiers = levelingConfig.tiers || [];
 
-// ── XP Settings ───────────────────────────────────────────────────────────
-// Message XP: 0.1 – 0.3 per message, daily cap 20
-const MSG_XP_MIN = 0.1;
-const MSG_XP_MAX = 0.3;
-const MSG_XP_DAILY_CAP = 20;
-
-// Voice XP: 3 per hour (handled in voiceXp.js), daily cap 50
-const VOICE_XP_DAILY_CAP = 50;
-
-const cooldownMs = levelingConfig.xpCooldown || 60000;
+// ── XP Settings (configurable via .env, fallback to defaults) ─────────────
+const MSG_XP_MIN = parseFloat(process.env.MSG_XP_MIN) || 0.1;
+const MSG_XP_MAX = parseFloat(process.env.MSG_XP_MAX) || 0.3;
+const MSG_XP_DAILY_CAP = parseInt(process.env.MSG_XP_DAILY_CAP) || 20;
+const VOICE_XP_DAILY_CAP = parseInt(process.env.VOICE_XP_DAILY_CAP) || 50;
+const cooldownMs = (parseInt(process.env.MSG_XP_COOLDOWN) || 60) * 1000;
 
 // In-memory cooldown tracker (userId-guildId -> lastXpTimestamp)
 const cooldowns = new Map();
