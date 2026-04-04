@@ -815,9 +815,9 @@
       showToast(`Added ${role ? role.name : 'role'} to permissions`, 'info');
     }
 
-    function removeOverwrite(owIdx) {
+    async function removeOverwrite(owIdx) {
       const ow = currentOverwrites[owIdx];
-      if (!confirm(`Remove all permission overwrites for ${ow.name}?`)) return;
+      if (!await showConfirm(`Remove all permission overwrites for ${ow.name}?`, { title: 'Remove Permissions', danger: true, confirmText: 'Remove' })) return;
       currentOverwrites.splice(owIdx, 1);
       renderPermissionEditor();
     }
@@ -853,7 +853,7 @@
 
     // ── Delete Channel ────────────────────────────────────────────────────
     async function confirmDeleteChannel(channelId, channelName) {
-      if (!confirm(`Delete #${channelName}? This cannot be undone.`)) return;
+      if (!await showConfirm(`Delete #${channelName}? This cannot be undone.`, { title: 'Delete Channel', danger: true })) return;
 
       try {
         const guildId = getCurrentGuild();
@@ -1192,7 +1192,7 @@
 
       const g = setupStatusCache?.[groupKey];
       const label = g?.label || groupKey;
-      if (!confirm(`Delete ALL channels in "${label}"? This will remove ${g?.existingCount || 0} channel(s) and the category.`)) return;
+      if (!await showConfirm(`Delete ALL channels in "${label}"?\nThis will remove ${g?.existingCount || 0} channel(s) and the category.`, { title: 'Delete Channel Group', danger: true, confirmText: 'Delete All' })) return;
 
       try {
         const result = await api(`/api/guilds/${guildId}/setup/channel-group`, {
@@ -1211,7 +1211,7 @@
       const guildId = getCurrentGuild();
       if (!guildId) return;
 
-      if (!confirm(`Delete #${channelName}?`)) return;
+      if (!await showConfirm(`Delete #${channelName}?`, { title: 'Delete Channel', danger: true })) return;
 
       try {
         // Find the channel ID from the guild's channel list

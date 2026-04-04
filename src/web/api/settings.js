@@ -335,6 +335,9 @@ router.get('/channels', (req, res) => {
       { id: 'verify', feature: 'Verification', description: 'Member verification channel', configKey: null, type: 'locale' },
     ];
 
+    const { channelName: localeName } = require('../../utils/locale');
+    const db = require('../../utils/database');
+
     // Check each channel's existence in all guilds
     const channels = channelDefs.map(def => {
       let currentName = def.id;
@@ -344,15 +347,38 @@ router.get('/channels', (req, res) => {
         currentName = p(def.configKey) || def.default || def.id;
       }
 
-      // Check if channel exists in any guild
+      // Check if channel exists in any guild — try DB mapping, localized name, raw name
       let found = false;
       let foundIn = null;
+      let foundChannelId = null;
+      let assignedViaDb = false;
       if (client) {
-        for (const [, guild] of client.guilds.cache) {
-          const ch = guild.channels.cache.find(c => c.name === currentName && c.isTextBased());
+        for (const [guildId, guild] of client.guilds.cache) {
+          // 1. Check DB mapping first (manual assignment)
+          const mapping = db.get(
+            'SELECT channel_id, channel_name FROM channel_mappings WHERE guild_id = ? AND feature_id = ?',
+            [guildId, def.id]
+          );
+          if (mapping) {
+            const ch = guild.channels.cache.get(mapping.channel_id);
+            if (ch) {
+              found = true;
+              foundIn = `#${ch.name}`;
+              foundChannelId = ch.id;
+              assignedViaDb = true;
+              break;
+            }
+          }
+
+          // 2. Try localized name and raw name
+          const locName = localeName(def.id, guildId);
+          const ch = guild.channels.cache.find(c =>
+            c.isTextBased() && (c.name === currentName || c.name === locName || c.name === def.id)
+          );
           if (ch) {
             found = true;
-            foundIn = guild.name;
+            foundIn = `#${ch.name}`;
+            foundChannelId = ch.id;
             break;
           }
         }
@@ -367,10 +393,24 @@ router.get('/channels', (req, res) => {
         type: def.type,
         found,
         foundIn,
+        foundChannelId,
+        assigned: assignedViaDb,
       };
     });
 
-    res.json({ channels });
+    // Also return all guild text channels for the assign dropdown
+    let allChannels = [];
+    if (client) {
+      for (const [, guild] of client.guilds.cache) {
+        allChannels = guild.channels.cache
+          .filter(c => c.isTextBased() && c.type !== 4)
+          .map(c => ({ id: c.id, name: c.name }))
+          .sort((a, b) => a.name.localeCompare(b.name));
+        break; // first guild
+      }
+    }
+
+    res.json({ channels, allChannels });
   } catch (err) {
     console.error('Channels settings error:', err.message);
     res.status(500).json({ error: 'Failed to load channel settings' });
@@ -413,6 +453,62 @@ router.put('/channels', (req, res) => {
   } catch (err) {
     console.error('Channel settings update error:', err.message);
     res.status(500).json({ error: 'Failed to update channel settings' });
+  }
+});
+
+/**
+ * PUT /api/settings/channels/assign
+ * Assign an existing Discord channel to a bot feature
+ * Body: { featureId: string, channelId: string, guildId: string }
+ */
+router.put('/channels/assign', (req, res) => {
+  try {
+    const { featureId, channelId, guildId } = req.body;
+    if (!featureId || !channelId || !guildId) {
+      return res.status(400).json({ error: 'featureId, channelId, and guildId are required' });
+    }
+
+    const client = req.app.locals.client;
+    const guild = client?.guilds.cache.get(guildId);
+    if (!guild) return res.status(404).json({ error: 'Guild not found' });
+
+    const channel = guild.channels.cache.get(channelId);
+    if (!channel) return res.status(404).json({ error: 'Channel not found' });
+
+    const db = require('../../utils/database');
+    db.run(
+      `INSERT INTO channel_mappings (guild_id, feature_id, channel_id, channel_name)
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT(guild_id, feature_id) DO UPDATE SET channel_id = ?, channel_name = ?`,
+      [guildId, featureId, channelId, channel.name, channelId, channel.name]
+    );
+
+    res.json({ success: true, channelName: channel.name });
+  } catch (err) {
+    console.error('Channel assign error:', err.message);
+    res.status(500).json({ error: 'Failed to assign channel' });
+  }
+});
+
+/**
+ * DELETE /api/settings/channels/assign
+ * Unassign a channel from a bot feature
+ * Body: { featureId: string, guildId: string }
+ */
+router.delete('/channels/assign', (req, res) => {
+  try {
+    const { featureId, guildId } = req.body;
+    if (!featureId || !guildId) {
+      return res.status(400).json({ error: 'featureId and guildId are required' });
+    }
+
+    const db = require('../../utils/database');
+    db.run('DELETE FROM channel_mappings WHERE guild_id = ? AND feature_id = ?', [guildId, featureId]);
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Channel unassign error:', err.message);
+    res.status(500).json({ error: 'Failed to unassign channel' });
   }
 });
 

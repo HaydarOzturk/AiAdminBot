@@ -615,7 +615,7 @@
     }
 
     async function removeWarning(userId) {
-      if (!confirm('Clear all warnings for this user?')) return;
+      if (!await showConfirm('Clear all warnings for this user?', { title: 'Clear Warnings', danger: true, confirmText: 'Clear All' })) return;
 
       try {
         const guildId = getCurrentGuild();
@@ -631,7 +631,7 @@
     }
 
     async function removeBlocklistWord(wordId) {
-      if (!confirm('Remove this word from the blocklist?')) return;
+      if (!await showConfirm('Remove this word from the blocklist?', { title: 'Remove Word', danger: true, confirmText: 'Remove' })) return;
 
       try {
         const guildId = getCurrentGuild();
@@ -660,7 +660,7 @@
         const userId = document.getElementById('warning-user-id').value;
         const reason = document.getElementById('warning-reason').value;
 
-        if (!confirm('Issue warning to this user?')) return;
+        if (!await showConfirm('Issue warning to this user?', { title: 'Issue Warning', warning: true, confirmText: 'Warn', icon: '⚠️' })) return;
 
         await api(`/api/guilds/${guildId}/moderation/warnings`, {
           method: 'POST',
@@ -691,7 +691,7 @@
         const reason = document.getElementById('ban-reason').value;
         const deleteMessageDays = parseInt(document.getElementById('ban-delete-days').value);
 
-        if (!confirm(`Ban user ${userId}? This action cannot be undone.`)) return;
+        if (!await showConfirm(`Ban user ${userId}? This action cannot be undone.`, { title: 'Ban User', danger: true, confirmText: 'Ban' })) return;
 
         await api(`/api/guilds/${guildId}/moderation/ban`, {
           method: 'POST',
@@ -720,7 +720,7 @@
         const userId = document.getElementById('kick-user-id').value;
         const reason = document.getElementById('kick-reason').value;
 
-        if (!confirm(`Kick user ${userId}?`)) return;
+        if (!await showConfirm(`Kick user ${userId}?`, { title: 'Kick User', danger: true, confirmText: 'Kick' })) return;
 
         await api(`/api/guilds/${guildId}/moderation/kick`, {
           method: 'POST',
@@ -750,7 +750,7 @@
         const reason = document.getElementById('timeout-reason').value;
         const duration = parseInt(document.getElementById('timeout-duration').value);
 
-        if (!confirm(`Timeout user ${userId}?`)) return;
+        if (!await showConfirm(`Timeout user ${userId}?`, { title: 'Timeout User', warning: true, confirmText: 'Timeout', icon: '⏱️' })) return;
 
         await api(`/api/guilds/${guildId}/moderation/timeout`, {
           method: 'POST',
@@ -784,7 +784,7 @@
           return;
         }
 
-        if (!confirm(`Clear ${amount} messages from this channel? This action cannot be undone.`)) return;
+        if (!await showConfirm(`Clear ${amount} messages from this channel? This action cannot be undone.`, { title: 'Clear Messages', danger: true, confirmText: 'Clear' })) return;
 
         await api(`/api/guilds/${guildId}/moderation/clear`, {
           method: 'POST',
@@ -817,7 +817,7 @@
           return;
         }
 
-        if (!confirm(`Add "${word}" to the blocklist?`)) return;
+        if (!await showConfirm(`Add "${word}" to the blocklist?`, { title: 'Add to Blocklist', confirmText: 'Add', icon: '🚫' })) return;
 
         await api(`/api/guilds/${guildId}/moderation/blocklist`, {
           method: 'POST',

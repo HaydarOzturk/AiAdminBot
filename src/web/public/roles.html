@@ -500,7 +500,7 @@
 
     // ── Select Role ──────────────────────────────────────────────────────
     async function selectRole(roleId) {
-      if (isDirty && !confirm('You have unsaved changes. Discard them?')) return;
+      if (isDirty && !await showConfirm('You have unsaved changes. Discard them?', { title: 'Unsaved Changes', warning: true, confirmText: 'Discard', icon: '📝' })) return;
       isDirty = false;
 
       selectedRoleId = roleId;
@@ -735,7 +735,7 @@
       const role = allRoles.find(r => r.id === selectedRoleId);
       if (!role) return;
       if (role.managed) { showToast('Cannot delete managed roles', 'warning'); return; }
-      if (!confirm(`Delete "${role.name}"? This cannot be undone.`)) return;
+      if (!await showConfirm(`Delete "${role.name}"? This cannot be undone.`, { title: 'Delete Role', danger: true })) return;
 
       try {
         const guildId = getCurrentGuild();
@@ -796,7 +796,7 @@
         return r ? r.name : id;
       });
 
-      if (!confirm(`Delete ${names.length} role(s)?\n\n${names.join(', ')}\n\nThis cannot be undone.`)) return;
+      if (!await showConfirm(`Delete ${names.length} role(s)?\n\n${names.join(', ')}\n\nThis cannot be undone.`, { title: 'Bulk Delete Roles', danger: true, confirmText: 'Delete All' })) return;
 
       try {
         const guildId = getCurrentGuild();
@@ -831,8 +831,8 @@
     }
 
     // ── Create Role ──────────────────────────────────────────────────────
-    function showCreatePanel() {
-      if (isDirty && !confirm('Discard unsaved changes?')) return;
+    async function showCreatePanel() {
+      if (isDirty && !await showConfirm('Discard unsaved changes?', { title: 'Unsaved Changes', warning: true, confirmText: 'Discard', icon: '📝' })) return;
       isDirty = false;
       selectedRoleId = null;
       renderRoleList();
