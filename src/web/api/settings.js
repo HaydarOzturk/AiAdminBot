@@ -69,12 +69,18 @@ const ENV_SCHEMA = {
       { key: 'AFK_TIMEOUT_MINUTES', label: 'Custom AFK Timeout (minutes)', type: 'number', default: '30', min: '1', max: '120' },
     ],
   },
-  voiceXp: {
-    label: 'Voice XP',
-    icon: '🔊',
+  levelling: {
+    label: 'Levelling',
+    icon: '📈',
     fields: [
-      { key: 'VOICE_XP_INTERVAL', label: 'XP Award Interval (ms)', type: 'number', default: '3600000' },
-      { key: 'VOICE_XP_AMOUNT', label: 'XP Per Interval', type: 'number', default: '3' },
+      { key: 'MSG_XP_MIN', label: 'Message XP — Minimum', type: 'number', step: '0.1', default: '0.1', description: 'Min XP awarded per message' },
+      { key: 'MSG_XP_MAX', label: 'Message XP — Maximum', type: 'number', step: '0.1', default: '0.3', description: 'Max XP awarded per message' },
+      { key: 'MSG_XP_DAILY_CAP', label: 'Message XP — Daily Cap', type: 'number', default: '20', description: 'Max message XP per user per day' },
+      { key: 'MSG_XP_COOLDOWN', label: 'Message XP — Cooldown (seconds)', type: 'number', default: '60', description: 'Seconds between XP gains from messages' },
+      { key: 'VOICE_XP_AMOUNT', label: 'Voice XP — Per Interval', type: 'number', default: '3', description: 'XP awarded per voice interval' },
+      { key: 'VOICE_XP_INTERVAL', label: 'Voice XP — Interval (minutes)', type: 'number', default: '60', description: 'Minutes between voice XP awards' },
+      { key: 'VOICE_XP_DAILY_CAP', label: 'Voice XP — Daily Cap', type: 'number', default: '50', description: 'Max voice XP per user per day' },
+      { key: 'LEVEL_UP_CHANNEL', label: 'Level-Up Announcement Channel', type: 'text', default: 'level-up', description: 'Channel name for level-up messages' },
     ],
   },
   web: {
@@ -295,9 +301,14 @@ router.get('/status', (req, res) => {
         customEnabled: p('AFK_CUSTOM_ENABLED') === 'true',
         timeout: parseInt(p('AFK_TIMEOUT_MINUTES') || '30'),
       },
-      voiceXp: {
-        amount: parseInt(p('VOICE_XP_AMOUNT') || '3'),
-        intervalMinutes: Math.round(parseInt(p('VOICE_XP_INTERVAL') || '3600000') / 60000),
+      levelling: {
+        msgXpMin: parseFloat(p('MSG_XP_MIN') || '0.1'),
+        msgXpMax: parseFloat(p('MSG_XP_MAX') || '0.3'),
+        msgDailyCap: parseInt(p('MSG_XP_DAILY_CAP') || '20'),
+        msgCooldown: parseInt(p('MSG_XP_COOLDOWN') || '60'),
+        voiceAmount: parseInt(p('VOICE_XP_AMOUNT') || '3'),
+        voiceInterval: parseInt(p('VOICE_XP_INTERVAL') || '60'),
+        voiceDailyCap: parseInt(p('VOICE_XP_DAILY_CAP') || '50'),
       },
       web: {
         port: p('WEB_PORT') || 'Not set',

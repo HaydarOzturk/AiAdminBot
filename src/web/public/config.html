@@ -322,8 +322,8 @@
           <button class="settings-tab" data-panel="afk">
             <span class="tab-icon">💤</span>AFK
           </button>
-          <button class="settings-tab" data-panel="voiceXp">
-            <span class="tab-icon">🔊</span>Voice XP
+          <button class="settings-tab" data-panel="levelling">
+            <span class="tab-icon">📈</span>Levelling
           </button>
           <button class="settings-tab" data-panel="web">
             <span class="tab-icon">🌐</span>Dashboard
@@ -357,8 +357,8 @@
         <!-- AFK Panel -->
         <div class="settings-panel" id="panel-afk"></div>
 
-        <!-- Voice XP Panel -->
-        <div class="settings-panel" id="panel-voiceXp"></div>
+        <!-- Levelling Panel -->
+        <div class="settings-panel" id="panel-levelling"></div>
 
         <!-- Web Panel -->
         <div class="settings-panel" id="panel-web"></div>
@@ -411,7 +411,12 @@
           <div class="setting-group">
             <div class="setting-group-title">Raw Configuration (config.json)</div>
             <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">
-              Edit the raw JSON configuration file. Be careful — invalid JSON will not save.
+              This file controls core bot behavior that isn't managed through .env settings:
+              <strong>permission levels</strong> (who can ban/kick/warn),
+              <strong>leveling tiers</strong> (Wood, Iron, Gold rank names and thresholds),
+              <strong>moderation log channels</strong>, and
+              <strong>verification settings</strong>.
+              Edit carefully — invalid JSON will not save.
             </p>
             <textarea id="config-editor" class="code-editor" style="width:100%; min-height:300px; background:#1c1917; color:#d6d3d1; border:1px solid #292524; border-radius:6px; padding:12px; font-family:monospace; font-size:13px; resize:vertical;" required></textarea>
             <div style="display:flex; gap:12px; margin-top:12px;">
@@ -517,7 +522,7 @@
 
           html += `<div class="setting-row">`;
           html += `<div class="setting-label"><strong>${escapeHtml(field.label)}</strong>`;
-          html += `<small>${escapeHtml(field.key)}</small></div>`;
+          html += `<small>${field.description ? escapeHtml(field.description) : escapeHtml(field.key)}</small></div>`;
           html += `<div class="setting-control">`;
 
           if (field.type === 'toggle') {
@@ -757,30 +762,30 @@
           const statusText = ch.found ? `${escapeHtml(ch.foundIn || 'server')}` : 'Missing';
           const isEditable = ch.type === 'env' && ch.configKey;
 
-          html += `<div class="setting-row" style="align-items:center; gap:12px;">`;
+          html += `<div class="setting-row" style="display:grid; grid-template-columns:1fr 180px auto; align-items:center; gap:16px;">`;
 
-          // Left: feature name + description
-          html += `<div style="flex:1; min-width:0;">`;
+          // Col 1: feature name + description
+          html += `<div style="min-width:0;">`;
           html += `<strong>${escapeHtml(ch.feature)}</strong>`;
           html += `<small style="display:block; color:var(--text-muted);">${escapeHtml(ch.description)}</small>`;
           html += `</div>`;
 
-          // Middle: editable input or channel code
-          html += `<div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">`;
+          // Col 2: editable input or channel code (fixed width)
+          html += `<div style="display:flex; align-items:center; justify-content:flex-end;">`;
           if (isEditable) {
             html += `<input type="text" class="setting-input" value="${escapeHtml(ch.currentName)}"
               data-channel-id="${ch.id}" placeholder="${escapeHtml(ch.id)}"
               onchange="trackChannelChange('${ch.id}', this.value)"
-              style="max-width:180px;">`;
+              style="width:170px;">`;
           } else {
             html += `<code style="background:var(--bg-tertiary); padding:4px 10px; border-radius:4px; font-size:13px;">#${escapeHtml(ch.currentName)}</code>`;
           }
           html += `</div>`;
 
-          // Right: status badge + assign button (fixed right)
-          html += `<div style="display:flex; align-items:center; gap:8px; flex-shrink:0; min-width:220px; justify-content:flex-end;">`;
+          // Col 3: assign dropdown / unassign btn + status badge
+          html += `<div style="display:flex; align-items:center; gap:8px; justify-content:flex-end; min-width:200px;">`;
           if (!ch.found) {
-            html += `<select class="setting-input" style="max-width:150px; font-size:12px; padding:4px 8px;" onchange="assignChannel('${ch.id}', this.value)">`;
+            html += `<select class="setting-input" style="width:140px; font-size:12px; padding:4px 8px;" onchange="assignChannel('${ch.id}', this.value)">`;
             html += `<option value="">Assign...</option>`;
             for (const gc of allGuildChannels) {
               html += `<option value="${gc.id}">#${escapeHtml(gc.name)}</option>`;

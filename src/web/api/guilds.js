@@ -1227,7 +1227,8 @@ router.get('/:guildId/config', (req, res) => {
     // Safe env vars (never expose tokens/passwords)
     const safeEnvKeys = ['LOCALE', 'LOG_LEVEL', 'AI_CHAT_ENABLED', 'AI_CHAT_CHANNEL',
       'AI_MODERATION_ENABLED', 'AI_MOD_CONFIDENCE_THRESHOLD', 'AI_TIMEOUT_MINUTES',
-      'WEB_PORT', 'VOICE_XP_INTERVAL', 'VOICE_XP_AMOUNT'];
+      'WEB_PORT', 'VOICE_XP_INTERVAL', 'VOICE_XP_AMOUNT', 'VOICE_XP_DAILY_CAP',
+      'MSG_XP_MIN', 'MSG_XP_MAX', 'MSG_XP_DAILY_CAP', 'MSG_XP_COOLDOWN'];
 
     const env = {};
     safeEnvKeys.forEach(key => {

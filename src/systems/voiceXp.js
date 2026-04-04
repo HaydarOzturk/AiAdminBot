@@ -14,8 +14,8 @@ const { loadConfig } = require('../utils/paths');
 const config = loadConfig('config.json');
 const levelingConfig = config.leveling || {};
 
-// How often to award voice XP (ms) — default 1 hour
-const VOICE_XP_INTERVAL = parseInt(process.env.VOICE_XP_INTERVAL) || 3600000;
+// How often to award voice XP (minutes via env, fallback 60 min)
+const VOICE_XP_INTERVAL = (parseInt(process.env.VOICE_XP_INTERVAL) || 60) * 60000;
 // How much XP to award per interval — 3 XP per hour
 const VOICE_XP_AMOUNT = parseInt(process.env.VOICE_XP_AMOUNT) || 3;
 
