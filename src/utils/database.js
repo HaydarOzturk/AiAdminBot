@@ -327,6 +327,16 @@ async function initDatabase() {
     )
   `);
 
+  db.run(`
+    CREATE TABLE IF NOT EXISTS channel_mappings (
+      guild_id TEXT NOT NULL,
+      feature_id TEXT NOT NULL,
+      channel_id TEXT NOT NULL,
+      channel_name TEXT,
+      PRIMARY KEY (guild_id, feature_id)
+    )
+  `);
+
   // Migration: clean up levels table
   // Fixes two bugs:
   // 1. Old fallback code created duplicate entries for same user+guild
