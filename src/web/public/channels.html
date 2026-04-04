@@ -938,6 +938,10 @@
 
     // ── Create Channel ────────────────────────────────────────────────────
     function showCreateChannelModal() {
+      // If on Quick Setup tab, switch to Channels tab first
+      if (document.getElementById('tab-channels').style.display === 'none') {
+        switchTab('channels');
+      }
       document.getElementById('no-selection').style.display = 'none';
       document.getElementById('channel-detail').style.display = 'none';
       document.getElementById('edit-channel-panel').style.display = 'none';
