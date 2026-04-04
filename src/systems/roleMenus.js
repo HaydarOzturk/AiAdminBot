@@ -234,7 +234,10 @@ function buildMenuComponents(menu, guild) {
 
 /**
  * Send a role menu to a channel (DB-based).
- * If there's already a published message for this menu in the same channel, edits it instead.
+ * Priority order for finding an existing message to edit:
+ * 1. DB-tracked published message in this channel
+ * 2. Scan channel for bot messages with same embed title (catches legacy/untracked messages)
+ * If found, edits it. Otherwise sends a new message.
  * @param {import('discord.js').TextChannel} channel
  * @param {number} menuId
  * @returns {import('discord.js').Message} The sent or edited message
@@ -254,7 +257,7 @@ async function sendRoleMenuById(channel, menuId) {
 
   const { embed, rows } = buildMenuComponents(menu, channel.guild);
 
-  // Check if there's already a published message for this menu in this channel
+  // 1. Check DB for tracked published message in this channel
   const existing = db.get(
     'SELECT * FROM role_menu_messages WHERE menu_id = ? AND channel_id = ?',
     [menuId, channel.id]
@@ -266,12 +269,41 @@ async function sendRoleMenuById(channel, menuId) {
       await msg.edit({ embeds: [embed], components: rows });
       return msg;
     } catch {
-      // Message was deleted — remove stale record and send a new one
+      // Message was deleted — remove stale record
       db.run('DELETE FROM role_menu_messages WHERE id = ?', [existing.id]);
     }
   }
 
-  // Send new message
+  // 2. Scan channel for untracked bot messages with matching embed title or role_ buttons
+  const botId = channel.client.user.id;
+  try {
+    const recentMessages = await channel.messages.fetch({ limit: 50 });
+    for (const [, msg] of recentMessages) {
+      if (msg.author.id !== botId) continue;
+      if (!msg.components?.length) continue;
+
+      // Check if this message has role_ buttons
+      const firstButton = msg.components[0]?.components?.[0];
+      if (!firstButton?.customId?.startsWith('role_')) continue;
+
+      // Match by embed title
+      const embedTitle = msg.embeds?.[0]?.title;
+      if (embedTitle && embedTitle === menu.title) {
+        // Found a matching legacy message — edit it and register it
+        await msg.edit({ embeds: [embed], components: rows });
+        db.run(
+          'INSERT OR REPLACE INTO role_menu_messages (menu_id, guild_id, channel_id, message_id) VALUES (?, ?, ?, ?)',
+          [menuId, channel.guild.id, channel.id, msg.id]
+        );
+        console.log(`  📌 Updated and registered legacy menu message for "${menu.title}" in #${channel.name}`);
+        return msg;
+      }
+    }
+  } catch {
+    // Can't scan — proceed to send new message
+  }
+
+  // 3. No existing message found — send new
   const message = await channel.send({ embeds: [embed], components: rows });
 
   db.run(`
@@ -434,8 +466,16 @@ async function scanAndRegisterLegacyMenus(client, guildId) {
           continue;
         }
 
-        // Legacy string format — map slug to DB menu
-        const dbMenu = getMenuBySlug(guildId, menuKey);
+        // Legacy string format — map slug to DB menu, or match by embed title
+        let dbMenu = getMenuBySlug(guildId, menuKey);
+        if (!dbMenu) {
+          // Try matching by embed title
+          const embedTitle = msg.embeds?.[0]?.title;
+          if (embedTitle) {
+            const allMenus = getMenusForGuild(guildId);
+            dbMenu = allMenus.find(m => m.title === embedTitle);
+          }
+        }
         if (!dbMenu) continue;
 
         // Check if already tracked
