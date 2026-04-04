@@ -75,12 +75,12 @@
               <table>
                 <thead>
                   <tr>
-                    <th>ID</th>
-                    <th>Type</th>
-                    <th>User</th>
-                    <th>Moderator</th>
-                    <th>Reason</th>
-                    <th>Date</th>
+                    <th data-sortable data-sort-type="number">ID</th>
+                    <th data-sortable>Type</th>
+                    <th data-sortable>User</th>
+                    <th data-sortable>Moderator</th>
+                    <th data-sortable>Reason</th>
+                    <th data-sortable data-sort-type="date">Date</th>
                   </tr>
                 </thead>
                 <tbody id="actions-table-body">
@@ -109,10 +109,10 @@
               <table>
                 <thead>
                   <tr>
-                    <th>User</th>
-                    <th>Warnings</th>
-                    <th>Most Recent</th>
-                    <th>Reason</th>
+                    <th data-sortable>User</th>
+                    <th data-sortable data-sort-type="number">Warnings</th>
+                    <th data-sortable data-sort-type="date">Most Recent</th>
+                    <th data-sortable>Reason</th>
                     <th>Action</th>
                   </tr>
                 </thead>
@@ -162,9 +162,9 @@
               <table>
                 <thead>
                   <tr>
-                    <th>Rank</th>
-                    <th>Moderator</th>
-                    <th>Actions</th>
+                    <th data-sortable data-sort-type="number">Rank</th>
+                    <th data-sortable>Moderator</th>
+                    <th data-sortable data-sort-type="number">Actions</th>
                   </tr>
                 </thead>
                 <tbody id="top-moderators-body">
@@ -334,9 +334,9 @@
               <table>
                 <thead>
                   <tr>
-                    <th>Word</th>
-                    <th>Added By</th>
-                    <th>Added At</th>
+                    <th data-sortable>Word</th>
+                    <th data-sortable>Added By</th>
+                    <th data-sortable data-sort-type="date">Added At</th>
                     <th>Action</th>
                   </tr>
                 </thead>
@@ -411,15 +411,18 @@
         data.actions.forEach(action => {
           const row = document.createElement('tr');
           row.innerHTML = `
-            <td>${escapeHtml(action.id)}</td>
+            <td data-sort-value="${action.id}">${escapeHtml(action.id)}</td>
             <td><span class="badge badge-info">${escapeHtml(action.type)}</span></td>
             <td>${escapeHtml(action.user)}</td>
             <td>${escapeHtml(action.moderator)}</td>
             <td>${escapeHtml(action.reason || 'No reason provided')}</td>
-            <td>${formatDate(action.date)}</td>
+            <td data-sort-value="${action.date || ''}">${formatDate(action.date)}</td>
           `;
           tbody.appendChild(row);
         });
+
+        // Enable column sorting
+        initSortableTable(tbody.closest('table'));
 
         // Update pagination
         totalPages = data.pagination?.pages || 1;
@@ -454,8 +457,8 @@
           const row = document.createElement('tr');
           row.innerHTML = `
             <td>${escapeHtml(warning.user)}</td>
-            <td><strong>${warning.count || 0}</strong></td>
-            <td>${formatDate(warning.latestDate)}</td>
+            <td data-sort-value="${warning.count || 0}"><strong>${warning.count || 0}</strong></td>
+            <td data-sort-value="${warning.latestDate || ''}">${formatDate(warning.latestDate)}</td>
             <td>${escapeHtml(warning.latestReason || 'N/A')}</td>
             <td>
               <button class="btn btn-danger btn-small" onclick="removeWarning('${escapeHtml(warning.userId)}')">
@@ -465,6 +468,9 @@
           `;
           tbody.appendChild(row);
         });
+
+        // Enable column sorting
+        initSortableTable(tbody.closest('table'));
       } catch (error) {
         console.error('Failed to load warnings:', error);
         showToast('Failed to load warnings', 'error');
@@ -500,12 +506,15 @@
         data.topModerators.forEach((mod, idx) => {
           const row = document.createElement('tr');
           row.innerHTML = `
-            <td>#${idx + 1}</td>
+            <td data-sort-value="${idx + 1}">#${idx + 1}</td>
             <td>${escapeHtml(mod.name)}</td>
-            <td><strong>${formatNumber(mod.actions)}</strong></td>
+            <td data-sort-value="${mod.actions || 0}"><strong>${formatNumber(mod.actions)}</strong></td>
           `;
           tbody.appendChild(row);
         });
+
+        // Enable column sorting
+        initSortableTable(tbody.closest('table'));
       } catch (error) {
         console.error('Failed to load moderation stats:', error);
         showToast('Failed to load statistics', 'error');
@@ -565,7 +574,7 @@
           row.innerHTML = `
             <td><strong>${escapeHtml(entry.word)}</strong></td>
             <td>${escapeHtml(entry.added_by || 'Unknown')}</td>
-            <td>${formatDate(entry.added_at)}</td>
+            <td data-sort-value="${entry.added_at || ''}">${formatDate(entry.added_at)}</td>
             <td>
               <button class="btn btn-danger btn-small" onclick="removeBlocklistWord('${escapeHtml(entry.id)}')">
                 Remove
@@ -574,6 +583,9 @@
           `;
           tbody.appendChild(row);
         });
+
+        // Enable column sorting
+        initSortableTable(tbody.closest('table'));
       } catch (error) {
         console.error('Failed to load blocklist:', error);
         showToast('Failed to load blocklist', 'error');

@@ -119,10 +119,10 @@
             <table>
               <thead>
                 <tr>
-                  <th>User</th>
-                  <th>Status</th>
-                  <th>Roles</th>
-                  <th>Joined</th>
+                  <th data-sortable>User</th>
+                  <th data-sortable>Status</th>
+                  <th data-sortable data-sort-type="number">Roles</th>
+                  <th data-sortable data-sort-type="date">Joined</th>
                 </tr>
               </thead>
               <tbody id="all-members-body">
@@ -134,6 +134,73 @@
             <button class="btn btn-secondary btn-small" id="members-prev">Previous</button>
             <span class="page-info" id="members-page-info">Page 1 of 1</span>
             <button class="btn btn-secondary btn-small" id="members-next">Next</button>
+          </div>
+        </div>
+
+        <!-- Server Resources (Debug Mode only) -->
+        <div class="card" id="debug-resources" style="display:none; border-left: 3px solid var(--neon);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h2 class="card-title" style="margin-bottom:0;">Server Resources</h2>
+            <span class="badge badge-primary">Debug Mode</span>
+          </div>
+
+          <div class="stats-grid" style="margin-bottom:16px;">
+            <div class="stat-card" style="min-height:120px;">
+              <div class="stat-label">CPU Load (1m)</div>
+              <div class="stat-value" id="debug-cpu" style="font-size:32px;">-</div>
+            </div>
+            <div class="stat-card" style="min-height:120px;">
+              <div class="stat-label">RAM Usage</div>
+              <div class="stat-value" id="debug-ram" style="font-size:32px;">-</div>
+              <div style="color:var(--text-muted); font-size:12px;" id="debug-ram-detail"></div>
+            </div>
+            <div class="stat-card" style="min-height:120px;">
+              <div class="stat-label">Disk Usage</div>
+              <div class="stat-value" id="debug-disk" style="font-size:32px;">-</div>
+              <div style="color:var(--text-muted); font-size:12px;" id="debug-disk-detail"></div>
+            </div>
+            <div class="stat-card" style="min-height:120px;">
+              <div class="stat-label">Bot Memory (RSS)</div>
+              <div class="stat-value" id="debug-bot-mem" style="font-size:32px;">-</div>
+              <div style="color:var(--text-muted); font-size:12px;" id="debug-bot-heap"></div>
+            </div>
+          </div>
+
+          <!-- Storage breakdown -->
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:16px;">
+            <div style="background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:10px; padding:14px;">
+              <div style="font-size:12px; color:var(--text-muted); margin-bottom:4px;">Database</div>
+              <div style="font-size:18px; font-weight:700; color:var(--neon);" id="debug-db-size">-</div>
+            </div>
+            <div style="background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:10px; padding:14px;">
+              <div style="font-size:12px; color:var(--text-muted); margin-bottom:4px;">Log Files</div>
+              <div style="font-size:18px; font-weight:700; color:var(--neon);" id="debug-logs-size">-</div>
+            </div>
+            <div style="background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:10px; padding:14px;">
+              <div style="font-size:12px; color:var(--text-muted); margin-bottom:4px;">Data Files</div>
+              <div style="font-size:18px; font-weight:700; color:var(--neon);" id="debug-data-size">-</div>
+            </div>
+            <div style="background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:10px; padding:14px;">
+              <div style="font-size:12px; color:var(--text-muted); margin-bottom:4px;">Total Bot Storage</div>
+              <div style="font-size:18px; font-weight:700; color:var(--neon);" id="debug-total-size">-</div>
+            </div>
+          </div>
+
+          <!-- System info table -->
+          <div class="table-wrapper">
+            <table>
+              <tbody>
+                <tr><td style="width:200px;"><strong>Platform</strong></td><td id="debug-platform">-</td></tr>
+                <tr><td><strong>Hostname</strong></td><td id="debug-hostname">-</td></tr>
+                <tr><td><strong>CPU</strong></td><td id="debug-cpu-model">-</td></tr>
+                <tr><td><strong>CPU Cores</strong></td><td id="debug-cpu-cores">-</td></tr>
+                <tr><td><strong>Load Average</strong></td><td id="debug-load-avg">-</td></tr>
+                <tr><td><strong>Server Uptime</strong></td><td id="debug-server-uptime">-</td></tr>
+                <tr><td><strong>Node.js</strong></td><td id="debug-node-version">-</td></tr>
+                <tr><td><strong>Process PID</strong></td><td id="debug-pid">-</td></tr>
+                <tr><td><strong>Bot Process Uptime</strong></td><td id="debug-process-uptime">-</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -231,16 +298,20 @@
         data.members.forEach(member => {
           const joinDate = member.joinedAt ? new Date(member.joinedAt).toLocaleDateString() : '-';
           const roles = member.roles && member.roles.length > 0 ? member.roles.join(', ') : '-';
+          const roleCount = member.roles ? member.roles.length : 0;
 
           const row = document.createElement('tr');
           row.innerHTML = `
-            <td><strong>${escapeHtml(member.displayName || member.username)}</strong><br><small style="color:var(--text-muted);">${escapeHtml(member.username)}</small></td>
+            <td>${escapeHtml(member.displayName || member.username)}<br><small style="color:var(--text-muted);">${escapeHtml(member.username)}</small></td>
             <td><span class="badge badge-success">Member</span></td>
-            <td style="font-size:12px;">${escapeHtml(roles)}</td>
-            <td>${joinDate}</td>
+            <td data-sort-value="${roleCount}" style="font-size:12px;">${escapeHtml(roles)}</td>
+            <td data-sort-value="${member.joinedAt || ''}">${joinDate}</td>
           `;
           tbody.appendChild(row);
         });
+
+        // Enable column sorting
+        initSortableTable(tbody.closest('table'));
 
         // Update pagination
         const pg = data.pagination;
@@ -293,12 +364,79 @@
       }
     });
 
+    // ── Debug: Server Resources ───────────────────────────────────────
+    function formatBytes(bytes) {
+      if (!bytes || bytes === 0) return '0 B';
+      const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(1024));
+      return (bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0) + ' ' + units[i];
+    }
+
+    async function loadSystemStats() {
+      try {
+        const data = await api('/api/stats/system');
+        const container = document.getElementById('debug-resources');
+
+        if (!data.enabled) {
+          container.style.display = 'none';
+          return;
+        }
+
+        container.style.display = 'block';
+
+        // CPU
+        document.getElementById('debug-cpu').textContent = data.cpu.loadAvg['1min'];
+
+        // RAM
+        document.getElementById('debug-ram').textContent = data.memory.usagePercent + '%';
+        document.getElementById('debug-ram-detail').textContent =
+          `${formatBytes(data.memory.used)} / ${formatBytes(data.memory.total)}`;
+
+        // Disk
+        if (data.disk.total > 0) {
+          document.getElementById('debug-disk').textContent = data.disk.usagePercent + '%';
+          document.getElementById('debug-disk-detail').textContent =
+            `${formatBytes(data.disk.used)} / ${formatBytes(data.disk.total)}`;
+        } else {
+          document.getElementById('debug-disk').textContent = 'N/A';
+          document.getElementById('debug-disk-detail').textContent = 'Not available on this OS';
+        }
+
+        // Bot memory
+        document.getElementById('debug-bot-mem').textContent = formatBytes(data.memory.process.rss);
+        document.getElementById('debug-bot-heap').textContent =
+          `Heap: ${formatBytes(data.memory.process.heapUsed)} / ${formatBytes(data.memory.process.heapTotal)}`;
+
+        // Storage breakdown
+        document.getElementById('debug-db-size').textContent = formatBytes(data.storage.database);
+        document.getElementById('debug-logs-size').textContent = formatBytes(data.storage.logs);
+        document.getElementById('debug-data-size').textContent = formatBytes(data.storage.data);
+        document.getElementById('debug-total-size').textContent = formatBytes(data.storage.total);
+
+        // System info table
+        document.getElementById('debug-platform').textContent = `${data.system.platform} (${data.system.arch})`;
+        document.getElementById('debug-hostname').textContent = data.system.hostname;
+        document.getElementById('debug-cpu-model').textContent = data.cpu.model;
+        document.getElementById('debug-cpu-cores').textContent = data.cpu.cores;
+        document.getElementById('debug-load-avg').textContent =
+          `${data.cpu.loadAvg['1min']} / ${data.cpu.loadAvg['5min']} / ${data.cpu.loadAvg['15min']}`;
+        document.getElementById('debug-server-uptime').textContent = data.system.uptimeFormatted;
+        document.getElementById('debug-node-version').textContent = data.node.version;
+        document.getElementById('debug-pid').textContent = data.node.pid;
+        document.getElementById('debug-process-uptime').textContent = formatDuration(data.node.uptimeSeconds * 1000);
+      } catch (err) {
+        console.error('Failed to load system stats:', err);
+      }
+    }
+
     // Load stats on page load
     document.addEventListener('DOMContentLoaded', () => {
       loadStats();
       loadMembers();
+      loadSystemStats();
       // Refresh stats every 30 seconds
       setInterval(loadStats, 30000);
+      setInterval(loadSystemStats, 30000);
     });
   </script>
 </body>
