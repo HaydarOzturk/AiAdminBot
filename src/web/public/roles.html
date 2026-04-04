@@ -500,15 +500,15 @@
                 <div class="menu-detail-section">
                   <div class="menu-detail-section-title">Roles <span id="md-roles-count" class="count"></span></div>
                   <div id="md-roles-list"></div>
-                  <div style="margin-top: 10px; padding: 12px; border: 1px dashed var(--border-color); border-radius: 8px;">
+                  <form id="add-role-form" onsubmit="event.preventDefault(); addMenuItemAction();" style="margin-top: 10px; padding: 12px; border: 1px dashed var(--border-color); border-radius: 8px;">
                     <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Add a role</div>
                     <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
-                      <input type="text" id="md-add-role-name" placeholder="Role name" style="flex:1;min-width:120px;font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-tertiary);color:var(--text-primary);font-family:inherit;">
+                      <input type="text" id="md-add-role-name" placeholder="Role name" required style="flex:1;min-width:120px;font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-tertiary);color:var(--text-primary);font-family:inherit;">
                       <input type="text" id="md-add-role-emoji" placeholder="Emoji" style="width:60px;font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-tertiary);color:var(--text-primary);">
                       <input type="color" id="md-add-role-color" value="#99aab5" style="width:32px;height:32px;border:none;border-radius:6px;cursor:pointer;padding:0;background:none;">
-                      <button class="btn btn-primary btn-small" onclick="addMenuItemAction()" style="font-size:12px;padding:6px 12px;">Add</button>
+                      <button type="submit" class="btn btn-primary btn-small" style="font-size:12px;padding:6px 12px;">Add</button>
                     </div>
-                  </div>
+                  </form>
                 </div>
 
                 <!-- Published Locations -->
