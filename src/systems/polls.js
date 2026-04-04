@@ -198,11 +198,23 @@ async function closePoll(messageId, guildId, client) {
 /**
  * AI-generated poll suggestions based on a topic
  * @param {string} topic - General topic or question
- * @param {string} guildId - For locale
+ * @param {object} [serverContext] - Server info for context-aware polls
+ * @param {string[]} [serverContext.members] - Member display names
+ * @param {string[]} [serverContext.channels] - Channel names
+ * @param {string[]} [serverContext.roles] - Role names
  * @returns {Promise<{question: string, options: string[]}|null>}
  */
-async function aiSuggestPoll(topic) {
+async function aiSuggestPoll(topic, serverContext = null) {
   if (!isConfigured()) return null;
+
+  let contextBlock = '';
+  if (serverContext) {
+    const parts = [];
+    if (serverContext.members?.length) parts.push(`Server members: ${serverContext.members.join(', ')}`);
+    if (serverContext.channels?.length) parts.push(`Channels: ${serverContext.channels.join(', ')}`);
+    if (serverContext.roles?.length) parts.push(`Roles: ${serverContext.roles.join(', ')}`);
+    if (parts.length) contextBlock = `\n\nServer context (use REAL names when the topic is about people/members):\n${parts.join('\n')}`;
+  }
 
   try {
     const result = await chat(
@@ -215,7 +227,9 @@ Rules:
 - Question should be engaging and clear
 - 3-5 options, each under 80 characters
 - Options should be distinct and cover the range of opinions
-- Match the language of the topic`,
+- Match the language of the topic
+- When the topic asks about specific PEOPLE or MEMBERS, use REAL member names from the server context below — NEVER make up fictional names or generic descriptions
+- If the user asks to pick active/top members, use actual member names${contextBlock}`,
         maxTokens: 256,
         temperature: 0.8,
       }
