@@ -554,4 +554,4 @@ function splitMessage(text, maxLength) {
   return chunks;
 }
 
-module.exports = { handleMessage, resetConversation, checkRateLimit, getGuildMemories, storeMemory, forgetMemory };
+module.exports = { handleMessage, resetConversation, checkRateLimit, getGuildMemories, storeMemory, forgetMemory, buildGuildContext };

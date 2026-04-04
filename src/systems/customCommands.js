@@ -10,6 +10,7 @@ const db = require('../utils/database');
 const { createEmbed } = require('../utils/embedBuilder');
 const { t } = require('../utils/locale');
 const { chat, isConfigured } = require('../utils/openrouter');
+const { buildGuildContext } = require('./aiChat');
 
 /**
  * Create or update a custom command
@@ -92,8 +93,14 @@ async function checkMessage(message) {
     let responseText;
 
     if (cmd.ai_mode && isConfigured()) {
-      // AI-powered command: response field is the system prompt
+      // AI-powered command: response field is the system prompt + server context
       const userInput = args.slice(1).join(' ') || '';
+      const guildContext = buildGuildContext(message.guild);
+      let systemPrompt = replaceVariables(cmd.response, message);
+      if (guildContext) {
+        systemPrompt += `\n\n=== SERVER CONTEXT ===\n${guildContext}`;
+      }
+
       const userPrompt = userInput
         ? `User "${message.author.username}" says: ${userInput}`
         : `User "${message.author.username}" triggered the !${cmdName} command in #${message.channel.name} on server "${message.guild.name}" (${message.guild.memberCount} members).`;
@@ -101,7 +108,7 @@ async function checkMessage(message) {
       responseText = await chat(
         [{ role: 'user', content: userPrompt }],
         {
-          systemPrompt: replaceVariables(cmd.response, message),
+          systemPrompt,
           maxTokens: 512,
           temperature: 0.8,
         }
