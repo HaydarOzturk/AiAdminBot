@@ -433,4 +433,44 @@ module.exports = [
       return { success: true, message: `Unlocked #${channel.name} — messages re-enabled` };
     },
   },
+  {
+    name: 'create_invite',
+    description: 'Create an invite link for a channel',
+    category: 'channels',
+    requiredPermission: 2,
+    destructive: false,
+    parameters: {
+      channel: { type: 'string', description: 'Channel name or ID (defaults to first text channel)', required: false },
+      maxAge: { type: 'number', description: 'Invite expiry in hours (0 = never, default 24)', required: false },
+      maxUses: { type: 'number', description: 'Max uses (0 = unlimited, default 0)', required: false },
+      temporary: { type: 'boolean', description: 'Temporary membership (kicked when they go offline, default false)', required: false },
+    },
+    async execute(guild, invoker, params) {
+      let channel;
+      if (params.channel) {
+        channel = guild.channels.cache.get(params.channel);
+        if (!channel) {
+          const { match, suggestions } = findChannel(guild, params.channel);
+          if (!match) return { success: false, message: notFoundMsg('Channel', params.channel, suggestions) };
+          channel = match;
+        }
+      } else {
+        // Default to first text channel or system channel
+        channel = guild.systemChannel || guild.channels.cache.find(c => c.type === ChannelType.GuildText);
+      }
+      if (!channel) return { success: false, message: 'No suitable channel found to create invite' };
+
+      const maxAge = (params.maxAge !== undefined ? params.maxAge : 24) * 3600; // convert hours to seconds
+      const invite = await channel.createInvite({
+        maxAge,
+        maxUses: params.maxUses || 0,
+        temporary: params.temporary || false,
+        reason: 'Created by AI Agent',
+      });
+
+      const expiry = maxAge === 0 ? 'never' : `${params.maxAge || 24} hours`;
+      const uses = invite.maxUses === 0 ? 'unlimited' : `${invite.maxUses} uses`;
+      return { success: true, message: `**Invite link:** https://discord.gg/${invite.code}\nChannel: #${channel.name}\nExpires: ${expiry} | Uses: ${uses}` };
+    },
+  },
 ];
