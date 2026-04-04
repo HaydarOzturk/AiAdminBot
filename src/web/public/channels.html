@@ -243,6 +243,33 @@
       flex-shrink: 0; line-height: 1;
     }
     .setup-add-form .btn-cancel:hover { color: var(--accent-danger); border-color: var(--accent-danger); }
+
+    /* Toggle option (checkbox) */
+    .toggle-option:has(input:checked) {
+      border-color: var(--neon) !important;
+      background: rgba(0,240,255,0.06) !important;
+    }
+    .toggle-option:has(input:checked) .toggle-check {
+      border-color: var(--neon);
+      background: var(--neon);
+    }
+    .toggle-option:has(input:checked) .toggle-check::after {
+      content: '✓'; color: var(--bg-primary); font-size: 12px; font-weight: 700;
+    }
+    .toggle-option:hover { border-color: var(--border-color) !important; }
+
+    /* Radio option (visibility) */
+    .perm-option:has(input:checked) {
+      border-color: var(--neon) !important;
+      background: rgba(0,240,255,0.06) !important;
+    }
+    .perm-option:has(input:checked) .radio-dot {
+      border-color: var(--neon);
+    }
+    .perm-option:has(input:checked) .radio-dot::after {
+      content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--neon);
+    }
+    .perm-option:hover { border-color: var(--border-color) !important; }
   </style>
 </head>
 <body>
@@ -415,20 +442,36 @@
                   <input type="text" id="new-ch-topic" placeholder="What's this channel about?" maxlength="1024">
                 </div>
 
-                <div class="form-group" id="new-ch-nsfw-group" style="display: flex; align-items: center; gap: 8px;">
-                  <input type="checkbox" id="new-ch-nsfw">
-                  <label for="new-ch-nsfw" style="margin: 0; cursor: pointer;">NSFW Channel</label>
+                <div class="form-group" id="new-ch-nsfw-group">
+                  <label class="toggle-option" for="new-ch-nsfw" style="cursor:pointer; display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--bg-tertiary); border:1px solid var(--border-subtle); border-radius:8px;">
+                    <input type="checkbox" id="new-ch-nsfw" style="display:none;">
+                    <span class="toggle-check" style="width:18px; height:18px; border-radius:4px; border:2px solid var(--border-color); display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all 0.15s;"></span>
+                    <div>
+                      <div style="font-size:13px; font-weight:500; color:var(--text-primary);">🔞 NSFW Channel</div>
+                      <div style="font-size:11px; color:var(--text-muted);">Age-restricted content — users must confirm they are 18+</div>
+                    </div>
+                  </label>
                 </div>
 
                 <!-- Quick permission setup -->
                 <div class="form-group">
-                  <label>Quick Permission Setup</label>
-                  <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 4px;">
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: var(--text-secondary);">
-                      <input type="radio" name="quick-perm" value="default" checked> Everyone can see (default)
+                  <label style="margin-bottom:6px; display:block;">🔒 Visibility</label>
+                  <div style="display:flex; flex-direction:column; gap:6px;">
+                    <label class="perm-option" style="cursor:pointer; display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--bg-tertiary); border:1px solid var(--border-subtle); border-radius:8px; transition:all 0.15s;">
+                      <input type="radio" name="quick-perm" value="default" checked style="display:none;">
+                      <span class="radio-dot" style="width:18px; height:18px; border-radius:50%; border:2px solid var(--border-color); display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all 0.15s;"></span>
+                      <div>
+                        <div style="font-size:13px; font-weight:500; color:var(--text-primary);">🌐 Public</div>
+                        <div style="font-size:11px; color:var(--text-muted);">Everyone can see this channel</div>
+                      </div>
                     </label>
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: var(--text-secondary);">
-                      <input type="radio" name="quick-perm" value="private"> Private — only selected roles
+                    <label class="perm-option" style="cursor:pointer; display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--bg-tertiary); border:1px solid var(--border-subtle); border-radius:8px; transition:all 0.15s;">
+                      <input type="radio" name="quick-perm" value="private" style="display:none;">
+                      <span class="radio-dot" style="width:18px; height:18px; border-radius:50%; border:2px solid var(--border-color); display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all 0.15s;"></span>
+                      <div>
+                        <div style="font-size:13px; font-weight:500; color:var(--text-primary);">🔒 Private</div>
+                        <div style="font-size:11px; color:var(--text-muted);">Only selected roles can access</div>
+                      </div>
                     </label>
                   </div>
                 </div>
