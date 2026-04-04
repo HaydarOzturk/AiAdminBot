@@ -316,16 +316,20 @@
         <!-- Quick Setup Tab -->
         <div id="tab-quick-setup" style="display: none;">
           <div class="card" style="margin-bottom: 16px; padding: 16px 20px;">
-            <p style="margin: 0; color: var(--text-secondary); font-size: 13px;">
-              All bot feature channels organized by category.
-              <strong style="color: #57f287;">Green</strong> = all channels ready,
-              <strong style="color: #fee75c;">Yellow</strong> = partially set up,
-              <strong style="color: #faa61a;">Orange</strong> = missing — click <strong>Create</strong> to set up.
-              Use <strong>+ Add Channel</strong> to add custom channels to any group,
-              <strong>×</strong> to remove individual channels,
-              and <strong style="color: var(--accent-danger);">🗑</strong> to delete an entire group.
-              <span style="border: 1px dashed #a855f7; padding: 1px 6px; border-radius: 4px; font-size: 11px; color: #a855f7;">Purple dashed</span> channels are custom (not part of default setup).
-            </p>
+            <div style="margin: 0; color: var(--text-secondary); font-size: 13px;">
+              <p style="margin: 0 0 10px 0;">All bot feature channels organized by category.</p>
+              <div style="display: flex; flex-wrap: wrap; gap: 10px 20px; margin-bottom: 10px;">
+                <span><strong style="color: #57f287;">Green</strong> = all channels ready</span>
+                <span><strong style="color: #fee75c;">Yellow</strong> = partially set up</span>
+                <span><strong style="color: #faa61a;">Orange</strong> = missing — click <strong>Create</strong></span>
+                <span><span style="border: 1px dashed #a855f7; padding: 1px 6px; border-radius: 4px; font-size: 11px; color: #a855f7;">Purple dashed</span> = custom channel (not part of default setup)</span>
+              </div>
+              <p style="margin: 0; color: var(--text-muted); font-size: 12px;">
+                <strong>+ Add Channel</strong> to add custom channels &nbsp;·&nbsp;
+                <strong>×</strong> to remove individual channels &nbsp;·&nbsp;
+                <strong style="color: var(--accent-danger);">🗑</strong> to delete an entire group
+              </p>
+            </div>
           </div>
           <div class="setup-grid" id="setup-grid">
             <div style="padding: 40px; text-align: center; color: var(--text-muted); grid-column: 1 / -1;">Loading feature status...</div>
