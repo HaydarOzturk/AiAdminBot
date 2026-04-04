@@ -250,7 +250,7 @@ async function handleAddRole(interaction, guildId) {
     return interaction.reply({ content: `❌ Role "${roleName}" already exists in this menu.`, flags: MessageFlags.Ephemeral });
   }
 
-  roleMenus.addMenuItem(menuId, { roleName, emoji, color });
+  await roleMenus.addMenuItem(menuId, { roleName, emoji, color });
   return interaction.reply({
     content: `✅ Added **${roleName}** to **${menu.title}**. (${menu.items.length + 1} roles total)`,
     flags: MessageFlags.Ephemeral,

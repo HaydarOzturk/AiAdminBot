@@ -1125,7 +1125,7 @@ router.delete('/:guildId/role-menus/:menuId', (req, res) => {
 });
 
 /** Add a role item to a menu */
-router.post('/:guildId/role-menus/:menuId/items', (req, res) => {
+router.post('/:guildId/role-menus/:menuId/items', async (req, res) => {
   try {
     const menuId = parseInt(req.params.menuId, 10);
     const menu = roleMenus.getMenuWithItems(menuId);
@@ -1143,7 +1143,7 @@ router.post('/:guildId/role-menus/:menuId/items', (req, res) => {
       return res.status(409).json({ error: `Role "${roleName}" already exists in this menu` });
     }
 
-    const itemId = roleMenus.addMenuItem(menuId, { roleName, emoji, color, position });
+    const itemId = await roleMenus.addMenuItem(menuId, { roleName, emoji, color, position });
     res.json({ itemId, menu: roleMenus.getMenuWithItems(menuId) });
   } catch (err) {
     res.status(500).json({ error: err.message });

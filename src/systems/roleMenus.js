@@ -2,6 +2,7 @@ const { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('
 const { createEmbed } = require('../utils/embedBuilder');
 const { loadConfig } = require('../utils/paths');
 const db = require('../utils/database');
+const { chat: aiChat, isConfigured: aiIsConfigured } = require('../utils/openrouter');
 
 // Map of old role names to their new names (for migration)
 const ROLE_RENAMES = {
@@ -54,6 +55,71 @@ async function ensureRole(guild, roleName, color) {
   }
 
   return role;
+}
+
+// ── Emoji suggestion ─────────────────────────────────────────────────────
+
+// Fast local lookup for common role names
+const EMOJI_MAP = {
+  // Games
+  'gta': '🚗', 'gta v': '🚗', 'gta 5': '🚗', 'cs': '🔫', 'cs2': '🔫', 'csgo': '🔫',
+  'minecraft': '⛏️', 'valorant': '🎯', 'league of legends': '⚔️', 'lol': '⚔️',
+  'fortnite': '🏗️', 'apex': '🔥', 'apex legends': '🔥', 'overwatch': '🎮',
+  'dota': '⚔️', 'dota 2': '⚔️', 'roblox': '🧱', 'among us': '🚀',
+  'call of duty': '🎖️', 'cod': '🎖️', 'pubg': '🪖', 'rust': '🔧',
+  'rocket league': '🚀', 'fifa': '⚽', 'nba': '🏀', 'warzone': '💣',
+  'elden ring': '💍', 'dark souls': '⚔️', 'zelda': '🗡️', 'pokemon': '⚡',
+  'terraria': '🌳', 'stardew valley': '🌾', 'ark': '🦖', 'destiny': '🌌',
+  'diablo': '😈', 'wow': '⚔️', 'world of warcraft': '⚔️', 'hearthstone': '🃏',
+  'rainbow six': '🛡️', 'r6': '🛡️', 'dead by daylight': '🔪', 'dbd': '🔪',
+  // Platforms
+  'twitch': '🟣', 'youtube': '🔴', 'kick': '🟢', 'steam': '💨',
+  'discord': '💬', 'twitter': '🐦', 'tiktok': '🎵', 'instagram': '📸',
+  // Colors
+  'red': '🔴', 'blue': '🔵', 'green': '🟢', 'yellow': '🟡',
+  'orange': '🟠', 'purple': '🟣', 'pink': '💗', 'white': '⚪', 'black': '⚫',
+  // General
+  'music': '🎵', 'art': '🎨', 'anime': '🌸', 'movies': '🎬', 'sports': '⚽',
+  'coding': '💻', 'programming': '💻', 'photography': '📷', 'cooking': '🍳',
+  'reading': '📚', 'travel': '✈️', 'fitness': '💪', 'memes': '😂',
+};
+
+/**
+ * Suggest an emoji for a role name.
+ * Tries local map first, then AI if configured.
+ * @param {string} roleName
+ * @returns {Promise<string|null>} A single emoji or null
+ */
+async function suggestEmoji(roleName) {
+  const lower = roleName.toLowerCase().trim();
+
+  // 1. Try exact local match
+  if (EMOJI_MAP[lower]) return EMOJI_MAP[lower];
+
+  // 2. Try partial local match
+  for (const [key, emoji] of Object.entries(EMOJI_MAP)) {
+    if (lower.includes(key) || key.includes(lower)) return emoji;
+  }
+
+  // 3. Try AI if configured
+  if (!aiIsConfigured()) return null;
+
+  try {
+    const result = await aiChat(
+      [{ role: 'user', content: `Role name: "${roleName}"` }],
+      {
+        systemPrompt: 'You are an emoji picker. Given a Discord role name, reply with ONLY a single Unicode emoji that best represents it. No text, no explanation, just one emoji character.',
+        maxTokens: 10,
+        temperature: 0.3,
+      }
+    );
+
+    // Extract the first emoji from the response
+    const emojiMatch = result.match(/\p{Emoji_Presentation}|\p{Emoji}\uFE0F/u);
+    return emojiMatch ? emojiMatch[0] : null;
+  } catch {
+    return null;
+  }
 }
 
 // ── DB CRUD functions ────────────────────────────────────────────────────
@@ -138,10 +204,19 @@ function deleteMenu(menuId) {
 }
 
 /**
- * Add an item (role) to a menu
- * @returns {number} The new item's ID
+ * Add an item (role) to a menu.
+ * If no emoji is provided, auto-suggests one via local map + AI.
+ * @returns {Promise<number>} The new item's ID
  */
-function addMenuItem(menuId, { roleName, emoji, color, position }) {
+async function addMenuItem(menuId, { roleName, emoji, color, position }) {
+  // Auto-suggest emoji if not provided
+  if (!emoji) {
+    try {
+      emoji = await suggestEmoji(roleName);
+    } catch {
+      emoji = null;
+    }
+  }
   // Get max position if not specified
   if (position == null) {
     const max = db.get('SELECT MAX(position) as maxPos FROM role_menu_items WHERE menu_id = ?', [menuId]);
@@ -378,7 +453,7 @@ async function unpublishMessage(client, recordId) {
  * Seed role menus from config/role-menus.json into the database for a guild.
  * Idempotent — skips menus that already exist for the guild.
  */
-function seedMenusFromConfig(guildId) {
+async function seedMenusFromConfig(guildId) {
   let config;
   try {
     config = loadRoleMenuConfig();
@@ -403,14 +478,15 @@ function seedMenusFromConfig(guildId) {
     });
 
     if (Array.isArray(menuData.roles)) {
-      menuData.roles.forEach((roleData, index) => {
-        addMenuItem(menuId, {
+      for (let index = 0; index < menuData.roles.length; index++) {
+        const roleData = menuData.roles[index];
+        await addMenuItem(menuId, {
           roleName: roleData.name,
           emoji: roleData.emoji || null,
           color: roleData.color || '#99aab5',
           position: index,
         });
-      });
+      }
     }
 
     console.log(`  📋 Seeded role menu "${slug}" for guild ${guildId}`);
@@ -713,5 +789,6 @@ module.exports = {
   unpublishMessage,
   seedMenusFromConfig,
   scanAndRegisterLegacyMenus,
+  suggestEmoji,
   ensureRole,
 };
