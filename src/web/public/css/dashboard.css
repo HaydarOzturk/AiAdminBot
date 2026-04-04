@@ -667,3 +667,38 @@ input:checked + .toggle-slider {
   background: rgba(245, 158, 11, 0.25);
   box-shadow: 0 0 12px rgba(245, 158, 11, 0.3);
 }
+
+/* ── Styled Checkbox (replaces raw browser checkbox) ─────────────────── */
+.styled-checkbox {
+  display: none;
+}
+.styled-checkbox + .cb-visual {
+  width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0;
+  border: 2px solid var(--border-color);
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: all 0.15s; cursor: pointer;
+}
+.styled-checkbox:checked + .cb-visual {
+  background: var(--neon); border-color: var(--neon);
+}
+.styled-checkbox:checked + .cb-visual::after {
+  content: '✓'; color: var(--bg-primary); font-size: 12px; font-weight: 700;
+}
+.styled-checkbox:disabled + .cb-visual {
+  opacity: 0.4; cursor: not-allowed;
+}
+
+/* Checkbox label row — used for role lists, filter toggles etc. */
+.cb-label {
+  display: flex; align-items: center; gap: 10px; padding: 7px 12px;
+  cursor: pointer; border-radius: 6px; transition: background 0.1s;
+  font-size: 13px; color: var(--text-secondary);
+}
+.cb-label:hover { background: rgba(255,255,255,0.04); }
+
+/* Small inline checkbox for filters */
+.cb-inline {
+  display: inline-flex; align-items: center; gap: 6px;
+  cursor: pointer; font-size: 13px; color: var(--text-muted);
+}
+.cb-inline .cb-visual { width: 16px; height: 16px; border-radius: 3px; }

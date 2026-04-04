@@ -479,7 +479,10 @@
         if (role.mentionable) badges += '<span class="role-mini-badge">@</span>';
 
         const checkbox = multiSelectMode && !role.managed
-          ? `<input type="checkbox" class="role-item-checkbox" ${isChecked ? 'checked' : ''} onclick="toggleRoleSelection('${role.id}')" style="display:block;">`
+          ? `<label style="display:flex;align-items:center;cursor:pointer;" onclick="event.stopPropagation();">
+               <input type="checkbox" class="role-item-checkbox styled-checkbox" ${isChecked ? 'checked' : ''} onclick="toggleRoleSelection('${role.id}')">
+               <span class="cb-visual"></span>
+             </label>`
           : '';
 
         div.innerHTML = `
