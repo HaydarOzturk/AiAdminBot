@@ -440,9 +440,17 @@
 
                 <div class="form-group" id="new-ch-category-group">
                   <label for="new-ch-category">Category (optional)</label>
-                  <select id="new-ch-category">
+                  <select id="new-ch-category" onchange="onCategorySelect(this)">
                     <option value="">No category</option>
                   </select>
+                  <div id="new-category-input" style="display:none; margin-top:8px; display:none;">
+                    <div style="display:flex; gap:8px; align-items:center;">
+                      <input type="text" id="new-category-name" placeholder="New category name" maxlength="100"
+                        style="flex:1; padding:8px 12px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:6px; color:var(--text-primary); font-size:14px;">
+                      <button type="button" class="btn btn-primary" style="padding:8px 14px; font-size:13px;" onclick="confirmNewCategory()">Create</button>
+                      <button type="button" class="btn" style="padding:8px 10px; font-size:13px; background:transparent; border:1px solid var(--border-color); color:var(--text-muted);" onclick="cancelNewCategory()">Cancel</button>
+                    </div>
+                  </div>
                 </div>
 
                 <div class="form-group" id="new-ch-topic-group">
@@ -956,6 +964,12 @@
         opt.textContent = cat.name;
         catSelect.appendChild(opt);
       });
+      // Add "New Category" option
+      const newCatOpt = document.createElement('option');
+      newCatOpt.value = '__new__';
+      newCatOpt.textContent = '➕ Create New Category...';
+      catSelect.appendChild(newCatOpt);
+      document.getElementById('new-category-input').style.display = 'none';
 
       // Populate private roles checkboxes
       const rolesList = document.getElementById('private-roles-list');
@@ -971,6 +985,64 @@
         `;
         rolesList.appendChild(label);
       });
+    }
+
+    // ── New Category inline creation ──────────────────────────────────────
+    function onCategorySelect(select) {
+      if (select.value === '__new__') {
+        document.getElementById('new-category-input').style.display = 'block';
+        document.getElementById('new-category-name').focus();
+      } else {
+        document.getElementById('new-category-input').style.display = 'none';
+      }
+    }
+
+    async function confirmNewCategory() {
+      const nameInput = document.getElementById('new-category-name');
+      const name = nameInput.value.trim();
+      if (!name) { showToast('Enter a category name', 'warning'); return; }
+
+      const guildId = getCurrentGuild();
+      if (!guildId) { showToast('Select a guild', 'warning'); return; }
+
+      try {
+        const result = await api(`/api/guilds/${guildId}/channels`, {
+          method: 'POST',
+          body: JSON.stringify({ name, type: 'category' }),
+        });
+
+        showToast(`Category "${name}" created`, 'success');
+
+        // Reload channels and re-populate dropdown
+        await loadChannels();
+        const catSelect = document.getElementById('new-ch-category');
+        catSelect.innerHTML = '<option value="">No category</option>';
+        allChannels.filter(c => c.type === 4).forEach(cat => {
+          const opt = document.createElement('option');
+          opt.value = cat.id;
+          opt.textContent = cat.name;
+          catSelect.appendChild(opt);
+        });
+        const newCatOpt = document.createElement('option');
+        newCatOpt.value = '__new__';
+        newCatOpt.textContent = '➕ Create New Category...';
+        catSelect.appendChild(newCatOpt);
+
+        // Select the newly created category
+        const newCat = allChannels.find(c => c.type === 4 && c.name.toLowerCase() === name.toLowerCase());
+        if (newCat) catSelect.value = newCat.id;
+
+        document.getElementById('new-category-input').style.display = 'none';
+        nameInput.value = '';
+      } catch (err) {
+        showToast('Failed to create category: ' + err.message, 'error');
+      }
+    }
+
+    function cancelNewCategory() {
+      document.getElementById('new-ch-category').value = '';
+      document.getElementById('new-category-input').style.display = 'none';
+      document.getElementById('new-category-name').value = '';
     }
 
     function hideCreateChannelModal() {
@@ -1008,7 +1080,8 @@
 
         const type = document.getElementById('new-ch-type').value;
         const name = document.getElementById('new-ch-name').value;
-        const parent = document.getElementById('new-ch-category').value || undefined;
+        const parentVal = document.getElementById('new-ch-category').value;
+        const parent = (parentVal && parentVal !== '__new__') ? parentVal : undefined;
         const topic = document.getElementById('new-ch-topic').value || undefined;
         const nsfw = document.getElementById('new-ch-nsfw').checked;
         const quickPerm = document.querySelector('input[name="quick-perm"]:checked').value;
