@@ -196,26 +196,9 @@ function getMenuItemCount(menuId) {
 // ── Publish / unpublish ──────────────────────────────────────────────────
 
 /**
- * Send a role menu to a channel (DB-based)
- * @param {import('discord.js').TextChannel} channel
- * @param {number} menuId
- * @returns {import('discord.js').Message} The sent message
+ * Build embed + button rows for a menu (shared by send and update)
  */
-async function sendRoleMenuById(channel, menuId) {
-  const menu = getMenuWithItems(menuId);
-  if (!menu) throw new Error('Menu not found');
-  if (!menu.items || menu.items.length === 0) throw new Error('Menu has no roles');
-
-  // Ensure all roles exist in the guild
-  for (const item of menu.items) {
-    const role = await ensureRole(channel.guild, item.role_name, item.color);
-    // Store the role ID for future reference
-    if (!item.role_id || item.role_id !== role.id) {
-      db.run('UPDATE role_menu_items SET role_id = ? WHERE id = ?', [role.id, item.id]);
-    }
-  }
-
-  // Build embed
+function buildMenuComponents(menu, guild) {
   const roleList = menu.items.map(r => `${r.emoji || '▪️'} **${r.role_name}**`).join('\n');
   const desc = menu.description ? `${menu.description}\n\n${roleList}` : roleList;
   const embed = createEmbed({
@@ -225,39 +208,72 @@ async function sendRoleMenuById(channel, menuId) {
   });
 
   if (menu.required_role_id) {
-    const reqRole = channel.guild.roles.cache.get(menu.required_role_id);
-    if (reqRole) {
-      embed.setFooter({ text: `Requires: ${reqRole.name}` });
-    }
+    const reqRole = guild?.roles?.cache?.get(menu.required_role_id);
+    if (reqRole) embed.setFooter({ text: `Requires: ${reqRole.name}` });
   }
 
-  // Build button rows (max 5 per row, max 5 rows = 25 buttons)
   const rows = [];
   let currentRow = new ActionRowBuilder();
 
   for (let i = 0; i < menu.items.length; i++) {
     const item = menu.items[i];
-
     const button = new ButtonBuilder()
       .setCustomId(`role_${menu.id}_${item.id}`)
       .setLabel(item.role_name)
       .setStyle(ButtonStyle.Secondary);
-
-    if (item.emoji) {
-      button.setEmoji(item.emoji);
-    }
-
+    if (item.emoji) button.setEmoji(item.emoji);
     currentRow.addComponents(button);
-
     if ((i + 1) % 5 === 0 || i === menu.items.length - 1) {
       rows.push(currentRow);
       currentRow = new ActionRowBuilder();
     }
   }
 
+  return { embed, rows };
+}
+
+/**
+ * Send a role menu to a channel (DB-based).
+ * If there's already a published message for this menu in the same channel, edits it instead.
+ * @param {import('discord.js').TextChannel} channel
+ * @param {number} menuId
+ * @returns {import('discord.js').Message} The sent or edited message
+ */
+async function sendRoleMenuById(channel, menuId) {
+  const menu = getMenuWithItems(menuId);
+  if (!menu) throw new Error('Menu not found');
+  if (!menu.items || menu.items.length === 0) throw new Error('Menu has no roles');
+
+  // Ensure all roles exist in the guild
+  for (const item of menu.items) {
+    const role = await ensureRole(channel.guild, item.role_name, item.color);
+    if (!item.role_id || item.role_id !== role.id) {
+      db.run('UPDATE role_menu_items SET role_id = ? WHERE id = ?', [role.id, item.id]);
+    }
+  }
+
+  const { embed, rows } = buildMenuComponents(menu, channel.guild);
+
+  // Check if there's already a published message for this menu in this channel
+  const existing = db.get(
+    'SELECT * FROM role_menu_messages WHERE menu_id = ? AND channel_id = ?',
+    [menuId, channel.id]
+  );
+
+  if (existing) {
+    try {
+      const msg = await channel.messages.fetch(existing.message_id);
+      await msg.edit({ embeds: [embed], components: rows });
+      return msg;
+    } catch {
+      // Message was deleted — remove stale record and send a new one
+      db.run('DELETE FROM role_menu_messages WHERE id = ?', [existing.id]);
+    }
+  }
+
+  // Send new message
   const message = await channel.send({ embeds: [embed], components: rows });
 
-  // Track the published message
   db.run(`
     INSERT OR REPLACE INTO role_menu_messages (menu_id, guild_id, channel_id, message_id)
     VALUES (?, ?, ?, ?)
@@ -286,35 +302,9 @@ async function updatePublishedMenus(client, guildId, menuId) {
       const msg = await channel.messages.fetch(record.message_id);
       if (!msg) throw new Error('Message not found');
 
-      // Rebuild embed + buttons
-      const roleList = menu.items.map(r => `${r.emoji || '▪️'} **${r.role_name}**`).join('\n');
-      const desc = menu.description ? `${menu.description}\n\n${roleList}` : roleList;
-      const embed = createEmbed({ title: menu.title, description: desc, color: 'primary' });
-
-      if (menu.required_role_id) {
-        const reqRole = guild.roles.cache.get(menu.required_role_id);
-        if (reqRole) embed.setFooter({ text: `Requires: ${reqRole.name}` });
-      }
-
-      const rows = [];
-      let currentRow = new ActionRowBuilder();
-      for (let i = 0; i < menu.items.length; i++) {
-        const item = menu.items[i];
-        const button = new ButtonBuilder()
-          .setCustomId(`role_${menu.id}_${item.id}`)
-          .setLabel(item.role_name)
-          .setStyle(ButtonStyle.Secondary);
-        if (item.emoji) button.setEmoji(item.emoji);
-        currentRow.addComponents(button);
-        if ((i + 1) % 5 === 0 || i === menu.items.length - 1) {
-          rows.push(currentRow);
-          currentRow = new ActionRowBuilder();
-        }
-      }
-
+      const { embed, rows } = buildMenuComponents(menu, guild);
       await msg.edit({ embeds: [embed], components: rows });
     } catch (err) {
-      // Message or channel was deleted — remove stale record
       console.warn(`⚠️ Could not update published menu message ${record.message_id}: ${err.message}`);
       db.run('DELETE FROM role_menu_messages WHERE id = ?', [record.id]);
     }
@@ -392,6 +382,83 @@ function seedMenusFromConfig(guildId) {
     }
 
     console.log(`  📋 Seeded role menu "${slug}" for guild ${guildId}`);
+  }
+}
+
+// ── Legacy message scanner ───────────────────────────────────────────────
+
+/**
+ * Scan channels for old bot role menu messages and register them in the DB.
+ * Finds messages sent by the bot that have buttons starting with "role_".
+ * Maps legacy menuType (e.g. "gameRoles") to the DB menu by slug.
+ */
+async function scanAndRegisterLegacyMenus(client, guildId) {
+  const guild = client.guilds.cache.get(guildId);
+  if (!guild) return;
+
+  const botId = client.user.id;
+  let registered = 0;
+
+  for (const [, channel] of guild.channels.cache) {
+    if (channel.type !== 0) continue; // text channels only
+    if (!channel.permissionsFor(guild.members.me)?.has('ViewChannel')) continue;
+
+    try {
+      const messages = await channel.messages.fetch({ limit: 50 });
+
+      for (const [, msg] of messages) {
+        if (msg.author.id !== botId) continue;
+        if (!msg.components?.length) continue;
+
+        // Check if any button starts with "role_"
+        const firstButton = msg.components[0]?.components?.[0];
+        if (!firstButton?.customId?.startsWith('role_')) continue;
+
+        const parts = firstButton.customId.split('_');
+        const menuKey = parts[1];
+
+        // Already in new numeric format — check if tracked
+        if (/^\d+$/.test(menuKey)) {
+          const menuId = parseInt(menuKey, 10);
+          const existing = db.get(
+            'SELECT id FROM role_menu_messages WHERE menu_id = ? AND message_id = ?',
+            [menuId, msg.id]
+          );
+          if (!existing) {
+            db.run(
+              'INSERT OR REPLACE INTO role_menu_messages (menu_id, guild_id, channel_id, message_id) VALUES (?, ?, ?, ?)',
+              [menuId, guildId, channel.id, msg.id]
+            );
+            registered++;
+          }
+          continue;
+        }
+
+        // Legacy string format — map slug to DB menu
+        const dbMenu = getMenuBySlug(guildId, menuKey);
+        if (!dbMenu) continue;
+
+        // Check if already tracked
+        const existing = db.get(
+          'SELECT id FROM role_menu_messages WHERE menu_id = ? AND message_id = ?',
+          [dbMenu.id, msg.id]
+        );
+        if (!existing) {
+          db.run(
+            'INSERT OR REPLACE INTO role_menu_messages (menu_id, guild_id, channel_id, message_id) VALUES (?, ?, ?, ?)',
+            [dbMenu.id, guildId, channel.id, msg.id]
+          );
+          registered++;
+          console.log(`  📌 Registered legacy menu message: "${dbMenu.slug}" in #${channel.name}`);
+        }
+      }
+    } catch {
+      // Can't read this channel — skip silently
+    }
+  }
+
+  if (registered > 0) {
+    console.log(`📌 Registered ${registered} legacy role menu message(s) for guild ${guild.name}`);
   }
 }
 
@@ -605,5 +672,6 @@ module.exports = {
   getPublishedMessages,
   unpublishMessage,
   seedMenusFromConfig,
+  scanAndRegisterLegacyMenus,
   ensureRole,
 };

@@ -96,11 +96,17 @@ module.exports = {
       console.warn('⚠️ Giveaway timer restore failed:', err.message);
     }
 
-    // Seed role menus from JSON config into DB for each guild
+    // Seed role menus from JSON config into DB, then scan for legacy published messages
     try {
-      const { seedMenusFromConfig } = require('../systems/roleMenus');
+      const { seedMenusFromConfig, scanAndRegisterLegacyMenus } = require('../systems/roleMenus');
       for (const guild of client.guilds.cache.values()) {
         seedMenusFromConfig(guild.id);
+      }
+      // Scan after all guilds are seeded (async, don't block startup)
+      for (const guild of client.guilds.cache.values()) {
+        scanAndRegisterLegacyMenus(client, guild.id).catch(err => {
+          console.warn(`⚠️ Legacy menu scan failed for ${guild.name}: ${err.message}`);
+        });
       }
     } catch (err) {
       console.warn('⚠️ Role menu seeding failed:', err.message);
