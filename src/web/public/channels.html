@@ -54,6 +54,36 @@
       padding: 8px 14px; color: var(--text-muted); font-size: 12px; font-style: italic;
     }
 
+    /* Drag & Drop */
+    .channel-item[draggable="true"] { cursor: grab; }
+    .channel-item.dragging { opacity: 0.4; }
+    .category-item.drop-target > .category-header {
+      border-color: var(--neon) !important;
+      background: rgba(0,240,255,0.08) !important;
+      box-shadow: 0 0 12px var(--neon-glow-soft) !important;
+    }
+    .category-children.drop-target {
+      outline: 2px dashed var(--neon);
+      outline-offset: -2px;
+      border-radius: 6px;
+      background: rgba(0,240,255,0.04);
+    }
+    .drop-zone-uncategorized {
+      min-height: 8px; margin-bottom: 8px; border-radius: 6px;
+      transition: all 0.15s;
+    }
+    .drop-zone-uncategorized.drop-target {
+      min-height: 32px;
+      outline: 2px dashed var(--neon);
+      outline-offset: -2px;
+      background: rgba(0,240,255,0.04);
+    }
+    .drop-zone-uncategorized.drop-target::after {
+      content: 'Drop here to remove from category';
+      display: block; text-align: center; padding: 6px;
+      color: var(--neon); font-size: 12px;
+    }
+
     /* Permission editor */
     .perm-editor { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; }
     .perm-role-row {
@@ -598,6 +628,19 @@
         childMap[c.parent].push(c);
       });
 
+      // Drop zone for uncategorized (remove from category)
+      const dropZone = document.createElement('li');
+      dropZone.className = 'drop-zone-uncategorized';
+      dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drop-target'); });
+      dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drop-target'));
+      dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('drop-target');
+        const channelId = e.dataTransfer.getData('text/plain');
+        if (channelId) moveChannelToCategory(channelId, null);
+      });
+      tree.appendChild(dropZone);
+
       // Render uncategorized channels first
       if (uncategorized.length > 0) {
         uncategorized.forEach(ch => {
@@ -609,6 +652,7 @@
       categories.forEach(cat => {
         const li = document.createElement('li');
         li.className = 'category-item';
+        li.dataset.categoryId = cat.id;
 
         const header = document.createElement('div');
         header.className = 'category-header';
@@ -628,6 +672,18 @@
           const arrow = header.querySelector('.arrow');
           children.classList.toggle('collapsed');
           arrow.classList.toggle('collapsed');
+        });
+
+        // Drop on category header
+        li.addEventListener('dragover', (e) => { e.preventDefault(); li.classList.add('drop-target'); });
+        li.addEventListener('dragleave', (e) => {
+          if (!li.contains(e.relatedTarget)) li.classList.remove('drop-target');
+        });
+        li.addEventListener('drop', (e) => {
+          e.preventDefault();
+          li.classList.remove('drop-target');
+          const channelId = e.dataTransfer.getData('text/plain');
+          if (channelId && channelId !== cat.id) moveChannelToCategory(channelId, cat.id);
         });
 
         const childrenUl = document.createElement('ul');
@@ -659,7 +715,10 @@
       const isText = icon === '#';
 
       li.className = 'channel-item' + (selectedChannelId === ch.id ? ' selected' : '');
+      li.draggable = true;
+      li.dataset.channelId = ch.id;
       li.innerHTML = `
+        <span style="cursor:grab; color:var(--text-muted); font-size:12px; margin-right:-4px;" title="Drag to move">⠿</span>
         <span class="channel-icon" ${isText ? 'style="font-size:18px;font-weight:700;color:var(--text-muted);"' : ''}>${icon}</span>
         <span class="channel-name">${escapeHtml(ch.name)}</span>
         <span class="channel-type-badge">${escapeHtml(ch.typeName)}</span>
@@ -668,7 +727,44 @@
         </div>
       `;
       li.addEventListener('click', () => selectChannel(ch.id));
+
+      // Drag events
+      li.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', ch.id);
+        e.dataTransfer.effectAllowed = 'move';
+        li.classList.add('dragging');
+      });
+      li.addEventListener('dragend', () => li.classList.remove('dragging'));
+
       return li;
+    }
+
+    // ── Move channel to category (real-time on Discord) ──────────────────
+    async function moveChannelToCategory(channelId, categoryId) {
+      const guildId = getCurrentGuild();
+      if (!guildId) return;
+
+      const ch = allChannels.find(c => c.id === channelId);
+      if (!ch) return;
+
+      // Don't move if already in the same category
+      if (ch.parent === categoryId) return;
+
+      const catName = categoryId
+        ? (allChannels.find(c => c.id === categoryId)?.name || 'category')
+        : 'uncategorized';
+
+      try {
+        await api(`/api/guilds/${guildId}/channels/${channelId}`, {
+          method: 'PUT',
+          body: JSON.stringify({ parent: categoryId || '' }),
+        });
+
+        showToast(`Moved #${ch.name} to ${catName}`, 'success');
+        loadChannels(); // Reload to reflect changes
+      } catch (err) {
+        showToast('Failed to move channel: ' + err.message, 'error');
+      }
     }
 
     // ── Select Channel ────────────────────────────────────────────────────
