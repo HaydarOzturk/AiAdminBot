@@ -203,11 +203,11 @@ router.post('/:guildId/channels', async (req, res) => {
     const guild = getGuild(req);
     if (!guild) return res.status(404).json({ error: 'Guild not found' });
 
-    const { name, type = 'text', parent, topic, nsfw = false, permissionOverwrites } = req.body;
+    const { name, type = 'text', parent, parentName, topic, nsfw = false, permissionOverwrites } = req.body;
     if (!name) return res.status(400).json({ error: 'name is required' });
 
     const typeMap = { text: 0, voice: 2, category: 4, announcement: 5, stage: 13, forum: 15 };
-    const channelType = typeMap[type];
+    const channelType = typeof type === 'number' ? type : typeMap[type];
     if (channelType === undefined) return res.status(400).json({ error: `Invalid type. Use: ${Object.keys(typeMap).join(', ')}` });
 
     const opts = {
@@ -216,7 +216,12 @@ router.post('/:guildId/channels', async (req, res) => {
       reason: 'Created via Dashboard',
     };
 
-    if (parent) opts.parent = parent;
+    if (parent) {
+      opts.parent = parent;
+    } else if (parentName) {
+      const cat = guild.channels.cache.find(c => c.type === 4 && c.name.toLowerCase() === parentName.toLowerCase());
+      if (cat) opts.parent = cat.id;
+    }
     if (topic && channelType === 0) opts.topic = topic;
     if (nsfw) opts.nsfw = true;
 
@@ -1501,6 +1506,89 @@ router.post('/:guildId/setup/channel-group', async (req, res) => {
     res.json({ success: true, created, skipped, categoryName: catCfg.name });
   } catch (err) {
     console.error('API channel-group setup error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * DELETE /api/guilds/:guildId/setup/channel-group
+ * Body: { group: string, deleteCategory: boolean }
+ * Deletes all channels in a feature group (and optionally the category).
+ */
+router.delete('/:guildId/setup/channel-group', async (req, res) => {
+  try {
+    const guild = getGuild(req);
+    if (!guild) return res.status(404).json({ error: 'Guild not found' });
+
+    const { group, deleteCategory } = req.body;
+    if (!group) return res.status(400).json({ error: 'group is required' });
+
+    const { ChannelType: CT } = require('discord.js');
+    const { buildLocalizedDefaultConfig } = require('../../systems/serverSetup');
+    const config = buildLocalizedDefaultConfig();
+
+    const GROUP_CAT_INDEX = {
+      verification: 0, roles: 1, chat: 2, welcome: 3, voice: 4, logs: 5, staff: 6, streaming: 7, afk: 8,
+    };
+
+    const catIndex = GROUP_CAT_INDEX[group];
+    if (catIndex === undefined) return res.status(400).json({ error: `Unknown group: ${group}` });
+
+    const catCfg = config.categories[catIndex];
+    if (!catCfg) return res.status(400).json({ error: 'Group config not found' });
+
+    // Find the category
+    const category = guild.channels.cache.find(
+      c => c.type === CT.GuildCategory && c.name.toLowerCase() === catCfg.name.toLowerCase()
+    );
+
+    let deleted = 0;
+
+    // Delete channels that match the group's default channel names
+    const expectedNames = catCfg.channels.map(ch => ch.name.toLowerCase());
+    for (const ch of guild.channels.cache.values()) {
+      if (ch.type === CT.GuildCategory) continue;
+      if (category && ch.parentId === category.id && expectedNames.includes(ch.name.toLowerCase())) {
+        await ch.delete('Removed via Dashboard Quick Setup');
+        deleted++;
+      }
+    }
+
+    // Delete category if requested and empty
+    if (deleteCategory && category) {
+      const remaining = guild.channels.cache.filter(c => c.parentId === category.id);
+      if (remaining.size === 0) {
+        await category.delete('Removed via Dashboard Quick Setup');
+      }
+    }
+
+    res.json({ success: true, deleted });
+  } catch (err) {
+    console.error('API channel-group delete error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * DELETE /api/guilds/:guildId/setup/channel
+ * Body: { channelId: string }
+ * Delete a single channel by ID.
+ */
+router.delete('/:guildId/setup/channel', async (req, res) => {
+  try {
+    const guild = getGuild(req);
+    if (!guild) return res.status(404).json({ error: 'Guild not found' });
+
+    const { channelId } = req.body;
+    if (!channelId) return res.status(400).json({ error: 'channelId is required' });
+
+    const channel = guild.channels.cache.get(channelId);
+    if (!channel) return res.status(404).json({ error: 'Channel not found' });
+
+    const name = channel.name;
+    await channel.delete('Removed via Dashboard');
+    res.json({ success: true, name });
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
