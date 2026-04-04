@@ -572,6 +572,33 @@ input:checked + .toggle-slider {
   .tab { white-space: nowrap; }
 }
 
+/* ── Sortable Table Headers ──────────────────────────────────────────── */
+th[data-sortable] {
+  cursor: pointer; user-select: none; position: relative;
+  padding-right: 24px !important; transition: color 0.15s;
+}
+th[data-sortable]:hover {
+  color: #fff; text-shadow: 0 0 6px var(--neon-glow);
+}
+th[data-sortable]::after {
+  content: '⇅'; position: absolute; right: 6px; top: 50%;
+  transform: translateY(-50%); font-size: 10px; opacity: 0.3;
+  transition: opacity 0.15s;
+}
+th[data-sortable]:hover::after { opacity: 0.6; }
+th[data-sortable].sort-asc::after {
+  content: '▲'; opacity: 1; color: var(--neon);
+  text-shadow: 0 0 6px var(--neon-glow);
+}
+th[data-sortable].sort-desc::after {
+  content: '▼'; opacity: 1; color: var(--neon);
+  text-shadow: 0 0 6px var(--neon-glow);
+}
+th[data-sortable].sort-asc,
+th[data-sortable].sort-desc {
+  color: #fff;
+}
+
 /* ── Custom Modal (replaces browser confirm/prompt/alert) ────────────── */
 .modal-overlay {
   position: fixed; inset: 0; z-index: 9999;

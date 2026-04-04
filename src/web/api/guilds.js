@@ -1228,7 +1228,8 @@ router.get('/:guildId/config', (req, res) => {
     const safeEnvKeys = ['LOCALE', 'LOG_LEVEL', 'AI_CHAT_ENABLED', 'AI_CHAT_CHANNEL',
       'AI_MODERATION_ENABLED', 'AI_MOD_CONFIDENCE_THRESHOLD', 'AI_TIMEOUT_MINUTES',
       'WEB_PORT', 'VOICE_XP_INTERVAL', 'VOICE_XP_AMOUNT', 'VOICE_XP_DAILY_CAP',
-      'MSG_XP_MIN', 'MSG_XP_MAX', 'MSG_XP_DAILY_CAP', 'MSG_XP_COOLDOWN'];
+      'MSG_XP_MIN', 'MSG_XP_MAX', 'MSG_XP_DAILY_CAP', 'MSG_XP_COOLDOWN',
+      'WEB_DEBUG_MODE'];
 
     const env = {};
     safeEnvKeys.forEach(key => {
@@ -1684,6 +1685,107 @@ router.put('/:guildId/setup/afk', async (req, res) => {
     });
   } catch (err) {
     console.error('API AFK update error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// STARBOARD SETTINGS
+// ══════════════════════════════════════════════════════════════════════════
+
+/**
+ * GET /api/guilds/:guildId/starboard
+ * Returns starboard settings for this guild
+ */
+router.get('/:guildId/starboard', (req, res) => {
+  try {
+    const guild = getGuild(req);
+    if (!guild) return res.status(404).json({ error: 'Guild not found' });
+
+    const settings = db.get(
+      'SELECT * FROM starboard_settings WHERE guild_id = ?',
+      [req.params.guildId]
+    );
+
+    if (!settings) {
+      return res.json({
+        enabled: false,
+        channelId: null,
+        channelName: null,
+        threshold: 3,
+        emoji: '⭐',
+        selfStar: false,
+      });
+    }
+
+    const channel = settings.channel_id
+      ? guild.channels.cache.get(settings.channel_id)
+      : null;
+
+    res.json({
+      enabled: !!settings.enabled,
+      channelId: settings.channel_id || null,
+      channelName: channel ? channel.name : null,
+      threshold: settings.threshold || 3,
+      emoji: settings.emoji || '⭐',
+      selfStar: !!settings.self_star,
+    });
+  } catch (err) {
+    console.error('Starboard GET error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * PUT /api/guilds/:guildId/starboard
+ * Update starboard settings
+ * Body: { enabled, channelId, threshold, emoji, selfStar }
+ */
+router.put('/:guildId/starboard', (req, res) => {
+  try {
+    const guild = getGuild(req);
+    if (!guild) return res.status(404).json({ error: 'Guild not found' });
+
+    const { enabled, channelId, threshold, emoji, selfStar } = req.body;
+    const guildId = req.params.guildId;
+
+    // Validate threshold
+    const safeThreshold = Math.min(25, Math.max(1, parseInt(threshold) || 3));
+
+    // Validate emoji (allow any string up to 10 chars)
+    const safeEmoji = (emoji || '⭐').slice(0, 10);
+
+    // Validate channel exists if provided
+    if (channelId) {
+      const channel = guild.channels.cache.get(channelId);
+      if (!channel) return res.status(400).json({ error: 'Channel not found' });
+    }
+
+    // Upsert starboard_settings
+    db.run(
+      `INSERT INTO starboard_settings (guild_id, enabled, channel_id, threshold, emoji, self_star)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(guild_id) DO UPDATE SET
+         enabled = ?, channel_id = ?, threshold = ?, emoji = ?, self_star = ?`,
+      [
+        guildId, enabled ? 1 : 0, channelId || null, safeThreshold, safeEmoji, selfStar ? 1 : 0,
+        enabled ? 1 : 0, channelId || null, safeThreshold, safeEmoji, selfStar ? 1 : 0,
+      ]
+    );
+
+    const channel = channelId ? guild.channels.cache.get(channelId) : null;
+
+    res.json({
+      success: true,
+      enabled: !!enabled,
+      channelId: channelId || null,
+      channelName: channel ? channel.name : null,
+      threshold: safeThreshold,
+      emoji: safeEmoji,
+      selfStar: !!selfStar,
+    });
+  } catch (err) {
+    console.error('Starboard PUT error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });

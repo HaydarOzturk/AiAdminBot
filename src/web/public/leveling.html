@@ -53,13 +53,13 @@
             <table>
               <thead>
                 <tr>
-                  <th>Rank</th>
-                  <th>User</th>
-                  <th>Level</th>
-                  <th>XP</th>
-                  <th>Messages</th>
-                  <th>Voice Time</th>
-                  <th>Tier</th>
+                  <th data-sortable data-sort-type="number">Rank</th>
+                  <th data-sortable>User</th>
+                  <th data-sortable data-sort-type="number">Level</th>
+                  <th data-sortable data-sort-type="number">XP</th>
+                  <th data-sortable data-sort-type="number">Messages</th>
+                  <th data-sortable data-sort-type="number">Voice Time</th>
+                  <th data-sortable>Tier</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -196,17 +196,20 @@
           const voiceTimeFormatted = formatVoiceTime(user.voiceMinutes || 0);
 
           row.innerHTML = `
-            <td><strong>#${idx + 1}</strong></td>
+            <td data-sort-value="${idx + 1}"><strong>#${idx + 1}</strong></td>
             <td>${escapeHtml(user.username)}</td>
-            <td><strong>${user.level ?? 0}</strong></td>
-            <td>${formatNumber(user.xp || 0)}</td>
-            <td>${formatNumber(user.messageCount || 0)}</td>
-            <td>${voiceTimeFormatted}</td>
+            <td data-sort-value="${user.level ?? 0}"><strong>${user.level ?? 0}</strong></td>
+            <td data-sort-value="${user.xp || 0}">${formatNumber(user.xp || 0)}</td>
+            <td data-sort-value="${user.messageCount || 0}">${formatNumber(user.messageCount || 0)}</td>
+            <td data-sort-value="${user.voiceMinutes || 0}">${voiceTimeFormatted}</td>
             <td>${tierBadge}</td>
             <td><button class="btn btn-danger btn-small" onclick="quickResetUser('${escapeHtml(user.userId)}', '${escapeHtml(user.username)}')">Reset</button></td>
           `;
           tbody.appendChild(row);
         });
+
+        // Enable column sorting
+        initSortableTable(tbody.closest('table'));
 
         // Populate reset dropdown with leaderboard users
         populateResetDropdown(data.users);

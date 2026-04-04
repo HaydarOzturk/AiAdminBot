@@ -96,6 +96,7 @@ const ENV_SCHEMA = {
     icon: '🔧',
     fields: [
       { key: 'DEBUG_OWNER_ID', label: 'Debug Owner ID (bypass staff exempt)', type: 'text', placeholder: 'Discord User ID' },
+      { key: 'WEB_DEBUG_MODE', label: 'Dashboard Debug Mode', type: 'toggle', default: 'false', description: 'Show server resource stats (CPU, RAM, disk) on the home page' },
     ],
   },
 };

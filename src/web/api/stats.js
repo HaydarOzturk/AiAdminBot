@@ -45,6 +45,120 @@ router.get('/', (req, res) => {
 });
 
 /**
+ * GET /api/stats/system
+ * Returns server resource usage (CPU, RAM, disk, database size, etc.)
+ * Only returns data if WEB_DEBUG_MODE=true
+ */
+router.get('/system', async (req, res) => {
+  try {
+    const debugMode = (process.env.WEB_DEBUG_MODE || 'false') === 'true';
+    if (!debugMode) {
+      return res.json({ enabled: false });
+    }
+
+    const os = require('os');
+    const fs = require('fs');
+    const path = require('path');
+    const { execSync } = require('child_process');
+    const { projectPath } = require('../../utils/paths');
+
+    // Memory usage
+    const totalMem = os.totalmem();
+    const freeMem = os.freemem();
+    const usedMem = totalMem - freeMem;
+    const processMem = process.memoryUsage();
+
+    // CPU info
+    const cpus = os.cpus();
+    const cpuModel = cpus[0]?.model || 'Unknown';
+    const cpuCores = cpus.length;
+
+    const loadAvg = os.loadavg();
+
+    // Disk usage — try df for Linux, fallback gracefully
+    let diskTotal = 0, diskUsed = 0, diskFree = 0;
+    try {
+      const dfOutput = execSync('df -B1 / 2>/dev/null || echo "0 0 0"', { encoding: 'utf-8', timeout: 3000 });
+      const lines = dfOutput.trim().split('\n');
+      if (lines.length >= 2) {
+        const parts = lines[1].split(/\s+/);
+        diskTotal = parseInt(parts[1]) || 0;
+        diskUsed = parseInt(parts[2]) || 0;
+        diskFree = parseInt(parts[3]) || 0;
+      }
+    } catch { /* Windows or other OS — skip */ }
+
+    // Database file size
+    const dbPath = projectPath(process.env.DATABASE_PATH || './data/bot.db');
+    let dbSize = 0;
+    try { dbSize = fs.statSync(dbPath).size; } catch { /* no db file */ }
+
+    // Log files total size
+    const logsDir = projectPath('./logs');
+    let logsSize = 0;
+    try {
+      if (fs.existsSync(logsDir)) {
+        for (const f of fs.readdirSync(logsDir)) {
+          try { logsSize += fs.statSync(path.join(logsDir, f)).size; } catch {}
+        }
+      }
+    } catch {}
+
+    // Data folder size
+    const dataDir = projectPath('./data');
+    let dataSize = 0;
+    try {
+      if (fs.existsSync(dataDir)) {
+        for (const f of fs.readdirSync(dataDir)) {
+          try { dataSize += fs.statSync(path.join(dataDir, f)).size; } catch {}
+        }
+      }
+    } catch {}
+
+    const uptimeSeconds = os.uptime();
+
+    res.json({
+      enabled: true,
+      system: {
+        platform: os.platform(),
+        arch: os.arch(),
+        hostname: os.hostname(),
+        uptimeSeconds,
+        uptimeFormatted: formatSystemUptime(uptimeSeconds),
+      },
+      cpu: {
+        model: cpuModel,
+        cores: cpuCores,
+        loadAvg: { '1min': loadAvg[0].toFixed(2), '5min': loadAvg[1].toFixed(2), '15min': loadAvg[2].toFixed(2) },
+      },
+      memory: {
+        total: totalMem, used: usedMem, free: freeMem,
+        usagePercent: ((usedMem / totalMem) * 100).toFixed(1),
+        process: { rss: processMem.rss, heapTotal: processMem.heapTotal, heapUsed: processMem.heapUsed, external: processMem.external },
+      },
+      disk: {
+        total: diskTotal, used: diskUsed, free: diskFree,
+        usagePercent: diskTotal > 0 ? ((diskUsed / diskTotal) * 100).toFixed(1) : '0',
+      },
+      storage: { database: dbSize, logs: logsSize, data: dataSize, total: dbSize + logsSize + dataSize },
+      node: { version: process.version, pid: process.pid, uptimeSeconds: Math.floor(process.uptime()) },
+    });
+  } catch (err) {
+    console.error('System stats error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+function formatSystemUptime(seconds) {
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  if (days > 0) return `${days}d ${hours}h ${mins}m`;
+  if (hours > 0) return `${hours}h ${mins}m`;
+  return `${mins}m`;
+}
+
+/**
  * GET /api/stats/:guildId
  * Returns detailed statistics for a specific guild
  */

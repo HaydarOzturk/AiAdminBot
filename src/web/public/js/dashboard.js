@@ -304,6 +304,98 @@ function showPrompt(message, opts = {}) {
   });
 }
 
+/* ── Sortable Tables ─────────────────────────────────────────────────── */
+
+/**
+ * Make a table sortable. Call after populating the table body.
+ * Headers must have data-sortable attribute.
+ * Optional: data-sort-type="number|date|string" (default: string)
+ *
+ * Rows can have data-sort-value on <td> elements for raw sort values,
+ * otherwise the text content is used.
+ *
+ * @param {HTMLElement|string} tableOrSelector - table element or CSS selector
+ */
+function initSortableTable(tableOrSelector) {
+  const table = typeof tableOrSelector === 'string'
+    ? document.querySelector(tableOrSelector)
+    : tableOrSelector;
+  if (!table) return;
+
+  const headers = table.querySelectorAll('th[data-sortable]');
+  headers.forEach((th, colIndex) => {
+    // Remove old listener if re-initializing
+    if (th._sortHandler) th.removeEventListener('click', th._sortHandler);
+
+    th._sortHandler = () => sortTableByColumn(table, th, colIndex);
+    th.addEventListener('click', th._sortHandler);
+  });
+}
+
+function sortTableByColumn(table, clickedTh, colIndex) {
+  const tbody = table.querySelector('tbody');
+  if (!tbody) return;
+
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+  // Skip if only 1 row or the "no data" placeholder row
+  if (rows.length <= 1 && rows[0]?.querySelectorAll('td').length <= 1) return;
+
+  const allHeaders = table.querySelectorAll('th[data-sortable]');
+  const sortType = clickedTh.dataset.sortType || 'string';
+
+  // Determine direction
+  let direction = 'asc';
+  if (clickedTh.classList.contains('sort-asc')) {
+    direction = 'desc';
+  } else if (clickedTh.classList.contains('sort-desc')) {
+    direction = 'asc';
+  }
+
+  // Clear all sort classes
+  allHeaders.forEach(h => h.classList.remove('sort-asc', 'sort-desc'));
+  clickedTh.classList.add(direction === 'asc' ? 'sort-asc' : 'sort-desc');
+
+  // Parse cell value for comparison
+  function getCellValue(row) {
+    const cells = row.querySelectorAll('td');
+    if (colIndex >= cells.length) return '';
+    const cell = cells[colIndex];
+    // Use data-sort-value if present, otherwise textContent
+    const raw = cell.dataset.sortValue !== undefined ? cell.dataset.sortValue : cell.textContent.trim();
+
+    switch (sortType) {
+      case 'number': {
+        // Strip commas, #, etc. and parse
+        const num = parseFloat(raw.replace(/[^0-9.\-]/g, ''));
+        return isNaN(num) ? -Infinity : num;
+      }
+      case 'date': {
+        const ts = Date.parse(raw);
+        return isNaN(ts) ? 0 : ts;
+      }
+      default:
+        return raw.toLowerCase();
+    }
+  }
+
+  rows.sort((a, b) => {
+    const valA = getCellValue(a);
+    const valB = getCellValue(b);
+
+    let cmp = 0;
+    if (sortType === 'number' || sortType === 'date') {
+      cmp = valA - valB;
+    } else {
+      cmp = valA < valB ? -1 : valA > valB ? 1 : 0;
+    }
+
+    return direction === 'asc' ? cmp : -cmp;
+  });
+
+  // Re-append sorted rows
+  rows.forEach(row => tbody.appendChild(row));
+}
+
 /* Initialize Page */
 document.addEventListener('DOMContentLoaded', () => {
   initNav();

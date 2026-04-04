@@ -753,7 +753,11 @@
 
     async function loadChannels() {
       try {
-        const data = await api('/api/settings/channels');
+        const guildId = getCurrentGuild();
+        const [data, starboardData] = await Promise.all([
+          api('/api/settings/channels'),
+          guildId ? api(`/api/guilds/${guildId}/starboard`).catch(() => null) : Promise.resolve(null),
+        ]);
         const container = document.getElementById('channelsList');
         const saveBtn = document.getElementById('saveChannelsBtn');
         allGuildChannels = data.allChannels || [];
@@ -793,11 +797,60 @@
           html += `</div>`;
 
           html += `</div>`;
+
+          // Inline starboard settings beneath the Starboard row
+          if (ch.id === 'starboard') {
+            const sb = starboardData || { enabled: false, threshold: 3, emoji: '⭐', selfStar: false };
+            html += `<div style="padding:12px 0 12px 20px; border-bottom:1px solid var(--border-color); display:flex; flex-wrap:wrap; gap:16px; align-items:center;">`;
+            html += `<div style="display:flex; align-items:center; gap:8px;">`;
+            html += `<label class="toggle-switch"><input type="checkbox" id="sb-enabled" ${sb.enabled ? 'checked' : ''}><span class="toggle-slider"></span></label>`;
+            html += `<span style="font-size:13px; color:var(--text-secondary);">Enabled</span>`;
+            html += `</div>`;
+            html += `<div style="display:flex; align-items:center; gap:6px;">`;
+            html += `<span style="font-size:13px; color:var(--text-secondary);">Stars needed:</span>`;
+            html += `<input type="number" class="setting-input" id="sb-threshold" min="1" max="25" value="${sb.threshold}" style="width:70px; padding:4px 8px; font-size:13px;">`;
+            html += `</div>`;
+            html += `<div style="display:flex; align-items:center; gap:6px;">`;
+            html += `<span style="font-size:13px; color:var(--text-secondary);">Emoji:</span>`;
+            html += `<input type="text" class="setting-input" id="sb-emoji" value="${escapeHtml(sb.emoji)}" style="width:50px; padding:4px 8px; font-size:16px; text-align:center;">`;
+            html += `</div>`;
+            html += `<div style="display:flex; align-items:center; gap:8px;">`;
+            html += `<label class="toggle-switch"><input type="checkbox" id="sb-self-star" ${sb.selfStar ? 'checked' : ''}><span class="toggle-slider"></span></label>`;
+            html += `<span style="font-size:13px; color:var(--text-secondary);">Self-star</span>`;
+            html += `</div>`;
+            html += `<button class="btn btn-primary btn-small" onclick="saveStarboard()">Save</button>`;
+            html += `</div>`;
+          }
         }
 
         container.innerHTML = html;
       } catch (err) {
         console.error('Failed to load channels:', err);
+      }
+    }
+
+    async function saveStarboard() {
+      const guildId = getCurrentGuild();
+      if (!guildId) { showToast('Select a guild first', 'warning'); return; }
+
+      try {
+        const enabled = document.getElementById('sb-enabled').checked;
+        const threshold = parseInt(document.getElementById('sb-threshold').value) || 3;
+        const emoji = document.getElementById('sb-emoji').value || '⭐';
+        const selfStar = document.getElementById('sb-self-star').checked;
+
+        // Find the starboard channel ID from the channels data
+        const channelsData = await api('/api/settings/channels');
+        const sbChannel = channelsData.channels.find(c => c.id === 'starboard');
+        const channelId = sbChannel?.foundChannelId || null;
+
+        await api(`/api/guilds/${guildId}/starboard`, {
+          method: 'PUT',
+          body: JSON.stringify({ enabled, channelId, threshold, emoji, selfStar }),
+        });
+        showToast('Starboard settings saved', 'success');
+      } catch (err) {
+        showToast('Failed to save starboard settings: ' + err.message, 'error');
       }
     }
 
