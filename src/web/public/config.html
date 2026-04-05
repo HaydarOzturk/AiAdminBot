@@ -570,59 +570,60 @@
     }
 
     // ── Stream Links Section (appended to streaming panel) ──────────
+
+    const ALL_PLATFORMS = [
+      { id: 'kick', label: 'Kick', emoji: '🟢', canDetectLive: true },
+      { id: 'twitch', label: 'Twitch', emoji: '🟣', canDetectLive: true },
+      { id: 'youtube', label: 'YouTube', emoji: '🔴', canDetectLive: true },
+      { id: 'youtube-shorts', label: 'YouTube Shorts', emoji: '📱', canDetectLive: true },
+      { id: 'tiktok', label: 'TikTok', emoji: '🎵', canDetectLive: false },
+      { id: 'instagram', label: 'Instagram', emoji: '📸', canDetectLive: false },
+      { id: 'facebook', label: 'Facebook Gaming', emoji: '🎮', canDetectLive: false },
+    ];
+
     async function loadStreamLinks() {
       const guildId = getCurrentGuild();
       if (!guildId) return;
       const panel = document.getElementById('panel-streaming');
       if (!panel) return;
 
-      // Don't duplicate
-      if (document.getElementById('stream-links-section')) return;
+      // Remove existing to refresh
+      const existing = document.getElementById('stream-links-section');
+      if (existing) existing.remove();
 
       try {
         const data = await api(`/api/guilds/${guildId}/stream-links`);
         const links = data.links || [];
+        const linkMap = {};
+        links.forEach(l => { linkMap[l.platform] = l; });
 
-        const platforms = ['kick', 'twitch', 'youtube'];
         let html = `
           <div id="stream-links-section" style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border-color);">
-            <h3 style="font-size:14px;font-weight:700;margin:0 0 12px;color:var(--text-primary);">Stream Links</h3>
-            <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">Platform links used for stream announcements. Edit or add links below.</p>
+            <h3 style="font-size:14px;font-weight:700;margin:0 0 4px;color:var(--text-primary);">Stream Links</h3>
+            <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">Manage platform links for stream announcements. Active platforms appear in announcements.</p>
         `;
 
-        for (const platform of platforms) {
-          const link = links.find(l => l.platform === platform);
-          const emoji = platform === 'kick' ? '🟢' : platform === 'twitch' ? '🟣' : '🔴';
-          const label = platform.charAt(0).toUpperCase() + platform.slice(1);
+        for (const plat of ALL_PLATFORMS) {
+          const link = linkMap[plat.id];
+          const isActive = !!link;
+          const liveLabel = plat.canDetectLive ? '<span style="font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(34,197,94,0.1);color:#22c55e;font-weight:600;margin-left:4px;">LIVE DETECT</span>' : '<span style="font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(168,162,158,0.1);color:#a8a29e;font-weight:600;margin-left:4px;">LINK ONLY</span>';
+
           html += `
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:10px 14px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-card);">
-              <span style="font-size:18px;width:24px;text-align:center;">${emoji}</span>
-              <span style="font-size:13px;font-weight:600;width:70px;color:var(--text-primary);">${label}</span>
-              <input type="text" id="sl-handle-${platform}" value="${escapeHtml(link?.platform_handle || '')}" placeholder="Handle/username"
-                style="flex:0 0 140px;font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-tertiary);color:var(--text-primary);font-family:inherit;">
-              <input type="text" id="sl-url-${platform}" value="${escapeHtml(link?.platform_url || '')}" placeholder="Full URL"
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:12px 14px;border:1px solid ${isActive ? 'var(--accent-primary)' : 'var(--border-color)'};border-radius:8px;background:var(--bg-card);${isActive ? 'border-left:3px solid var(--accent-primary);' : 'opacity:0.7;'}">
+              <span style="font-size:18px;width:24px;text-align:center;">${plat.emoji}</span>
+              <div style="width:120px;">
+                <div style="font-size:13px;font-weight:600;color:var(--text-primary);">${plat.label}</div>
+                <div>${liveLabel}</div>
+              </div>
+              <input type="text" id="sl-handle-${plat.id}" value="${escapeHtml(link?.platform_handle || '')}" placeholder="Handle/username"
+                style="flex:0 0 130px;font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-tertiary);color:var(--text-primary);font-family:inherit;">
+              <input type="text" id="sl-url-${plat.id}" value="${escapeHtml(link?.platform_url || '')}" placeholder="Channel or profile URL"
                 style="flex:1;font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-tertiary);color:var(--text-primary);font-family:inherit;">
-              <button class="btn btn-primary btn-small" style="font-size:11px;" onclick="saveStreamLink('${platform}')">Save</button>
-              ${link ? `<button class="btn btn-danger btn-small" style="font-size:11px;" onclick="deleteStreamLink('${platform}')">Delete</button>` : ''}
+              <button class="btn btn-primary btn-small" style="font-size:11px;" onclick="saveStreamLink('${plat.id}')">${isActive ? 'Update' : 'Activate'}</button>
+              ${isActive ? `<button class="btn btn-danger btn-small" style="font-size:11px;" onclick="deleteStreamLink('${plat.id}')">Deactivate</button>` : ''}
             </div>
           `;
         }
-
-        // Show any additional platforms
-        links.filter(l => !platforms.includes(l.platform)).forEach(link => {
-          html += `
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:10px 14px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-card);">
-              <span style="font-size:18px;width:24px;text-align:center;">🔗</span>
-              <span style="font-size:13px;font-weight:600;width:70px;color:var(--text-primary);">${escapeHtml(link.platform)}</span>
-              <input type="text" id="sl-handle-${link.platform}" value="${escapeHtml(link.platform_handle || '')}" placeholder="Handle"
-                style="flex:0 0 140px;font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-tertiary);color:var(--text-primary);font-family:inherit;">
-              <input type="text" id="sl-url-${link.platform}" value="${escapeHtml(link.platform_url || '')}" placeholder="URL"
-                style="flex:1;font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-tertiary);color:var(--text-primary);font-family:inherit;">
-              <button class="btn btn-primary btn-small" style="font-size:11px;" onclick="saveStreamLink('${link.platform}')">Save</button>
-              <button class="btn btn-danger btn-small" style="font-size:11px;" onclick="deleteStreamLink('${link.platform}')">Delete</button>
-            </div>
-          `;
-        });
 
         html += `</div>`;
         panel.insertAdjacentHTML('beforeend', html);
@@ -641,20 +642,18 @@
           method: 'PUT',
           body: JSON.stringify({ handle, url }),
         });
-        showToast(`${platform} link saved`, 'success');
+        showToast(`${platform} activated`, 'success');
+        loadStreamLinks(); // Refresh to show active state
       } catch (err) { showToast('Failed: ' + err.message, 'error'); }
     }
 
     async function deleteStreamLink(platform) {
-      if (!await showConfirm(`Delete ${platform} link?`, { title: 'Delete Link', danger: true })) return;
+      if (!await showConfirm(`Deactivate ${platform}? The link will be removed from announcements.`, { title: 'Deactivate Platform', warning: true })) return;
       const guildId = getCurrentGuild();
       try {
         await api(`/api/guilds/${guildId}/stream-links/${platform}`, { method: 'DELETE' });
-        showToast(`${platform} link deleted`, 'success');
-        // Reload
-        const section = document.getElementById('stream-links-section');
-        if (section) section.remove();
-        loadStreamLinks();
+        showToast(`${platform} deactivated`, 'success');
+        loadStreamLinks(); // Refresh
       } catch (err) { showToast('Failed: ' + err.message, 'error'); }
     }
 
