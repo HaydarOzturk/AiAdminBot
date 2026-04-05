@@ -850,7 +850,7 @@
             <div class="draft-item-type">${draft.message_type}</div>
           </div>
           <select onchange="this.dataset.channelId=this.value">${channelOptions}</select>
-          <button class="btn btn-primary btn-small" style="font-size:11px;" onclick="publishDraft(${draft.id}, this.parentElement.querySelector('select').value)">Publish</button>
+          <button class="btn btn-primary btn-small" style="font-size:11px;" onclick="publishDraft(${draft.id}, this.parentElement.querySelector('select').value)">Save (Default)</button>
           <button class="btn btn-secondary btn-small" style="font-size:11px;" onclick="editDraftInline(${draft.id})">Edit</button>
           <button class="btn btn-danger btn-small" style="font-size:11px;" onclick="deleteDraft(${draft.id})">Delete</button>
         `;
