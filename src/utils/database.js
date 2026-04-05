@@ -493,6 +493,17 @@ async function initDatabase() {
     // Table might not exist yet or column already exists — safe to ignore
   }
 
+  // Migration: add game config columns to channel_ai_config if missing
+  try {
+    const cols = db.exec('PRAGMA table_info(channel_ai_config)');
+    const hasTemp = cols[0]?.values?.some(row => row[1] === 'allow_temp_channels');
+    if (!hasTemp) {
+      db.run('ALTER TABLE channel_ai_config ADD COLUMN allow_temp_channels INTEGER DEFAULT 0');
+      db.run('ALTER TABLE channel_ai_config ADD COLUMN max_concurrent_games INTEGER DEFAULT 2');
+      console.log('🔄 Migration: added game config columns to channel_ai_config');
+    }
+  } catch {}
+
   // Save to disk after creating tables
   saveDatabase();
 

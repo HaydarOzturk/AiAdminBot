@@ -2156,6 +2156,8 @@ router.get('/:guildId/channel-ai', (req, res) => {
             customPrompt: cfg.custom_prompt || '',
             autoDetectIntent: cfg.auto_detect_intent != null ? !!cfg.auto_detect_intent : true,
             responseCooldown: cfg.response_cooldown || 30,
+            allowTempChannels: !!cfg.allow_temp_channels,
+            maxConcurrentGames: cfg.max_concurrent_games || 2,
           });
         });
     }
@@ -2185,7 +2187,7 @@ router.get('/:guildId/channel-ai', (req, res) => {
 /** Upsert a channel's AI config */
 router.put('/:guildId/channel-ai/:channelId', (req, res) => {
   try {
-    const { enabled, intent, customPrompt, autoDetectIntent, responseCooldown } = req.body;
+    const { enabled, intent, customPrompt, autoDetectIntent, responseCooldown, allowTempChannels, maxConcurrentGames } = req.body;
 
     // Validate intent
     if (intent && !channelAi.getIntentById(intent)) {
@@ -2198,6 +2200,7 @@ router.put('/:guildId/channel-ai/:channelId', (req, res) => {
     channelAi.upsertConfig(req.params.guildId, req.params.channelId, {
       enabled, intent, customPrompt, autoDetectIntent,
       responseCooldown: Math.max(10, Math.min(300, responseCooldown || 30)),
+      allowTempChannels, maxConcurrentGames,
     });
 
     res.json({ success: true });

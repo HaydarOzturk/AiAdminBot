@@ -165,16 +165,18 @@ function getAllConfigs(guildId) {
   return db.all('SELECT * FROM channel_ai_config WHERE guild_id = ?', [guildId]);
 }
 
-function upsertConfig(guildId, channelId, { enabled, intent, customPrompt, autoDetectIntent, responseCooldown }) {
+function upsertConfig(guildId, channelId, { enabled, intent, customPrompt, autoDetectIntent, responseCooldown, allowTempChannels, maxConcurrentGames }) {
   db.run(`
-    INSERT INTO channel_ai_config (guild_id, channel_id, enabled, intent, custom_prompt, auto_detect_intent, response_cooldown)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO channel_ai_config (guild_id, channel_id, enabled, intent, custom_prompt, auto_detect_intent, response_cooldown, allow_temp_channels, max_concurrent_games)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(guild_id, channel_id) DO UPDATE SET
       enabled = excluded.enabled,
       intent = excluded.intent,
       custom_prompt = excluded.custom_prompt,
       auto_detect_intent = excluded.auto_detect_intent,
       response_cooldown = excluded.response_cooldown,
+      allow_temp_channels = excluded.allow_temp_channels,
+      max_concurrent_games = excluded.max_concurrent_games,
       updated_at = CURRENT_TIMESTAMP
   `, [
     guildId, channelId,
@@ -183,6 +185,8 @@ function upsertConfig(guildId, channelId, { enabled, intent, customPrompt, autoD
     customPrompt || null,
     autoDetectIntent != null ? (autoDetectIntent ? 1 : 0) : 1,
     responseCooldown || 30,
+    allowTempChannels ? 1 : 0,
+    Math.max(1, Math.min(5, maxConcurrentGames || 2)),
   ]);
   clearConfigCache(channelId);
 }
@@ -360,16 +364,26 @@ function resolveMentions(message) {
  * Game session state per channel.
  * Tracks conversation history so the AI remembers questions/answers.
  */
-const gameSessions = new Map(); // channelId → { messages[], players: Set, startedAt, lastActivity, questionCount }
+const gameSessions = new Map(); // channelId → session
 
 const GAME_SESSION_TTL = 5 * 60 * 1000; // 5 minutes inactivity → session ends
-const MAX_GAME_HISTORY = 20; // Keep last 20 messages in context
+const MAX_GAME_HISTORY = 20;
 const MAX_QUESTIONS_PER_SESSION = 10;
+const ANSWER_BATCH_DELAY = 10000; // 10 seconds to collect answers before evaluating
+
+function hasActiveGameSession(channelId) {
+  const session = gameSessions.get(channelId);
+  if (!session) return false;
+  if (Date.now() - session.lastActivity > GAME_SESSION_TTL) {
+    gameSessions.delete(channelId);
+    return false;
+  }
+  return true;
+}
 
 function getGameSession(channelId) {
   const session = gameSessions.get(channelId);
   if (!session) return null;
-  // Check TTL
   if (Date.now() - session.lastActivity > GAME_SESSION_TTL) {
     gameSessions.delete(channelId);
     return null;
@@ -377,15 +391,30 @@ function getGameSession(channelId) {
   return session;
 }
 
-function startGameSession(channelId, userId) {
+/**
+ * Count active game sessions for a guild.
+ */
+function getGuildGameCount(guildId) {
+  let count = 0;
+  for (const [, session] of gameSessions) {
+    if (session.guildId === guildId && Date.now() - session.lastActivity < GAME_SESSION_TTL) count++;
+  }
+  return count;
+}
+
+function startGameSession(channelId, guildId, userId) {
   const session = {
     messages: [],
     players: new Set([userId]),
+    guildId,
     startedAt: Date.now(),
     lastActivity: Date.now(),
     questionCount: 0,
-    joinPhase: true, // waiting for players to join
-    joinPhaseEndAt: Date.now() + 30000, // 30 seconds to join
+    joinPhase: true,
+    joinPhaseEndAt: Date.now() + 30000,
+    pendingAnswers: [], // buffered answers for batching
+    answerTimer: null, // timer for answer batch processing
+    tempChannelId: null, // if this game runs in a temp channel
   };
   gameSessions.set(channelId, session);
   return session;
@@ -400,7 +429,20 @@ function addToGameHistory(session, role, content) {
   session.lastActivity = Date.now();
 }
 
-function endGameSession(channelId) {
+async function endGameSession(channelId, client) {
+  const session = gameSessions.get(channelId);
+  if (session) {
+    if (session.answerTimer) clearTimeout(session.answerTimer);
+    // Clean up temp channel after 60s grace period
+    if (session.tempChannelId && client) {
+      setTimeout(async () => {
+        try {
+          const ch = await client.channels.fetch(session.tempChannelId);
+          if (ch) await ch.delete('Game session ended');
+        } catch {}
+      }, 60000);
+    }
+  }
   gameSessions.delete(channelId);
 }
 
@@ -459,7 +501,47 @@ async function handleChannelAi(message) {
 
   // For mini-games: start a new game session with join phase
   if (isGameIntent) {
-    gameSession = startGameSession(message.channel.id, message.author.id);
+    // Check per-guild game limit
+    const maxGames = config.max_concurrent_games || 2;
+    const currentGames = getGuildGameCount(message.guild.id);
+    if (currentGames >= maxGames) {
+      // Check if temp channels are allowed
+      if (config.allow_temp_channels) {
+        // Create temp channel for this game
+        try {
+          const tempCh = await message.guild.channels.create({
+            name: `oyun-oturumu-${currentGames + 1}`,
+            type: 0,
+            parent: message.channel.parent,
+            reason: 'Temporary game session channel',
+          });
+          await message.reply({ content: `🎮 Ana kanal meşgul! Oyun için geçici kanal oluşturuldu: ${tempCh}`, allowedMentions: { repliedUser: false } });
+          gameSession = startGameSession(tempCh.id, message.guild.id, message.author.id);
+          gameSession.tempChannelId = tempCh.id;
+          // Continue with temp channel (the join phase announcement goes there)
+          const locale = getLocale(message.guild.id);
+          const joinMessages = {
+            tr: '🎮 **Oyun başlıyor!** Katılmak isteyenler 30 saniye içinde bir mesaj yazsın!\n\n⏳ 30 saniye bekleniyor... Hazır olduğunuzda "başla" yazın.',
+          };
+          const joinMsg = joinMessages[locale] || '🎮 **Game starting!** Type anything within 30 seconds to join!\n\n⏳ Waiting 30 seconds... Type "start" when ready.';
+          await tempCh.send({ content: joinMsg });
+          return true;
+        } catch (err) {
+          console.error('Failed to create temp game channel:', err.message);
+          await message.reply({ content: '❌ Geçici kanal oluşturulamadı.', allowedMentions: { repliedUser: false } });
+          return false;
+        }
+      } else {
+        const locale = getLocale(message.guild.id);
+        const busyMsg = locale === 'tr'
+          ? '🎮 Şu anda başka bir oyun devam ediyor. Lütfen bitmesini bekleyin!'
+          : '🎮 A game is already in progress. Please wait for it to finish!';
+        await message.reply({ content: busyMsg, allowedMentions: { repliedUser: false } });
+        return false;
+      }
+    }
+
+    gameSession = startGameSession(message.channel.id, message.guild.id, message.author.id);
 
     // Announce join phase in the guild's configured language
     const locale = getLocale(message.guild.id);
@@ -583,7 +665,7 @@ Keep each response under 1500 characters.`;
 
 /**
  * Handle a message within an active game session.
- * Maintains conversation history so the AI remembers questions and answers.
+ * Uses answer batching: collects answers for 10s, then evaluates all at once.
  */
 async function handleGameMessage(message, intent, config, session) {
   const resolvedContent = resolveMentions(message);
@@ -594,7 +676,6 @@ async function handleGameMessage(message, intent, config, session) {
     session.players.add(message.author.id);
     session.lastActivity = Date.now();
 
-    // Check if join phase should end (30s elapsed or someone says "start"/"başla")
     const shouldStart = Date.now() >= session.joinPhaseEndAt ||
                         ['start', 'başla', 'hadi', 'go', 'ready', 'hazır'].includes(lower);
 
@@ -602,23 +683,40 @@ async function handleGameMessage(message, intent, config, session) {
       session.joinPhase = false;
       addToGameHistory(session, 'user', `[JOIN_PHASE_OVER — ${session.players.size} players joined. Start the game now with the first question!]`);
     } else {
-      // Still in join phase — just acknowledge the player joined
-      return false; // Don't respond to every join message, let the timer handle it
+      return false; // Let the auto-start timer handle it
     }
-
-    // Fall through to AI call to start the game
+    // Fall through to AI call
   } else {
-    // Check for game-end commands
+    // Check for game-end commands — process immediately
     if (['stop', 'end', 'quit', 'bitir', 'dur', 'bitti'].includes(lower)) {
+      if (session.answerTimer) { clearTimeout(session.answerTimer); session.answerTimer = null; }
+      // Flush any pending answers
+      if (session.pendingAnswers.length > 0) {
+        const batch = session.pendingAnswers.map(a => `${a.username}: ${a.content}`).join('\n');
+        addToGameHistory(session, 'user', batch);
+        session.pendingAnswers = [];
+      }
       addToGameHistory(session, 'user', `${message.author.username}: ${resolvedContent}`);
       addToGameHistory(session, 'user', '[GAME OVER — User requested end. Show final scoreboard and congratulate.]');
-    } else {
+      // Fall through to immediate AI call
+    } else if (session.questionCount >= MAX_QUESTIONS_PER_SESSION) {
       addToGameHistory(session, 'user', `${message.author.username}: ${resolvedContent}`);
-    }
-
-    // Check max questions
-    if (session.questionCount >= MAX_QUESTIONS_PER_SESSION) {
       addToGameHistory(session, 'user', '[MAX QUESTIONS REACHED — End the game now with final scoreboard.]');
+      // Fall through to immediate AI call
+    } else {
+      // Buffer the answer for batch processing
+      session.pendingAnswers.push({ username: message.author.username, content: resolvedContent });
+      session.lastActivity = Date.now();
+
+      // Start batch timer if not already running
+      if (!session.answerTimer) {
+        session.answerTimer = setTimeout(() => {
+          processAnswerBatch(message.channel, session, config).catch(err => {
+            console.error('Answer batch error:', err.message);
+          });
+        }, ANSWER_BATCH_DELAY);
+      }
+      return true; // Buffered, will be processed by timer
     }
   }
 
@@ -687,7 +785,7 @@ async function handleGameMessage(message, intent, config, session) {
 
     // End session if game is over
     if (shouldEnd) {
-      endGameSession(message.channel.id);
+      await endGameSession(message.channel.id, message.client);
     }
 
     return true;
@@ -698,12 +796,80 @@ async function handleGameMessage(message, intent, config, session) {
   }
 }
 
+/**
+ * Process a batch of buffered answers — sends all answers to AI at once.
+ */
+async function processAnswerBatch(channel, session, config) {
+  session.answerTimer = null;
+
+  if (session.pendingAnswers.length === 0) return;
+
+  // Combine all buffered answers into one message
+  const batch = session.pendingAnswers.map(a => `${a.username}: ${a.content}`).join('\n');
+  session.pendingAnswers = [];
+
+  addToGameHistory(session, 'user', batch);
+
+  try {
+    const guild = channel.guild;
+    const playerNames = [];
+    for (const playerId of session.players) {
+      try { const m = await guild.members.fetch(playerId); playerNames.push(m.displayName || m.user.username); }
+      catch { playerNames.push(playerId); }
+    }
+
+    const langNames = { tr: 'Turkish', en: 'English', de: 'German', es: 'Spanish', fr: 'French', pt: 'Portuguese', ru: 'Russian', ar: 'Arabic' };
+    const srvLang = langNames[getLocale(guild.id)] || 'English';
+
+    let systemPrompt = GAME_SYSTEM_PROMPT
+      .replace('{players}', playerNames.join(', '))
+      .replace(/{maxQuestions}/g, String(MAX_QUESTIONS_PER_SESSION))
+      .replace('{questionCount}', String(session.questionCount))
+      .replace(/{serverLanguage}/g, srvLang);
+
+    if (config.custom_prompt) systemPrompt += '\n\nExtra instructions: ' + config.custom_prompt;
+
+    const response = await aiChat(session.messages, { systemPrompt, maxTokens: 1024, temperature: 0.8 });
+
+    if (!response || response.trim().length === 0) return;
+
+    if (response.includes('?')) session.questionCount++;
+    addToGameHistory(session, 'assistant', response);
+
+    const shouldEnd = session.questionCount >= MAX_QUESTIONS_PER_SESSION ||
+                      response.toLowerCase().includes('final skor') ||
+                      response.toLowerCase().includes('final score') ||
+                      response.toLowerCase().includes('game over');
+
+    // Send
+    const chunks = [];
+    let remaining = response;
+    while (remaining.length > 0) {
+      if (remaining.length <= 2000) { chunks.push(remaining); break; }
+      const splitAt = remaining.lastIndexOf(' ', 2000);
+      chunks.push(remaining.slice(0, splitAt > 0 ? splitAt : 2000));
+      remaining = remaining.slice(splitAt > 0 ? splitAt + 1 : 2000);
+    }
+    for (const chunk of chunks) {
+      await channel.send({ content: chunk });
+    }
+
+    if (shouldEnd) {
+      await endGameSession(channel.id, channel.client);
+    }
+  } catch (error) {
+    console.error(`Answer batch error in #${channel.name}: ${error.message}`);
+  }
+}
+
 module.exports = {
   handleChannelAi,
+  hasActiveGameSession,
   getIntents,
   getIntentById,
   getAllConfigs,
   upsertConfig,
   clearConfigCache,
+  getGuildGameCount,
   INTENTS,
 };

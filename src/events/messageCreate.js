@@ -74,6 +74,15 @@ module.exports = {
       console.error('❌ AI setup error:', error.message);
     }
 
+    // ── Active Game Session (priority over agent) ──────────────────────
+    try {
+      const channelAi = require('../systems/channelAi');
+      if (channelAi.hasActiveGameSession(message.channel.id)) {
+        await channelAi.handleChannelAi(message);
+        return; // Game sessions get exclusive message handling
+      }
+    } catch {}
+
     // ── AI Admin Agent ──────────────────────────────────────────────────
     try {
       const agent = require('../agent');

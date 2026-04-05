@@ -249,6 +249,17 @@
                 <label>Custom Prompt (optional)</label>
                 <textarea id="prompt-${ch.channelId}" placeholder="Add extra instructions for the AI in this channel...">${escapeHtml(ch.customPrompt || '')}</textarea>
               </div>
+              ${ch.intent === 'mini-games' ? `
+              <div class="config-row" style="margin-bottom:12px;">
+                <div class="config-field">
+                  <label>Allow Temp Game Channels</label>
+                  <label class="toggle"><input type="checkbox" id="temp-${ch.channelId}" ${ch.allowTempChannels ? 'checked' : ''}><span class="toggle-slider"></span></label>
+                </div>
+                <div class="config-field">
+                  <label>Max Concurrent Games</label>
+                  <input type="number" id="maxgames-${ch.channelId}" value="${ch.maxConcurrentGames || 2}" min="1" max="5">
+                </div>
+              </div>` : ''}
               <div class="config-actions">
                 <button class="btn btn-primary btn-small" onclick="saveChannelConfig('${ch.channelId}')">Save</button>
               </div>
@@ -287,14 +298,22 @@
     async function saveChannelConfig(channelId) {
       const guildId = getCurrentGuild();
       try {
+        const intent = document.getElementById('intent-' + channelId).value;
+        const body = {
+          enabled: true,
+          intent,
+          customPrompt: document.getElementById('prompt-' + channelId).value,
+          responseCooldown: parseInt(document.getElementById('cooldown-' + channelId).value) || 30,
+        };
+        // Add game-specific fields if mini-games
+        const tempEl = document.getElementById('temp-' + channelId);
+        const maxEl = document.getElementById('maxgames-' + channelId);
+        if (tempEl) body.allowTempChannels = tempEl.checked;
+        if (maxEl) body.maxConcurrentGames = parseInt(maxEl.value) || 2;
+
         await api(`/api/guilds/${guildId}/channel-ai/${channelId}`, {
           method: 'PUT',
-          body: JSON.stringify({
-            enabled: true,
-            intent: document.getElementById('intent-' + channelId).value,
-            customPrompt: document.getElementById('prompt-' + channelId).value,
-            responseCooldown: parseInt(document.getElementById('cooldown-' + channelId).value) || 30,
-          }),
+          body: JSON.stringify(body),
         });
         showToast('Channel AI config saved', 'success');
         await loadAiData();
