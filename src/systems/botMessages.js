@@ -71,7 +71,11 @@ function getMessagesForGuild(guildId, { type, channelId } = {}) {
 
   if (type) {
     if (type === 'system') {
-      sql += ' AND is_system = 1';
+      sql += ' AND is_system = 1 AND message_type != ?';
+      params.push('bot-action');
+    } else if (type === 'bot-action') {
+      sql += ' AND message_type = ?';
+      params.push('bot-action');
     } else {
       sql += ' AND message_type = ? AND is_system = 0';
       params.push(type);
@@ -272,6 +276,45 @@ async function deleteMessage(client, id) {
   deleteMessageRecord(id);
 }
 
+// ── Detection helpers ────────────────────────────────────────────────────
+
+// Channel name patterns that indicate log/action channels
+const LOG_CHANNEL_PATTERNS = [
+  /log$/i, /-log$/i, /logs$/i, /kayit/i, /kayıt/i,
+  /punishment/i, /ceza/i, /mod-/i, /admin-/i,
+];
+
+// Embed field names that indicate bot action/log messages
+const ACTION_FIELD_NAMES = [
+  'user', 'kullanıcı', 'moderator', 'action', 'eylem', 'işlem',
+  'reason', 'sebep', 'neden', 'duration', 'süre',
+  'channel', 'kanal', 'role', 'rol',
+  'old role', 'new role', 'removed role', 'added role',
+  'eski rol', 'yeni rol',
+];
+
+/**
+ * Detect if a message is a bot action/log message (not user-managed content).
+ */
+function isBotActionMessage(channel, embed) {
+  // Check channel name
+  if (LOG_CHANNEL_PATTERNS.some(p => p.test(channel.name))) return true;
+
+  // Check embed fields — if it has typical log fields, it's an action message
+  const fieldNames = (embed.fields || []).map(f => f.name.toLowerCase());
+  const matchCount = fieldNames.filter(fn =>
+    ACTION_FIELD_NAMES.some(pattern => fn.includes(pattern))
+  ).length;
+
+  // If 2+ fields match action patterns, it's likely a log message
+  if (matchCount >= 2) return true;
+
+  // Check if embed has timestamp (common in log messages) + action-like fields
+  if (embed.timestamp && matchCount >= 1) return true;
+
+  return false;
+}
+
 // ── Scan ─────────────────────────────────────────────────────────────────
 
 /**
@@ -316,6 +359,10 @@ async function scanChannel(client, guildId, channelId) {
       // Check if it's a verification message
       const isVerification = firstButton?.customId === 'verify_button';
 
+      // Skip poll and giveaway messages
+      if (firstButton?.customId?.startsWith('poll_vote_')) continue;
+      if (firstButton?.customId === 'giveaway_enter') continue;
+
       // Extract embed data
       const embed = msg.embeds[0];
       const content = {
@@ -328,13 +375,22 @@ async function scanChannel(client, guildId, channelId) {
       if (embed.thumbnail?.url) content.thumbnail = embed.thumbnail.url;
       if (embed.image?.url) content.image = embed.image.url;
 
+      // Detect message type
       const name = embed.title || `Untitled (#${channel.name})`;
-      const messageType = isVerification ? 'verification' : 'custom';
+      let messageType = 'custom';
+
+      if (isVerification) {
+        messageType = 'verification';
+      } else if (isBotActionMessage(channel, embed)) {
+        messageType = 'bot-action';
+      }
+
+      const isSystem = (messageType === 'verification' || messageType === 'bot-action') ? 1 : 0;
 
       db.run(`
         INSERT INTO bot_messages (guild_id, channel_id, message_id, message_type, name, content, is_system)
         VALUES (?, ?, ?, ?, ?, ?, ?)
-      `, [guildId, channelId, msg.id, messageType, name, JSON.stringify(content), isVerification ? 1 : 0]);
+      `, [guildId, channelId, msg.id, messageType, name, JSON.stringify(content), isSystem]);
 
       registered++;
     }
