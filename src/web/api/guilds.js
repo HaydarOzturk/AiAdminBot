@@ -1373,6 +1373,11 @@ router.put('/:guildId/bot-messages/:id', async (req, res) => {
 
     botMessages.updateMessage(id, fields);
 
+    // Mark as default template if requested
+    if (req.body.markAsDefault) {
+      db.run("UPDATE bot_messages SET created_by = 'default', updated_at = CURRENT_TIMESTAMP WHERE id = ?", [id]);
+    }
+
     // Auto-update published Discord message
     if (msg.message_id) {
       const client = getClient(req);

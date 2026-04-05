@@ -852,10 +852,10 @@
 
       await loadTemplateChannels();
 
-      // Drafts = user-created, no message_id (never published)
-      const drafts = allMessages.filter(m => !m.message_id && m.created_by);
-      // Saved defaults = user-created AND published
-      const defaults = allMessages.filter(m => m.message_id && m.created_by);
+      // Drafts = user-created, not yet saved as default
+      const drafts = allMessages.filter(m => m.created_by === 'dashboard');
+      // Saved defaults = marked as default (created_by = 'default')
+      const defaults = allMessages.filter(m => m.created_by === 'default');
 
       // Render drafts
       const draftsList = document.getElementById('drafts-list');
@@ -906,9 +906,17 @@
     }
 
     async function saveAsDefault(id) {
-      // Just mark it as saved — no publish to Discord. The bot systems will pick it up from DB.
-      showToast('Saved as default template', 'success');
-      // Already in DB, nothing else needed — it's now available for bot systems to use
+      const guildId = getCurrentGuild();
+      try {
+        // Mark as default by updating created_by to 'default'
+        await api(`/api/guilds/${guildId}/bot-messages/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ markAsDefault: true }),
+        });
+        showToast('Saved as default template', 'success');
+        await loadMessages();
+        await renderDrafts();
+      } catch (err) { showToast('Failed: ' + (err.message || 'Error'), 'error'); }
     }
 
     async function publishToChannel(id, channelId) {

@@ -67,9 +67,9 @@ function detectPlatform(url) {
  * @returns {object|null} Parsed content object or null
  */
 function findCustomTemplate(guildId, templateName) {
-  // Look for a saved template by name and type
+  // Look for a saved default template by name and type
   const record = db.get(
-    "SELECT content FROM bot_messages WHERE guild_id = ? AND message_type = 'stream-announcement' AND name LIKE ? ORDER BY updated_at DESC LIMIT 1",
+    "SELECT content FROM bot_messages WHERE guild_id = ? AND message_type = 'stream-announcement' AND created_by = 'default' AND name LIKE ? ORDER BY updated_at DESC LIMIT 1",
     [guildId, `%${templateName}%`]
   );
   if (!record) return null;
