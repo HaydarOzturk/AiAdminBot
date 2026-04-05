@@ -1302,7 +1302,7 @@ router.get('/:guildId/bot-messages', (req, res) => {
 
 /** Get message templates */
 router.get('/:guildId/bot-messages/templates', (req, res) => {
-  res.json({ templates: botMessages.getTemplates() });
+  res.json({ templates: botMessages.getTemplates(req.params.guildId) });
 });
 
 /** Scan all channels for untracked bot messages */

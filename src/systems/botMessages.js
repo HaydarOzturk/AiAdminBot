@@ -1,90 +1,114 @@
 const { EmbedBuilder } = require('discord.js');
 const { createEmbed } = require('../utils/embedBuilder');
 const db = require('../utils/database');
-const { channelName: getLocaleName } = require('../utils/locale');
+const { channelName: getLocaleName, getLocale } = require('../utils/locale');
 
 // ── Templates ────────────────────────────────────────────────────────────
 
-const TEMPLATES = [
-  {
-    id: 'rules',
-    name: 'Server Rules',
-    description: 'A rules embed with numbered fields',
-    messageType: 'rules',
-    content: {
-      title: 'Server Rules',
-      description: 'Please read and follow these rules to keep our community safe and welcoming.',
-      color: '#5865f2',
+const TEMPLATE_I18N = {
+  en: {
+    rules: { name: 'Server Rules', desc: 'A rules embed with numbered fields', title: 'Server Rules',
+      body: 'Please read and follow these rules to keep our community safe and welcoming.',
       fields: [
-        { name: '1. Be Respectful', value: 'Treat everyone with respect. No harassment, hate speech, or discrimination.', inline: false },
-        { name: '2. No Spam', value: 'Do not spam messages, images, or links.', inline: false },
-        { name: '3. No NSFW', value: 'Keep all content appropriate and safe for work.', inline: false },
+        { name: '1. Be Respectful', value: 'Treat everyone with respect. No harassment, hate speech, or discrimination.' },
+        { name: '2. No Spam', value: 'Do not spam messages, images, or links.' },
+        { name: '3. No NSFW', value: 'Keep all content appropriate and safe for work.' },
       ],
-      footer: 'Breaking rules may result in warnings, mutes, or bans.',
-    },
-  },
-  {
-    id: 'welcome-info',
-    name: 'Welcome Info',
-    description: 'An informational embed for new members',
-    messageType: 'info',
-    content: {
-      title: 'Welcome to the Server!',
-      description: 'Here is everything you need to get started.',
-      color: '#22c55e',
+      footer: 'Breaking rules may result in warnings, mutes, or bans.' },
+    welcome: { name: 'Welcome Info', desc: 'An informational embed for new members', title: 'Welcome to the Server!',
+      body: 'Here is everything you need to get started.',
       fields: [
-        { name: 'Verify', value: 'Head to the verification channel to get access.', inline: false },
-        { name: 'Roles', value: 'Pick your roles in the roles channel.', inline: false },
-        { name: 'Have Fun', value: 'Explore the channels and enjoy your stay!', inline: false },
+        { name: 'Verify', value: 'Head to the verification channel to get access.' },
+        { name: 'Roles', value: 'Pick your roles in the roles channel.' },
+        { name: 'Have Fun', value: 'Explore the channels and enjoy your stay!' },
+      ] },
+    announcement: { name: 'Announcement', desc: 'A general announcement template', title: 'Announcement',
+      body: 'Your announcement text here.', footer: 'Posted by the admin team' },
+    streamLive: { name: 'Stream Announcement (Live)', desc: 'Template for live stream announcements',
+      title: '🔴 {user} is LIVE!', body: '**{user}** is now streaming on **{platform}**!\n\n🎮 **{game}**\n📺 **{title}**',
+      footer: 'Click Watch Now to join!' },
+    streamEnded: { name: 'Stream Ended', desc: 'Template for when a stream ends',
+      title: '⚫ {user}', body: 'Stream has ended. Thanks for watching!' },
+    blank: { name: 'Blank Embed', desc: 'Start from scratch' },
+  },
+  tr: {
+    rules: { name: 'Sunucu Kuralları', desc: 'Numaralı alanlarla kural mesajı', title: 'Sunucu Kuralları',
+      body: 'Topluluğumuzu güvenli ve hoş tutmak için lütfen bu kuralları okuyun ve uyun.',
+      fields: [
+        { name: '1. Saygılı Olun', value: 'Herkese saygılı davranın. Taciz, nefret söylemi veya ayrımcılık yasaktır.' },
+        { name: '2. Spam Yapmayın', value: 'Tekrarlayan mesaj, görsel veya link spam yapmayın.' },
+        { name: '3. Uygunsuz İçerik Yok', value: 'Tüm içerik uygun ve güvenli olmalıdır.' },
       ],
-    },
+      footer: 'Kural ihlali uyarı, susturma veya yasaklanma ile sonuçlanabilir.' },
+    welcome: { name: 'Hoş Geldin Bilgisi', desc: 'Yeni üyeler için bilgi mesajı', title: 'Sunucuya Hoş Geldiniz!',
+      body: 'Başlamanız için bilmeniz gereken her şey burada.',
+      fields: [
+        { name: 'Doğrulama', value: 'Erişim için doğrulama kanalına gidin.' },
+        { name: 'Roller', value: 'Rol kanalından rollerinizi seçin.' },
+        { name: 'İyi Eğlenceler', value: 'Kanalları keşfedin ve iyi vakit geçirin!' },
+      ] },
+    announcement: { name: 'Duyuru', desc: 'Genel duyuru şablonu', title: 'Duyuru',
+      body: 'Duyuru metninizi buraya yazın.', footer: 'Yönetim ekibi tarafından yayınlandı' },
+    streamLive: { name: 'Yayın Duyurusu (Canlı)', desc: 'Canlı yayın duyuru şablonu',
+      title: '🔴 {user} YAYINDA!', body: '**{user}** şu anda **{platform}** üzerinde canlı yayında!\n\n🎮 **{game}**\n📺 **{title}**',
+      footer: 'İzlemek için Watch Now\'a tıkla!' },
+    streamEnded: { name: 'Yayın Sona Erdi', desc: 'Yayın bittiğinde kullanılan şablon',
+      title: '⚫ {user}', body: 'Yayın sona erdi. İzlediğiniz için teşekkürler!' },
+    blank: { name: 'Boş Embed', desc: 'Sıfırdan başla' },
   },
-  {
-    id: 'announcement',
-    name: 'Announcement',
-    description: 'A general announcement template',
-    messageType: 'announcement',
-    content: {
-      title: 'Announcement',
-      description: 'Your announcement text here.',
-      color: '#f59e0b',
-      footer: 'Posted by the admin team',
-    },
+  de: {
+    rules: { name: 'Serverregeln', desc: 'Regeln-Embed mit nummerierten Feldern', title: 'Serverregeln',
+      body: 'Bitte lesen und befolgen Sie diese Regeln, um unsere Community sicher zu halten.',
+      fields: [
+        { name: '1. Respektvoll sein', value: 'Behandeln Sie alle mit Respekt. Keine Belästigung oder Diskriminierung.' },
+        { name: '2. Kein Spam', value: 'Keine wiederholten Nachrichten, Bilder oder Links.' },
+        { name: '3. Kein NSFW', value: 'Alle Inhalte müssen angemessen sein.' },
+      ],
+      footer: 'Regelverstöße können zu Verwarnungen, Stummschaltung oder Bann führen.' },
+    welcome: { name: 'Willkommensinfo', desc: 'Informationen für neue Mitglieder', title: 'Willkommen auf dem Server!',
+      body: 'Hier ist alles, was du zum Starten brauchst.',
+      fields: [
+        { name: 'Verifizierung', value: 'Gehe zum Verifizierungskanal.' },
+        { name: 'Rollen', value: 'Wähle deine Rollen im Rollenkanal.' },
+        { name: 'Viel Spaß', value: 'Erkunde die Kanäle und genieße deinen Aufenthalt!' },
+      ] },
+    announcement: { name: 'Ankündigung', desc: 'Allgemeine Ankündigungsvorlage', title: 'Ankündigung',
+      body: 'Dein Ankündigungstext hier.', footer: 'Vom Admin-Team veröffentlicht' },
+    streamLive: { name: 'Stream-Ankündigung (Live)', desc: 'Vorlage für Live-Stream-Ankündigungen',
+      title: '🔴 {user} ist LIVE!', body: '**{user}** streamt jetzt auf **{platform}**!\n\n🎮 **{game}**\n📺 **{title}**',
+      footer: 'Klicke auf Watch Now!' },
+    streamEnded: { name: 'Stream Beendet', desc: 'Vorlage für beendete Streams',
+      title: '⚫ {user}', body: 'Der Stream ist beendet. Danke fürs Zuschauen!' },
+    blank: { name: 'Leeres Embed', desc: 'Von Grund auf neu' },
   },
-  {
-    id: 'stream-live',
-    name: 'Stream Announcement (Live)',
-    description: 'Template for live stream announcements',
-    messageType: 'custom',
-    content: {
-      title: '🔴 {user} is LIVE!',
-      description: '**{user}** is now streaming on **{platform}**!\n\n🎮 **{game}**\n📺 **{title}**',
-      color: '#ff0000',
-      footer: 'Click Watch Now to join!',
-    },
-  },
-  {
-    id: 'stream-ended',
-    name: 'Stream Ended',
-    description: 'Template for when a stream ends',
-    messageType: 'custom',
-    content: {
-      title: '⚫ {user}',
-      description: 'Stream has ended. Thanks for watching!',
-      color: '#808080',
-    },
-  },
-  {
-    id: 'blank',
-    name: 'Blank Embed',
-    description: 'Start from scratch',
-    messageType: 'custom',
-    content: { title: '', description: '', color: '#5865f2', fields: [] },
-  },
-];
+};
 
-function getTemplates() {
-  return JSON.parse(JSON.stringify(TEMPLATES));
+function getTemplates(guildId) {
+  const locale = guildId ? getLocale(guildId) : (process.env.LOCALE || 'en');
+  const strings = TEMPLATE_I18N[locale] || TEMPLATE_I18N.en;
+  const en = TEMPLATE_I18N.en; // fallback
+
+  const s = (key) => strings[key] || en[key];
+
+  return [
+    { id: 'rules', name: s('rules').name, description: s('rules').desc, messageType: 'rules',
+      content: { title: s('rules').title, description: s('rules').body, color: '#5865f2',
+        fields: (s('rules').fields || []).map(f => ({ ...f, inline: false })),
+        footer: s('rules').footer || '' } },
+    { id: 'welcome-info', name: s('welcome').name, description: s('welcome').desc, messageType: 'info',
+      content: { title: s('welcome').title, description: s('welcome').body, color: '#22c55e',
+        fields: (s('welcome').fields || []).map(f => ({ ...f, inline: false })) } },
+    { id: 'announcement', name: s('announcement').name, description: s('announcement').desc, messageType: 'announcement',
+      content: { title: s('announcement').title, description: s('announcement').body, color: '#f59e0b',
+        footer: s('announcement').footer || '' } },
+    { id: 'stream-live', name: s('streamLive').name, description: s('streamLive').desc, messageType: 'stream-announcement',
+      content: { title: s('streamLive').title, description: s('streamLive').body, color: '#ff0000',
+        footer: s('streamLive').footer || '' } },
+    { id: 'stream-ended', name: s('streamEnded').name, description: s('streamEnded').desc, messageType: 'stream-announcement',
+      content: { title: s('streamEnded').title, description: s('streamEnded').body, color: '#808080' } },
+    { id: 'blank', name: s('blank').name, description: s('blank').desc, messageType: 'custom',
+      content: { title: '', description: '', color: '#5865f2', fields: [] } },
+  ];
 }
 
 // ── CRUD ─────────────────────────────────────────────────────────────────
