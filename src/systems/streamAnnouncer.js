@@ -90,26 +90,78 @@ function replacePlaceholders(text, vars) {
     .replace(/\{platform\}/gi, vars.platform || '')
     .replace(/\{game\}/gi, vars.game || '')
     .replace(/\{title\}/gi, vars.title || '')
+    .replace(/\{stream_title\}/gi, vars.stream_title || '')
     .replace(/\{url\}/gi, vars.url || '')
-    .replace(/\{viewers\}/gi, vars.viewers || '');
+    .replace(/\{viewers\}/gi, vars.viewers || '')
+    .replace(/\{platforms_status\}/gi, vars.platforms_status || '');
 }
 
 /**
  * Build the "LIVE" announcement embed + button row.
- * @param {import('discord.js').GuildMember} member
- * @param {object} streamActivity - The Streaming activity object
- * @param {string} guildId
- * @returns {{ embeds: EmbedBuilder[], components: ActionRowBuilder[] }}
+ * Fetches ALL platform data (like /go-live) for rich per-platform status.
  */
-function buildLiveMessage(member, streamActivity, guildId) {
+async function buildLiveMessage(member, streamActivity, guildId) {
   const url = streamActivity.url || '';
   const platform = detectPlatform(url);
   const game = streamActivity.state || streamActivity.details || '-';
   const title = streamActivity.details || streamActivity.name || 'Live Stream';
   const userName = member.displayName || member.user.username;
+  const ownerAvatar = member.user.displayAvatarURL({ dynamic: true, size: 256 });
 
-  const viewers = streamActivity.state?.match?.(/(\d+)/)?.[1] || '';
-  const vars = { user: userName, platform, game, title, url, viewers };
+  // Fetch ALL platform data (same as /go-live)
+  const { checkAllPlatforms, PLATFORMS } = require('./streamingChecker');
+  const ownerId = process.env.STREAM_OWNER_ID || member.guild.ownerId;
+  const links = db.all(
+    'SELECT * FROM streaming_links WHERE guild_id = ? AND user_id = ?',
+    [guildId, ownerId]
+  );
+
+  let platformResults = [];
+  let platformsStatus = '';
+  let streamTitle = title;
+  let allButtons = [];
+
+  if (links && links.length > 0) {
+    try {
+      platformResults = await checkAllPlatforms(links);
+
+      // Build per-platform status lines (same as go-live lines 140-149)
+      const statusLines = platformResults.map(r => {
+        if (r.isLive) {
+          const viewerStr = r.viewers > 0 ? ` • 👥 ${r.viewers}` : '';
+          return `${r.emoji} **${r.label}** — 🔴 LIVE${viewerStr}`;
+        } else if (PLATFORMS[r.platform]?.canDetectLive) {
+          return `${r.emoji} **${r.label}** — ⚫ ${t('streaming.offline', {}, guildId) || 'Offline'}`;
+        } else {
+          return `${r.emoji} **${r.label}**`;
+        }
+      });
+      platformsStatus = statusLines.join('\n');
+
+      // Get stream title from main live platform
+      const mainLive = platformResults.find(r => r.isLive && r.title);
+      if (mainLive?.title) streamTitle = mainLive.title;
+
+      // Build buttons (one per platform)
+      allButtons = platformResults.map(r =>
+        new ButtonBuilder()
+          .setLabel(r.isLive ? `🔴 ${r.label}` : r.label)
+          .setStyle(ButtonStyle.Link)
+          .setURL(r.isLive ? r.liveUrl : r.url)
+          .setEmoji(r.emoji)
+      );
+    } catch (err) {
+      console.warn('Failed to fetch platform data for announcement:', err.message);
+    }
+  }
+
+  // Build vars with compound placeholders
+  const vars = {
+    user: userName, platform, game, title, url,
+    stream_title: streamTitle,
+    viewers: platformResults.find(r => r.isLive)?.viewers?.toString() || '',
+    platforms_status: platformsStatus,
+  };
 
   // Check for custom template from dashboard
   const customTemplate = findCustomTemplate(guildId, 'Live');
@@ -118,37 +170,43 @@ function buildLiveMessage(member, streamActivity, guildId) {
   if (customTemplate) {
     embed = new EmbedBuilder()
       .setColor(customTemplate.color?.startsWith('#') ? parseInt(customTemplate.color.replace('#', ''), 16) : 0xFF0000)
+      .setThumbnail(ownerAvatar)
       .setTimestamp();
 
+    // Author line (matching go-live format)
+    if (customTemplate.author) {
+      embed.setAuthor({ name: replacePlaceholders(customTemplate.author, vars), iconURL: ownerAvatar });
+    }
     if (customTemplate.title) embed.setTitle(replacePlaceholders(customTemplate.title, vars));
     if (customTemplate.description) embed.setDescription(replacePlaceholders(customTemplate.description, vars));
     if (customTemplate.footer) embed.setFooter({ text: replacePlaceholders(customTemplate.footer, vars) });
-    if (customTemplate.thumbnail) {
-      embed.setThumbnail(customTemplate.thumbnail);
-    } else {
-      embed.setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 256 }));
-    }
+    if (customTemplate.thumbnail) embed.setThumbnail(customTemplate.thumbnail);
 
-    // Apply custom fields
     if (Array.isArray(customTemplate.fields)) {
       for (const field of customTemplate.fields) {
         if (field.name && field.value) {
           embed.addFields({
             name: replacePlaceholders(field.name, vars),
-            value: replacePlaceholders(field.value, vars),
+            value: replacePlaceholders(field.value, vars) || '-',
             inline: !!field.inline,
           });
         }
       }
     }
   } else {
-    // Default: use locale-based template
+    // Default: go-live format using locale
     embed = new EmbedBuilder()
       .setColor(0xFF0000)
-      .setTitle(t('streaming.liveTitle', { user: userName }, guildId))
-      .setDescription(t('streaming.liveDescription', { user: userName, platform, game, title }, guildId))
-      .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 256 }))
+      .setAuthor({ name: `${userName} ${t('streaming.isLiveNow', {}, guildId) || 'şu anda YAYINDA!'}`, iconURL: ownerAvatar })
+      .setThumbnail(ownerAvatar)
       .setTimestamp();
+
+    if (streamTitle) embed.setTitle(`📺 ${streamTitle}`);
+    embed.setDescription(t('streaming.goLiveDesc', { user: userName }, guildId) || `**${userName}** şu anda yayında! Gel izle ve destek ol!`);
+
+    if (platformsStatus) {
+      embed.addFields({ name: t('streaming.platformStatus', {}, guildId) || 'Platform Durumu', value: platformsStatus, inline: false });
+    }
   }
 
   if (streamActivity.assets?.largeImage) {
@@ -156,16 +214,20 @@ function buildLiveMessage(member, streamActivity, guildId) {
     if (imgUrl) embed.setImage(imgUrl);
   }
 
+  // Build button rows
   const components = [];
-  if (url) {
-    const row = new ActionRowBuilder().addComponents(
+  if (allButtons.length > 0) {
+    for (let i = 0; i < allButtons.length; i += 5) {
+      components.push(new ActionRowBuilder().addComponents(...allButtons.slice(i, i + 5)));
+    }
+  } else if (url) {
+    components.push(new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setLabel(t('streaming.watchNow', {}, guildId))
         .setStyle(ButtonStyle.Link)
         .setURL(url)
         .setEmoji('📺')
-    );
-    components.push(row);
+    ));
   }
 
   return { embeds: [embed], components };
@@ -294,7 +356,7 @@ async function announceStreamStart(guild, member, presenceOrStreamInfo) {
       };
     }
 
-    const messagePayload = buildLiveMessage(member, streamActivity, guild.id);
+    const messagePayload = await buildLiveMessage(member, streamActivity, guild.id);
 
     const msg = await channel.send(messagePayload);
 
