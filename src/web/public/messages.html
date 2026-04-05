@@ -852,10 +852,10 @@
 
       await loadTemplateChannels();
 
-      // Drafts = no message_id (never published/saved)
-      const drafts = allMessages.filter(m => !m.message_id && !m.is_system);
-      // Saved defaults = has message_id (published to a channel)
-      const defaults = allMessages.filter(m => m.message_id && !m.is_system);
+      // Drafts = user-created, no message_id (never published)
+      const drafts = allMessages.filter(m => !m.message_id && m.created_by);
+      // Saved defaults = user-created AND published
+      const defaults = allMessages.filter(m => m.message_id && m.created_by);
 
       // Render drafts
       const draftsList = document.getElementById('drafts-list');

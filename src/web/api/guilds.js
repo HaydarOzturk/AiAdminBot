@@ -1346,7 +1346,7 @@ router.post('/:guildId/bot-messages', (req, res) => {
       messageType: messageType || 'custom',
       content: content || {},
       channelId: channelId || null,
-      createdBy: null,
+      createdBy: 'dashboard',
     });
     res.json({ message: botMessages.getMessage(id) });
   } catch (err) {
