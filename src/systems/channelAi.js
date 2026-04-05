@@ -867,6 +867,7 @@ async function processAnswerBatch(channel, session, config) {
 module.exports = {
   handleChannelAi,
   hasActiveGameSession,
+  getChannelConfig,
   getIntents,
   getIntentById,
   getAllConfigs,

@@ -74,12 +74,20 @@ module.exports = {
       console.error('❌ AI setup error:', error.message);
     }
 
-    // ── Active Game Session (priority over agent) ──────────────────────
+    // ── Channel AI Priority (game sessions + game channels) ────────────
     try {
       const channelAi = require('../systems/channelAi');
+      // Active game sessions get exclusive handling
       if (channelAi.hasActiveGameSession(message.channel.id)) {
         await channelAi.handleChannelAi(message);
-        return; // Game sessions get exclusive message handling
+        return;
+      }
+      // Channels with channel AI enabled get priority over agent
+      // (prevents agent from stealing bot mentions in AI channels)
+      const config = channelAi.getChannelConfig?.(message.guild?.id, message.channel.id);
+      if (config && config.enabled) {
+        const handled = await channelAi.handleChannelAi(message);
+        if (handled) return;
       }
     } catch {}
 
