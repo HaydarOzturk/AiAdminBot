@@ -83,13 +83,16 @@ module.exports = {
         return;
       }
       // Channels with channel AI enabled get priority over agent
-      // (prevents agent from stealing bot mentions in AI channels)
-      const config = channelAi.getChannelConfig?.(message.guild?.id, message.channel.id);
-      if (config && config.enabled) {
-        const handled = await channelAi.handleChannelAi(message);
-        if (handled) return;
+      if (message.guild) {
+        const config = channelAi.getChannelConfig(message.guild.id, message.channel.id);
+        if (config && config.enabled) {
+          const handled = await channelAi.handleChannelAi(message);
+          if (handled) return;
+        }
       }
-    } catch {}
+    } catch (error) {
+      console.error('❌ Channel AI priority error:', error.message);
+    }
 
     // ── AI Admin Agent ──────────────────────────────────────────────────
     try {

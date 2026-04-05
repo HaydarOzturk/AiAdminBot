@@ -493,7 +493,12 @@ async function handleChannelAi(message) {
 
   // Smart detection for non-game or game-start trigger
   const score = shouldRespond(message, intent, message.client.user.id);
-  if (score < RESPONSE_THRESHOLD) return false;
+  if (score < RESPONSE_THRESHOLD) {
+    if (isGameIntent && message.content.length > 5) {
+      console.log(`🎮 Game message skipped (score ${score} < ${RESPONSE_THRESHOLD}): "${message.content.substring(0, 50)}"`);
+    }
+    return false;
+  }
 
   // Cooldown check — skip for game-start triggers (games manage their own pacing)
   if (!isGameIntent) {
@@ -503,6 +508,7 @@ async function handleChannelAi(message) {
 
   // For mini-games: start a new game session with join phase
   if (isGameIntent) {
+    console.log(`🎮 Game trigger detected in #${message.channel.name} (score: ${score}) — starting new session`);
     // Check per-guild game limit
     const maxGames = config.max_concurrent_games || 2;
     const currentGames = getGuildGameCount(message.guild.id);
