@@ -495,9 +495,11 @@ async function handleChannelAi(message) {
   const score = shouldRespond(message, intent, message.client.user.id);
   if (score < RESPONSE_THRESHOLD) return false;
 
-  // Cooldown check (skip for active game sessions)
-  const cooldown = config.response_cooldown || 30;
-  if (isOnCooldown(message.channel.id, cooldown)) return false;
+  // Cooldown check — skip for game-start triggers (games manage their own pacing)
+  if (!isGameIntent) {
+    const cooldown = config.response_cooldown || 30;
+    if (isOnCooldown(message.channel.id, cooldown)) return false;
+  }
 
   // For mini-games: start a new game session with join phase
   if (isGameIntent) {
