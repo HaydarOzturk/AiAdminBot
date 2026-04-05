@@ -891,13 +891,15 @@
           const chName = channelNameCache[msg.channel_id] || msg.channel_id;
           const div = document.createElement('div');
           div.className = 'draft-item';
+          const isStreamTemplate = msg.message_type === 'stream-announcement';
           div.innerHTML = `
             <div class="draft-item-info">
               <div class="draft-item-name">${escapeHtml(msg.name)}</div>
-              <div class="draft-item-type">${msg.message_type} &middot; #${escapeHtml(chName)}</div>
+              <div class="draft-item-type">${msg.message_type}${chName ? ` &middot; #${escapeHtml(chName)}` : ''}</div>
+              ${isStreamTemplate ? '<div style="font-size:10px;color:var(--accent-primary);margin-top:2px;">Publishes with live platform data. Also auto-used on stream detection.</div>' : ''}
             </div>
             <select>${buildChannelSelect(msg.channel_id)}</select>
-            <button class="btn btn-success btn-small" style="font-size:11px;" onclick="publishToChannel(${msg.id}, this.parentElement.querySelector('select').value)">Publish</button>
+            <button class="btn btn-success btn-small" style="font-size:11px;" onclick="publishToChannel(${msg.id}, this.parentElement.querySelector('select').value)">${isStreamTemplate ? 'Publish Live' : 'Publish'}</button>
             <button class="btn btn-primary btn-small" style="font-size:11px;" onclick="updateExisting(${msg.id})">Update</button>
             ${msg.message_id ? `<button class="btn btn-secondary btn-small" style="font-size:11px;" onclick="unpublishDefault(${msg.id})">Unpublish</button>` : ''}
             <button class="btn btn-secondary btn-small" style="font-size:11px;" onclick="editDraftInline(${msg.id})">Edit</button>
