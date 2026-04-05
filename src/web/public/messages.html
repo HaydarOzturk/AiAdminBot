@@ -984,6 +984,7 @@
             </select>
           </div>
         </div>
+        ${content.author ? `<div class="editor-group"><label>Author (displayed above title)</label><input type="text" id="die-author-${id}" value="${escapeHtml(content.author)}" oninput="updateInlinePreview(${id})"></div>` : ''}
         <div class="editor-group"><label>Title</label><input type="text" id="die-title-${id}" value="${escapeHtml(content.title || '')}" oninput="updateInlinePreview(${id})"></div>
         <div class="editor-group"><label>Description</label><textarea id="die-desc-${id}" rows="3" oninput="updateInlinePreview(${id})">${escapeHtml(content.description || '')}</textarea></div>
         <div class="editor-group"><label>Color</label>
@@ -993,6 +994,13 @@
           </div>
         </div>
         <div class="editor-group"><label>Footer</label><input type="text" id="die-footer-${id}" value="${escapeHtml(content.footer || '')}" oninput="updateInlinePreview(${id})"></div>
+        ${(content.fields && content.fields.length > 0) ? content.fields.map((f, i) => `
+          <div style="padding:8px 12px;border:1px solid var(--border-color);border-radius:6px;margin-bottom:6px;background:var(--bg-card);">
+            <div class="editor-group" style="margin-bottom:6px;"><label>Field: ${escapeHtml(f.name || 'Field ' + (i+1))}</label>
+            <input type="text" id="die-fn-${id}-${i}" value="${escapeHtml(f.name || '')}" placeholder="Field name" style="margin-bottom:4px;" oninput="updateInlinePreview(${id})">
+            <textarea id="die-fv-${id}-${i}" rows="2" placeholder="Field value" oninput="updateInlinePreview(${id})">${escapeHtml(f.value || '')}</textarea></div>
+          </div>
+        `).join('') : ''}
         <div id="die-preview-${id}" class="embed-preview" style="display:none;margin-top:12px;"></div>
         <div style="display:flex;gap:8px;margin-top:10px;">
           <button class="btn btn-primary btn-small" onclick="saveDraftInline(${id})">Save</button>
@@ -1017,6 +1025,7 @@
       const preview = document.getElementById(`die-preview-${id}`);
       if (!preview || preview.style.display === 'none') return;
 
+      const author = document.getElementById(`die-author-${id}`)?.value || '';
       const title = document.getElementById(`die-title-${id}`)?.value || '';
       const desc = document.getElementById(`die-desc-${id}`)?.value || '';
       const color = document.getElementById(`die-color-${id}`)?.value || '#5865f2';
@@ -1024,32 +1033,71 @@
 
       preview.style.borderLeftColor = color;
 
-      if (!title && !desc && !footer) {
-        preview.innerHTML = '<div class="ep-empty">Empty embed</div>';
-        return;
-      }
-
       let html = '';
+      if (author) html += `<div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:4px;">👤 ${escapeHtml(author)}</div>`;
       if (title) html += `<div class="ep-title">${escapeHtml(title)}</div>`;
       if (desc) html += `<div class="ep-description">${escapeHtml(desc)}</div>`;
+
+      // Render fields from the editor
+      let i = 0;
+      while (true) {
+        const fnEl = document.getElementById(`die-fn-${id}-${i}`);
+        const fvEl = document.getElementById(`die-fv-${id}-${i}`);
+        if (!fnEl && !fvEl) break;
+        const fn = fnEl?.value || '';
+        const fv = fvEl?.value || '';
+        if (fn || fv) {
+          html += `<div style="margin-top:8px;"><div class="ep-field-name">${escapeHtml(fn)}</div><div class="ep-field-value">${escapeHtml(fv)}</div></div>`;
+        }
+        i++;
+      }
+
       if (footer) html += `<div class="ep-footer">${escapeHtml(footer)}</div>`;
+
+      if (!html) html = '<div class="ep-empty">Empty embed</div>';
       preview.innerHTML = html;
     }
 
     async function saveDraftInline(id) {
       const guildId = getCurrentGuild();
       try {
+        // Get existing content to preserve fields/author that aren't in the inline editor
+        const existing = await api(`/api/guilds/${guildId}/bot-messages/${id}`);
+        const existingContent = typeof existing.message?.content === 'string'
+          ? JSON.parse(existing.message.content) : (existing.message?.content || {});
+
+        // Merge: update edited fields, preserve the rest
+        const updatedContent = {
+          ...existingContent,
+          title: document.getElementById(`die-title-${id}`).value,
+          description: document.getElementById(`die-desc-${id}`).value,
+          color: document.getElementById(`die-color-${id}`)?.value || '#5865f2',
+          footer: document.getElementById(`die-footer-${id}`)?.value || '',
+        };
+
+        // Update author if the field exists in the editor
+        const authorEl = document.getElementById(`die-author-${id}`);
+        if (authorEl) updatedContent.author = authorEl.value;
+
+        // Update fields if they exist in the editor
+        if (Array.isArray(existingContent.fields)) {
+          updatedContent.fields = existingContent.fields.map((f, i) => {
+            const nameEl = document.getElementById(`die-fn-${id}-${i}`);
+            const valEl = document.getElementById(`die-fv-${id}-${i}`);
+            return {
+              name: nameEl ? nameEl.value : f.name,
+              value: valEl ? valEl.value : f.value,
+              inline: f.inline || false,
+            };
+          });
+        }
+
         await api(`/api/guilds/${guildId}/bot-messages/${id}`, {
           method: 'PUT',
           body: JSON.stringify({
             name: document.getElementById(`die-name-${id}`).value,
             messageType: document.getElementById(`die-type-${id}`).value,
-            content: {
-              title: document.getElementById(`die-title-${id}`).value,
-              description: document.getElementById(`die-desc-${id}`).value,
-              color: document.getElementById(`die-color-${id}`)?.value || '#5865f2',
-              footer: document.getElementById(`die-footer-${id}`)?.value || '',
-            },
+            content: updatedContent,
           }),
         });
         showToast('Draft saved', 'success');
