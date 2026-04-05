@@ -8,6 +8,7 @@
 
 const { chat: aiChat, isConfigured: aiIsConfigured } = require('../utils/openrouter');
 const { buildGuildContext, getGuildMemories } = require('./aiChat');
+const { getLocale } = require('../utils/locale');
 const db = require('../utils/database');
 
 // ── Intent Registry ──────────────────────────────────────────────────────
