@@ -1403,8 +1403,14 @@ router.delete('/:guildId/bot-messages/:id', async (req, res) => {
       return res.status(404).json({ error: 'Message not found' });
     }
 
-    const client = getClient(req);
-    await botMessages.deleteMessage(client, id);
+    if (req.query.keepMessage === 'true') {
+      // Delete DB record only, keep Discord message
+      db.run('DELETE FROM bot_messages WHERE id = ?', [id]);
+    } else {
+      // Delete both DB record and Discord message
+      const client = getClient(req);
+      await botMessages.deleteMessage(client, id);
+    }
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -838,10 +838,11 @@
       } catch {}
     }
 
-    function buildChannelSelect() {
+    function buildChannelSelect(selectedChannelId) {
       let html = '<option value="">Select channel...</option>';
       templateChannels.forEach(ch => {
-        html += `<option value="${ch.id}">#${escapeHtml(ch.name)}</option>`;
+        const selected = ch.id === selectedChannelId ? ' selected' : '';
+        html += `<option value="${ch.id}"${selected}>#${escapeHtml(ch.name)}</option>`;
       });
       return html;
     }
@@ -894,11 +895,11 @@
               <div class="draft-item-name">${escapeHtml(msg.name)}</div>
               <div class="draft-item-type">${msg.message_type} &middot; #${escapeHtml(chName)}</div>
             </div>
-            <select>${buildChannelSelect()}</select>
+            <select>${buildChannelSelect(msg.channel_id)}</select>
             <button class="btn btn-success btn-small" style="font-size:11px;" onclick="publishToChannel(${msg.id}, this.parentElement.querySelector('select').value)">Publish</button>
             <button class="btn btn-primary btn-small" style="font-size:11px;" onclick="updateExisting(${msg.id})">Update</button>
             <button class="btn btn-secondary btn-small" style="font-size:11px;" onclick="editDraftInline(${msg.id})">Edit</button>
-            <button class="btn btn-danger btn-small" style="font-size:11px;" onclick="deleteDraft(${msg.id})">Delete</button>
+            <button class="btn btn-danger btn-small" style="font-size:11px;" onclick="deleteDefault(${msg.id}, ${msg.message_id ? 'true' : 'false'})">Delete</button>
           `;
           defaultsList.appendChild(div);
         });
@@ -1061,8 +1062,59 @@
         await api(`/api/guilds/${guildId}/bot-messages/${id}`, { method: 'DELETE' });
         showToast('Deleted', 'success');
         await loadMessages();
-        renderDrafts();
+        await renderDrafts();
       } catch (err) { showToast('Failed: ' + err.message, 'error'); }
+    }
+
+    async function deleteDefault(id, hasPublished) {
+      const guildId = getCurrentGuild();
+
+      if (hasPublished) {
+        // Show options: delete everything, keep Discord message, or cancel
+        const choice = await showConfirm(
+          'This default has a published Discord message.\n\nChoose what to delete:',
+          {
+            title: 'Delete Default',
+            danger: true,
+            confirmText: 'Delete Everything',
+            cancelText: 'Cancel',
+          }
+        );
+
+        if (!choice) {
+          // User clicked Cancel — offer "Keep Message, Delete Draft" option
+          const keepMsg = await showConfirm(
+            'Would you like to keep the Discord message but remove this default template?',
+            { title: 'Keep Message?', warning: true, confirmText: 'Yes, Keep Message', cancelText: 'No, Cancel' }
+          );
+          if (keepMsg) {
+            try {
+              await api(`/api/guilds/${guildId}/bot-messages/${id}?keepMessage=true`, { method: 'DELETE' });
+              showToast('Default removed (Discord message kept)', 'success');
+              await loadMessages();
+              await renderDrafts();
+            } catch (err) { showToast('Failed: ' + err.message, 'error'); }
+          }
+          return;
+        }
+
+        // Delete everything
+        try {
+          await api(`/api/guilds/${guildId}/bot-messages/${id}`, { method: 'DELETE' });
+          showToast('Deleted (including Discord message)', 'success');
+          await loadMessages();
+          await renderDrafts();
+        } catch (err) { showToast('Failed: ' + err.message, 'error'); }
+      } else {
+        // No published message — simple delete
+        if (!await showConfirm('Delete this default template?', { title: 'Delete Default', danger: true })) return;
+        try {
+          await api(`/api/guilds/${guildId}/bot-messages/${id}`, { method: 'DELETE' });
+          showToast('Deleted', 'success');
+          await loadMessages();
+          await renderDrafts();
+        } catch (err) { showToast('Failed: ' + err.message, 'error'); }
+      }
     }
 
     // ── Init ─────────────────────────────────────────────────────────────
