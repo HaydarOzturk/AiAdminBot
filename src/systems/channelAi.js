@@ -354,6 +354,64 @@ function resolveMentions(message) {
   return content;
 }
 
+// ── Game Sessions ────────────────────────────────────────────────────────
+
+/**
+ * Game session state per channel.
+ * Tracks conversation history so the AI remembers questions/answers.
+ */
+const gameSessions = new Map(); // channelId → { messages[], players: Set, startedAt, lastActivity, questionCount }
+
+const GAME_SESSION_TTL = 5 * 60 * 1000; // 5 minutes inactivity → session ends
+const MAX_GAME_HISTORY = 20; // Keep last 20 messages in context
+const MAX_QUESTIONS_PER_SESSION = 10;
+
+function getGameSession(channelId) {
+  const session = gameSessions.get(channelId);
+  if (!session) return null;
+  // Check TTL
+  if (Date.now() - session.lastActivity > GAME_SESSION_TTL) {
+    gameSessions.delete(channelId);
+    return null;
+  }
+  return session;
+}
+
+function startGameSession(channelId, userId) {
+  const session = {
+    messages: [],
+    players: new Set([userId]),
+    startedAt: Date.now(),
+    lastActivity: Date.now(),
+    questionCount: 0,
+  };
+  gameSessions.set(channelId, session);
+  return session;
+}
+
+function addToGameHistory(session, role, content) {
+  session.messages.push({ role, content });
+  // Trim to keep context window manageable
+  if (session.messages.length > MAX_GAME_HISTORY) {
+    session.messages = session.messages.slice(-MAX_GAME_HISTORY);
+  }
+  session.lastActivity = Date.now();
+}
+
+function endGameSession(channelId) {
+  gameSessions.delete(channelId);
+}
+
+// Clean up expired sessions every 2 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [channelId, session] of gameSessions) {
+    if (now - session.lastActivity > GAME_SESSION_TTL) {
+      gameSessions.delete(channelId);
+    }
+  }
+}, 120000);
+
 // ── Main Handler ─────────────────────────────────────────────────────────
 
 const RESPONSE_THRESHOLD = 2;
@@ -379,20 +437,35 @@ async function handleChannelAi(message) {
   const intent = getIntentById(config.intent);
   if (!intent) return false;
 
-  // Smart detection
+  // For mini-games: check if there's an active game session
+  const isGameIntent = intent.id === 'mini-games';
+  let gameSession = isGameIntent ? getGameSession(message.channel.id) : null;
+
+  if (gameSession) {
+    // Active game session — every message in the channel is part of the game
+    gameSession.players.add(message.author.id);
+    return await handleGameMessage(message, intent, config, gameSession);
+  }
+
+  // Smart detection for non-game or game-start trigger
   const score = shouldRespond(message, intent, message.client.user.id);
   if (score < RESPONSE_THRESHOLD) return false;
 
-  // Cooldown check
+  // Cooldown check (skip for active game sessions)
   const cooldown = config.response_cooldown || 30;
   if (isOnCooldown(message.channel.id, cooldown)) return false;
 
+  // For mini-games: start a new game session
+  if (isGameIntent) {
+    gameSession = startGameSession(message.channel.id, message.author.id);
+    return await handleGameMessage(message, intent, config, gameSession);
+  }
+
+  // Non-game intent: one-shot response
   try {
-    // Build prompt
     const systemPrompt = await buildPrompt(intent, message, config.custom_prompt);
     const resolvedContent = resolveMentions(message);
 
-    // Call AI
     const response = await aiChat(
       [{ role: 'user', content: resolvedContent }],
       { systemPrompt, maxTokens: 1024, temperature: 0.7 }
@@ -421,6 +494,125 @@ async function handleChannelAi(message) {
     return true;
   } catch (error) {
     console.error(`Channel AI error in #${message.channel.name}: ${error.message}`);
+    return false;
+  }
+}
+
+// ── Game Message Handler ─────────────────────────────────────────────────
+
+const GAME_SYSTEM_PROMPT = `You are a fun game master running an interactive game session in a Discord channel.
+
+CRITICAL RULES FOR GAME SESSIONS:
+1. You have FULL MEMORY of this conversation. Read the message history carefully.
+2. When you ask a question, WAIT for the user's answer before moving on.
+3. When a user answers, EVALUATE their answer against the correct answer.
+4. Say if they were RIGHT or WRONG, reveal the correct answer, and give a score update.
+5. Only then ask the next question.
+6. Track scores per player across the session.
+7. After {maxQuestions} questions, end the game with a final scoreboard.
+8. If someone says "stop", "end", "quit", "bitir", "dur" — end the game early with scores.
+
+GAME FLOW:
+- Start: Welcome players, explain rules, ask first question
+- Each round: Ask question → Wait for answer → Evaluate → Score → Next question
+- End: Show final scores, congratulate winner
+
+Current players: {players}
+Questions asked so far: {questionCount}/{maxQuestions}
+
+Keep responses fun with emojis. Respond in the same language the user writes in.
+Keep each response under 1500 characters.`;
+
+/**
+ * Handle a message within an active game session.
+ * Maintains conversation history so the AI remembers questions and answers.
+ */
+async function handleGameMessage(message, intent, config, session) {
+  const resolvedContent = resolveMentions(message);
+  const lower = resolvedContent.toLowerCase().trim();
+
+  // Check for game-end commands
+  if (['stop', 'end', 'quit', 'bitir', 'dur', 'bitti'].includes(lower)) {
+    // Ask AI to wrap up with final scores
+    addToGameHistory(session, 'user', `${message.author.username}: ${resolvedContent}`);
+    addToGameHistory(session, 'user', '[GAME OVER — User requested end. Show final scoreboard and congratulate.]');
+  } else {
+    addToGameHistory(session, 'user', `${message.author.username}: ${resolvedContent}`);
+  }
+
+  // Check max questions
+  if (session.questionCount >= MAX_QUESTIONS_PER_SESSION) {
+    addToGameHistory(session, 'user', '[MAX QUESTIONS REACHED — End the game now with final scoreboard.]');
+  }
+
+  try {
+    // Build game-specific system prompt
+    const playerNames = [];
+    for (const playerId of session.players) {
+      try {
+        const member = await message.guild.members.fetch(playerId);
+        playerNames.push(member.displayName || member.user.username);
+      } catch {
+        playerNames.push(playerId);
+      }
+    }
+
+    let systemPrompt = GAME_SYSTEM_PROMPT
+      .replace('{players}', playerNames.join(', '))
+      .replace(/{maxQuestions}/g, String(MAX_QUESTIONS_PER_SESSION))
+      .replace('{questionCount}', String(session.questionCount));
+
+    // Add custom prompt if set
+    if (config.custom_prompt) {
+      systemPrompt += '\n\nExtra instructions: ' + config.custom_prompt;
+    }
+
+    // Send full conversation history to AI
+    const response = await aiChat(
+      session.messages,
+      { systemPrompt, maxTokens: 1024, temperature: 0.8 }
+    );
+
+    if (!response || response.trim().length === 0) return false;
+
+    // Track if this response likely contains a new question
+    if (response.includes('?')) {
+      session.questionCount++;
+    }
+
+    // Add AI response to session history
+    addToGameHistory(session, 'assistant', response);
+
+    // Check if game should end
+    const shouldEnd = lower === 'stop' || lower === 'end' || lower === 'quit' ||
+                      lower === 'bitir' || lower === 'dur' || lower === 'bitti' ||
+                      session.questionCount >= MAX_QUESTIONS_PER_SESSION ||
+                      response.toLowerCase().includes('final skor') ||
+                      response.toLowerCase().includes('final score') ||
+                      response.toLowerCase().includes('game over');
+
+    // Send response
+    const chunks = [];
+    let remaining = response;
+    while (remaining.length > 0) {
+      if (remaining.length <= 2000) { chunks.push(remaining); break; }
+      const splitAt = remaining.lastIndexOf(' ', 2000);
+      chunks.push(remaining.slice(0, splitAt > 0 ? splitAt : 2000));
+      remaining = remaining.slice(splitAt > 0 ? splitAt + 1 : 2000);
+    }
+
+    for (const chunk of chunks) {
+      await message.reply({ content: chunk, allowedMentions: { repliedUser: false } });
+    }
+
+    // End session if game is over
+    if (shouldEnd) {
+      endGameSession(message.channel.id);
+    }
+
+    return true;
+  } catch (error) {
+    console.error(`Game session error in #${message.channel.name}: ${error.message}`);
     return false;
   }
 }
