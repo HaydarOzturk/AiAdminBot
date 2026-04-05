@@ -352,16 +352,22 @@ async function scanChannel(client, guildId, channelId) {
       );
       if (isRoleMenu) continue;
 
-      // Skip messages with role_ buttons (role menus not yet tracked)
-      const firstButton = msg.components?.[0]?.components?.[0];
-      if (firstButton?.customId?.startsWith('role_')) continue;
+      // Collect all button custom IDs from this message
+      const allCustomIds = [];
+      for (const row of (msg.components || [])) {
+        for (const comp of (row.components || [])) {
+          if (comp.customId) allCustomIds.push(comp.customId);
+        }
+      }
 
-      // Check if it's a verification message
-      const isVerification = firstButton?.customId === 'verify_button';
+      // Skip messages with role_ buttons (role menus)
+      if (allCustomIds.some(id => id.startsWith('role_'))) continue;
 
-      // Skip poll and giveaway messages
-      if (firstButton?.customId?.startsWith('poll_vote_')) continue;
-      if (firstButton?.customId === 'giveaway_enter') continue;
+      // Detect special message types by button IDs
+      const isVerification = allCustomIds.includes('verify_button');
+      const isPoll = allCustomIds.some(id => id.startsWith('poll_vote_'));
+      const isGiveaway = allCustomIds.includes('giveaway_enter');
+      const isAgentConfirm = allCustomIds.some(id => id.startsWith('agent_confirm_') || id.startsWith('agent_cancel_'));
 
       // Extract embed data
       const embed = msg.embeds[0];
@@ -375,17 +381,24 @@ async function scanChannel(client, guildId, channelId) {
       if (embed.thumbnail?.url) content.thumbnail = embed.thumbnail.url;
       if (embed.image?.url) content.image = embed.image.url;
 
+      // Skip agent confirmation messages (ephemeral-like)
+      if (isAgentConfirm) continue;
+
       // Detect message type
       const name = embed.title || `Untitled (#${channel.name})`;
       let messageType = 'custom';
 
       if (isVerification) {
         messageType = 'verification';
+      } else if (isPoll) {
+        messageType = 'poll';
+      } else if (isGiveaway) {
+        messageType = 'giveaway';
       } else if (isBotActionMessage(channel, embed)) {
         messageType = 'bot-action';
       }
 
-      const isSystem = (messageType === 'verification' || messageType === 'bot-action') ? 1 : 0;
+      const isSystem = ['verification', 'bot-action', 'poll', 'giveaway'].includes(messageType) ? 1 : 0;
 
       db.run(`
         INSERT INTO bot_messages (guild_id, channel_id, message_id, message_type, name, content, is_system)

@@ -57,6 +57,8 @@
     .msg-type-badge.info { background: rgba(34,197,94,0.1); color: #22c55e; }
     .msg-type-badge.system { background: rgba(249,115,22,0.1); color: var(--accent-primary); }
     .msg-type-badge.bot-action { background: rgba(168,162,158,0.15); color: #78716c; }
+    .msg-type-badge.poll { background: rgba(88,101,242,0.1); color: #5865f2; }
+    .msg-type-badge.giveaway { background: rgba(168,85,247,0.1); color: #a855f7; }
     .msg-status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
     .msg-status-dot.published { background: #22c55e; }
     .msg-status-dot.draft { background: #a8a29e; }
@@ -194,6 +196,8 @@
                 <button class="filter-chip" data-filter="rules" onclick="setFilter('rules')">Rules</button>
                 <button class="filter-chip" data-filter="announcement" onclick="setFilter('announcement')">Announce</button>
                 <button class="filter-chip" data-filter="info" onclick="setFilter('info')">Info</button>
+                <button class="filter-chip" data-filter="poll" onclick="setFilter('poll')">Polls</button>
+                <button class="filter-chip" data-filter="giveaway" onclick="setFilter('giveaway')">Giveaways</button>
                 <button class="filter-chip" data-filter="bot-action" onclick="setFilter('bot-action')">Bot Actions</button>
                 <button class="filter-chip" data-filter="system" onclick="setFilter('system')">System</button>
               </div>
@@ -342,10 +346,11 @@
 
       let filtered = allMessages;
       if (currentFilter !== 'all') {
+        const specificTypes = ['bot-action', 'poll', 'giveaway'];
         if (currentFilter === 'system') {
-          filtered = filtered.filter(m => m.is_system && m.message_type !== 'bot-action');
-        } else if (currentFilter === 'bot-action') {
-          filtered = filtered.filter(m => m.message_type === 'bot-action');
+          filtered = filtered.filter(m => m.is_system && !specificTypes.includes(m.message_type));
+        } else if (specificTypes.includes(currentFilter)) {
+          filtered = filtered.filter(m => m.message_type === currentFilter);
         } else {
           filtered = filtered.filter(m => m.message_type === currentFilter && !m.is_system);
         }
