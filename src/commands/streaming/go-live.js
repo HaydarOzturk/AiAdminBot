@@ -170,11 +170,44 @@ module.exports = {
       components.push(new ActionRowBuilder().addComponents(...allButtons.slice(i, i + 5)));
     }
 
-    // Send the announcement
-    await announcementChannel.send({
+    // Check if there's already an active announcement to update
+    const { activeAnnouncements } = require('../../systems/streamAnnouncer');
+    const existingAnnouncement = activeAnnouncements.get(guild.id);
+
+    if (existingAnnouncement) {
+      // Update existing announcement
+      try {
+        const existingChannel = guild.channels.cache.get(existingAnnouncement.channelId);
+        if (existingChannel) {
+          const existingMsg = await existingChannel.messages.fetch(existingAnnouncement.messageId).catch(() => null);
+          if (existingMsg) {
+            await existingMsg.edit({
+              content: `@everyone\n🔴 **${ownerName}** ${t('streaming.isLiveNow', {}, g)}`,
+              embeds: [embed],
+              components,
+            });
+            await interaction.editReply({
+              content: `✅ ${t('streaming.announcementUpdated', { channel: existingChannel.name }, g) || `Announcement updated in #${existingChannel.name}!`}`,
+            });
+            return;
+          }
+        }
+      } catch {
+        // Existing message not found — send new one below
+      }
+    }
+
+    // Send new announcement
+    const sentMsg = await announcementChannel.send({
       content: `@everyone\n🔴 **${ownerName}** ${t('streaming.isLiveNow', {}, g)}`,
       embeds: [embed],
       components,
+    });
+
+    // Track it so future /go-live calls can update it
+    activeAnnouncements.set(guild.id, {
+      messageId: sentMsg.id,
+      channelId: announcementChannel.id,
     });
 
     // Ephemeral reply to command user
