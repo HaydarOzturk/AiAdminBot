@@ -1,6 +1,7 @@
 const { EmbedBuilder } = require('discord.js');
 const { createEmbed } = require('../utils/embedBuilder');
 const db = require('../utils/database');
+const { channelName: getLocaleName } = require('../utils/locale');
 
 // ── Templates ────────────────────────────────────────────────────────────
 
@@ -373,7 +374,7 @@ function getButtonIds(msg) {
  * Skips: log channels, bot-action messages, AI chat replies, agent confirmations.
  * Keeps: polls, giveaways, verification, custom embeds.
  */
-async function scanChannel(client, guildId, channelId, remainingBudget) {
+async function scanChannel(client, guildId, channelId, remainingBudget, featureMap = {}) {
   const guild = client.guilds.cache.get(guildId);
   if (!guild) return 0;
 
@@ -467,18 +468,15 @@ async function scanChannel(client, guildId, channelId, remainingBudget) {
         messageType = 'giveaway';
         isSystem = 1;
       } else {
-        // Check channel_mappings for feature-based categorization
-        const mapping = db.get(
-          'SELECT feature_id FROM channel_mappings WHERE guild_id = ? AND channel_id = ?',
-          [guildId, channelId]
-        );
-        if (mapping) {
+        // Use feature map for channel-based categorization
+        const feature = featureMap[channelId];
+        if (feature) {
           const featureToType = {
             'stream-announcements': 'stream-announcement',
             'welcome': 'info',
           };
-          if (featureToType[mapping.feature_id]) {
-            messageType = featureToType[mapping.feature_id];
+          if (featureToType[feature]) {
+            messageType = featureToType[feature];
           }
         }
       }
@@ -498,6 +496,39 @@ async function scanChannel(client, guildId, channelId, remainingBudget) {
 }
 
 /**
+ * Build a reverse map: channelId → featureId for a guild.
+ * Uses DB mappings first, then falls back to locale-aware channel name matching.
+ */
+function buildChannelFeatureMap(guild) {
+  const guildId = guild.id;
+  const featureIds = ['stream-announcements', 'welcome', 'verify', 'punishment-log', 'join-leave-log', 'level-up', 'ai-chat', 'starboard', 'admin-agent'];
+  const map = {};
+
+  for (const featureId of featureIds) {
+    // 1. Check DB mapping
+    const mapping = db.get(
+      'SELECT channel_id FROM channel_mappings WHERE guild_id = ? AND feature_id = ?',
+      [guildId, featureId]
+    );
+    if (mapping) {
+      map[mapping.channel_id] = featureId;
+      continue;
+    }
+
+    // 2. Try locale name and raw name
+    const locName = getLocaleName(featureId, guildId);
+    const ch = guild.channels.cache.find(c =>
+      c.isTextBased() && (c.name === locName || c.name === featureId)
+    );
+    if (ch) {
+      map[ch.id] = featureId;
+    }
+  }
+
+  return map;
+}
+
+/**
  * Scan all text channels in a guild for untracked bot messages.
  * Throttled: delays between channels, caps total registered messages.
  */
@@ -505,13 +536,16 @@ async function scanAllChannels(client, guildId) {
   const guild = client.guilds.cache.get(guildId);
   if (!guild) return 0;
 
+  // Build channel→feature map once for the whole scan
+  const featureMap = buildChannelFeatureMap(guild);
+
   let total = 0;
   const channels = guild.channels.cache.filter(c => c.type === 0);
 
   for (const [, channel] of channels) {
     if (total >= MAX_TOTAL_REGISTERED) break;
 
-    const count = await scanChannel(client, guildId, channel.id, MAX_TOTAL_REGISTERED - total);
+    const count = await scanChannel(client, guildId, channel.id, MAX_TOTAL_REGISTERED - total, featureMap);
     total += count;
 
     // Throttle: small delay between channels to avoid rate limits
