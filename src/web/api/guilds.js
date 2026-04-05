@@ -1311,8 +1311,8 @@ router.post('/:guildId/bot-messages/scan', async (req, res) => {
     const client = getClient(req);
     if (!client) return res.status(500).json({ error: 'Bot client not available' });
 
-    // Clear previously auto-scanned entries (not user-created ones) to allow re-scan
-    db.run('DELETE FROM bot_messages WHERE guild_id = ? AND created_by IS NULL AND is_system = 1', [req.params.guildId]);
+    // Clear ALL previously auto-scanned entries (not user-created) to allow fresh re-scan
+    db.run('DELETE FROM bot_messages WHERE guild_id = ? AND created_by IS NULL', [req.params.guildId]);
 
     const count = await botMessages.scanAllChannels(client, req.params.guildId);
     const messages = botMessages.getMessagesForGuild(req.params.guildId);

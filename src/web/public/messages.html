@@ -321,12 +321,22 @@
     let selectedMsgData = null;
     let currentFilter = 'all';
     let editorFields = [];
+    let channelNameCache = {};
 
     // ── Load Messages ────────────────────────────────────────────────────
     async function loadMessages() {
       try {
         const guildId = getCurrentGuild();
         if (!guildId) return;
+
+        // Load channel names for grouping
+        if (Object.keys(channelNameCache).length === 0) {
+          try {
+            const chData = await api(`/api/guilds/${guildId}/channels`);
+            (chData.channels || []).forEach(ch => { channelNameCache[ch.id] = ch.name; });
+          } catch {}
+        }
+
         const data = await api(`/api/guilds/${guildId}/bot-messages`);
         allMessages = data.messages || [];
         renderMessageList();
@@ -380,7 +390,7 @@
       for (const [, group] of Object.entries(groups)) {
         const header = document.createElement('div');
         header.className = 'msg-group-header';
-        header.textContent = '#' + (group.items[0]?.channel_name || group.name);
+        header.textContent = '#' + (channelNameCache[group.name] || group.name);
         list.appendChild(header);
         group.items.forEach(m => list.appendChild(createMsgItem(m)));
       }

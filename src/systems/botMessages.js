@@ -278,10 +278,11 @@ async function deleteMessage(client, id) {
 
 // ── Detection helpers ────────────────────────────────────────────────────
 
-// Channel name patterns that indicate log/action channels
+// Channel name patterns that indicate log/action channels (skip entirely)
 const LOG_CHANNEL_PATTERNS = [
   /log$/i, /-log$/i, /logs$/i, /kayit/i, /kayıt/i,
   /punishment/i, /ceza/i, /mod-/i, /admin-/i,
+  /bot-komut/i, /bot-command/i,
 ];
 
 // Embed field names that indicate bot action/log messages
@@ -291,6 +292,15 @@ const ACTION_FIELD_NAMES = [
   'channel', 'kanal', 'role', 'rol',
   'old role', 'new role', 'removed role', 'added role',
   'eski rol', 'yeni rol',
+];
+
+// Embed titles that are transient agent/system messages (skip)
+const SKIP_TITLE_PATTERNS = [
+  // Agent action results (all locales)
+  /İşlem Tamamlandı/i, /İşlem Başarısız/i, /Onay Gerekli/i,
+  /Action Completed/i, /Action Failed/i, /Confirmation Required/i,
+  // Automod warnings
+  /Auto.?mod/i, /Uyarı/i,
 ];
 
 /**
@@ -396,6 +406,13 @@ async function scanChannel(client, guildId, channelId, remainingBudget) {
 
       // Skip bot-action log messages (even if not in a log channel)
       if (!isPoll && !isGiveaway && !isVerification && isBotActionMessage(channel, embed)) continue;
+
+      // Skip transient agent/system messages by embed title
+      const embedTitle = embed.title || '';
+      if (SKIP_TITLE_PATTERNS.some(p => p.test(embedTitle))) continue;
+
+      // Skip embeds with no title and no description (empty/minimal bot messages)
+      if (!embed.title && !embed.description) continue;
 
       // Extract embed data
       const content = {
