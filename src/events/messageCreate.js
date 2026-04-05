@@ -83,6 +83,15 @@ module.exports = {
       console.error('❌ AI Agent error:', error.message);
     }
 
+    // ── Per-Channel AI Assist ──────────────────────────────────────────
+    try {
+      const channelAi = require('../systems/channelAi');
+      await channelAi.handleChannelAi(message);
+      // Don't return — let automod and other systems still process
+    } catch (error) {
+      console.error('❌ Channel AI error:', error.message);
+    }
+
     // ── Custom Commands ────────────────────────────────────────────────
     try {
       const customCommands = require('../systems/customCommands');

@@ -391,6 +391,23 @@ async function initDatabase() {
     )
   `);
 
+  // ── Per-Channel AI Configuration ────────────────────────────────────────
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS channel_ai_config (
+      guild_id TEXT NOT NULL,
+      channel_id TEXT NOT NULL,
+      enabled INTEGER DEFAULT 0,
+      intent TEXT DEFAULT 'help-support',
+      custom_prompt TEXT,
+      auto_detect_intent INTEGER DEFAULT 1,
+      response_cooldown INTEGER DEFAULT 30,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (guild_id, channel_id)
+    )
+  `);
+
   db.run(`
     CREATE TABLE IF NOT EXISTS channel_mappings (
       guild_id TEXT NOT NULL,

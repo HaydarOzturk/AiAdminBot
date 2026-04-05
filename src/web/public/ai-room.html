@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Room - Admin+AI</title>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <style>
+    /* Tabs */
+    .tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 2px solid var(--border-color); padding-bottom: 0; }
+    .tab { font-size: 14px; font-weight: 600; padding: 10px 20px; border: none; background: none; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s; font-family: inherit; }
+    .tab:hover { color: var(--text-primary); background: var(--bg-tertiary); border-radius: 8px 8px 0 0; }
+    .tab.active { color: var(--accent-primary); border-bottom-color: var(--accent-primary); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Status cards */
+    .status-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; margin-bottom: 24px; }
+    .status-card {
+      background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px;
+      padding: 20px; display: flex; flex-direction: column; gap: 8px;
+    }
+    .status-card h3 { font-size: 14px; margin: 0; color: var(--text-primary); display: flex; align-items: center; gap: 8px; }
+    .status-card .status-value { font-size: 24px; font-weight: 700; color: var(--text-primary); }
+    .status-card .status-label { font-size: 12px; color: var(--text-muted); }
+    .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+    .status-dot.on { background: #22c55e; }
+    .status-dot.off { background: #a8a29e; }
+
+    /* Channel list */
+    .channel-group { margin-bottom: 20px; }
+    .channel-group-header { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); padding: 8px 0; }
+    .channel-row {
+      display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+      border: 1px solid var(--border-color); border-radius: 10px; margin-bottom: 6px;
+      background: var(--bg-card); transition: all 0.15s;
+    }
+    .channel-row:hover { border-color: var(--accent-primary); }
+    .channel-row.enabled { border-left: 3px solid var(--accent-primary); }
+    .channel-info { flex: 1; min-width: 0; }
+    .channel-name { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+    .channel-topic { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px; }
+    .channel-intent-badge { font-size: 10px; padding: 2px 8px; border-radius: 6px; background: rgba(249,115,22,0.1); color: var(--accent-primary); font-weight: 600; }
+
+    /* Toggle switch */
+    .toggle { position: relative; width: 42px; height: 24px; flex-shrink: 0; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider { position: absolute; inset: 0; background: #d6d3d1; border-radius: 12px; cursor: pointer; transition: background 0.2s; }
+    .toggle-slider::before { content: ''; position: absolute; width: 18px; height: 18px; border-radius: 50%; background: white; bottom: 3px; left: 3px; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+    .toggle input:checked + .toggle-slider { background: var(--accent-primary); }
+    .toggle input:checked + .toggle-slider::before { transform: translateX(18px); }
+
+    /* Channel config panel */
+    .channel-config {
+      display: none; padding: 16px; margin: 4px 0 10px; border: 1px solid var(--border-color);
+      border-radius: 10px; background: var(--bg-tertiary);
+    }
+    .channel-config.visible { display: block; }
+    .config-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    @media (max-width: 700px) { .config-row { grid-template-columns: 1fr; } }
+    .config-field label { font-size: 12px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px; }
+    .config-field select, .config-field input, .config-field textarea {
+      width: 100%; font-size: 13px; padding: 8px 12px; border-radius: 8px;
+      border: 1px solid var(--border-color); background: var(--bg-card);
+      font-family: inherit; color: var(--text-primary); box-sizing: border-box;
+    }
+    .config-field textarea { resize: vertical; min-height: 60px; }
+    .config-actions { display: flex; gap: 8px; margin-top: 10px; }
+
+    /* Intent cards */
+    .intent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+    .intent-card {
+      background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px;
+      padding: 20px; transition: all 0.15s;
+    }
+    .intent-card:hover { border-color: var(--accent-primary); }
+    .intent-card h3 { font-size: 16px; margin: 0 0 6px; color: var(--text-primary); }
+    .intent-card .intent-style { font-size: 11px; padding: 2px 8px; border-radius: 6px; background: rgba(249,115,22,0.1); color: var(--accent-primary); font-weight: 600; display: inline-block; margin-bottom: 8px; }
+    .intent-card p { font-size: 13px; color: var(--text-muted); margin: 0; }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <nav class="sidebar">
+      <div class="sidebar-header">
+        <a href="/index.html" style="text-decoration:none;"><h2 class="bot-title"><img src="/img/logo.png" alt="Logo" class="bot-logo">Admin+AI</h2></a>
+        <select id="guild-selector" class="guild-selector"><option value="">Loading guilds...</option></select>
+      </div>
+      <ul class="sidebar-nav">
+        <li><a href="/"><span class="nav-icon">📊</span> Home</a></li>
+        <li><a href="/moderation.html"><span class="nav-icon">⚔️</span> Moderation</a></li>
+        <li><a href="/roles.html"><span class="nav-icon">👥</span> Roles</a></li>
+        <li><a href="/channels.html"><span class="nav-icon">📁</span> Channels</a></li>
+        <li><a href="/leveling.html"><span class="nav-icon">📈</span> Leveling</a></li>
+        <li><a href="/messages.html"><span class="nav-icon">💬</span> Bot Messages</a></li>
+        <li><a href="/ai-room.html" class="active"><span class="nav-icon">🧠</span> AI Room</a></li>
+        <li><a href="/config.html"><span class="nav-icon">⚙️</span> Settings</a></li>
+        <li><a href="/logs.html"><span class="nav-icon">📝</span> Logs</a></li>
+        <li><a href="/invite.html"><span class="nav-icon">🔗</span> Invite Bot</a></li>
+      </ul>
+      <div class="sidebar-footer"><button class="logout-btn" id="logout-btn">Logout</button></div>
+    </nav>
+
+    <div class="main-content">
+      <div class="content-header">
+        <h1 class="content-title">AI Room</h1>
+      </div>
+
+      <div class="content-area">
+        <div class="tabs">
+          <button class="tab active" onclick="switchTab('overview')">Overview</button>
+          <button class="tab" onclick="switchTab('channel-ai')">Channel AI</button>
+          <button class="tab" onclick="switchTab('intents')">Intent Library</button>
+        </div>
+
+        <!-- Tab: Overview -->
+        <div id="tab-overview" class="tab-content active">
+          <div class="status-grid" id="status-grid">
+            <div style="padding:20px;color:var(--text-muted);">Loading AI status...</div>
+          </div>
+        </div>
+
+        <!-- Tab: Channel AI -->
+        <div id="tab-channel-ai" class="tab-content">
+          <p style="color:var(--text-muted);font-size:13px;margin-bottom:16px;">Enable AI assist on any channel. The bot will use smart detection to respond only when relevant, based on the assigned intent.</p>
+          <div id="channel-list">
+            <div style="padding:20px;color:var(--text-muted);">Loading channels...</div>
+          </div>
+        </div>
+
+        <!-- Tab: Intent Library -->
+        <div id="tab-intents" class="tab-content">
+          <p style="color:var(--text-muted);font-size:13px;margin-bottom:16px;">Available AI intents. Each intent defines how the AI behaves in a channel — what triggers it, how it responds, and what tone it uses.</p>
+          <div class="intent-grid" id="intent-grid"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/dashboard.js"></script>
+  <script>
+    let aiData = null;
+
+    function switchTab(name) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      document.getElementById('tab-' + name).classList.add('active');
+      document.querySelector(`.tab[onclick="switchTab('${name}')"]`).classList.add('active');
+    }
+
+    // ── Load Data ────────────────────────────────────────────────────────
+    async function loadAiData() {
+      const guildId = getCurrentGuild();
+      if (!guildId) return;
+      try {
+        aiData = await api(`/api/guilds/${guildId}/channel-ai`);
+        renderOverview();
+        renderChannelList();
+        renderIntentLibrary();
+      } catch (err) {
+        console.error('Failed to load AI data:', err);
+        showToast('Failed to load AI data', 'error');
+      }
+    }
+
+    // ── Overview ─────────────────────────────────────────────────────────
+    function renderOverview() {
+      const s = aiData.aiStatus;
+      const grid = document.getElementById('status-grid');
+      grid.innerHTML = `
+        <div class="status-card">
+          <h3><span class="status-dot ${s.chatEnabled ? 'on' : 'off'}"></span> AI Chat</h3>
+          <div class="status-value">${s.chatEnabled ? 'ON' : 'OFF'}</div>
+          <div class="status-label">Conversational AI assistant</div>
+        </div>
+        <div class="status-card">
+          <h3><span class="status-dot ${s.moderationEnabled ? 'on' : 'off'}"></span> AI Moderation</h3>
+          <div class="status-value">${s.moderationEnabled ? 'ON' : 'OFF'}</div>
+          <div class="status-label">Automatic content scanning</div>
+        </div>
+        <div class="status-card">
+          <h3><span class="status-dot ${s.agentEnabled ? 'on' : 'off'}"></span> AI Agent</h3>
+          <div class="status-value">${s.agentEnabled ? 'ON' : 'OFF'}</div>
+          <div class="status-label">Admin command agent</div>
+        </div>
+        <div class="status-card">
+          <h3>📚 Knowledge Base</h3>
+          <div class="status-value">${s.knowledgeEntries}</div>
+          <div class="status-label">entries stored</div>
+        </div>
+        <div class="status-card">
+          <h3>🧠 Channel AI</h3>
+          <div class="status-value">${s.channelAiCount}</div>
+          <div class="status-label">channels with AI enabled</div>
+        </div>
+      `;
+    }
+
+    // ── Channel List ─────────────────────────────────────────────────────
+    function renderChannelList() {
+      const container = document.getElementById('channel-list');
+      container.innerHTML = '';
+
+      // Group by category
+      const groups = {};
+      (aiData.channels || []).forEach(ch => {
+        const cat = ch.parentName || 'No Category';
+        if (!groups[cat]) groups[cat] = [];
+        groups[cat].push(ch);
+      });
+
+      for (const [catName, channels] of Object.entries(groups)) {
+        const group = document.createElement('div');
+        group.className = 'channel-group';
+        group.innerHTML = `<div class="channel-group-header">${escapeHtml(catName)}</div>`;
+
+        channels.forEach(ch => {
+          const intentObj = aiData.intents.find(i => i.id === ch.intent);
+          const row = document.createElement('div');
+          row.innerHTML = `
+            <div class="channel-row ${ch.enabled ? 'enabled' : ''}" onclick="toggleConfig('${ch.channelId}')">
+              <div class="channel-info">
+                <div class="channel-name">#${escapeHtml(ch.channelName)}</div>
+                ${ch.channelTopic ? `<div class="channel-topic">${escapeHtml(ch.channelTopic)}</div>` : ''}
+              </div>
+              ${ch.enabled ? `<span class="channel-intent-badge">${intentObj?.name || ch.intent}</span>` : ''}
+              <label class="toggle" onclick="event.stopPropagation();">
+                <input type="checkbox" ${ch.enabled ? 'checked' : ''} onchange="toggleChannel('${ch.channelId}', this.checked)">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="channel-config" id="config-${ch.channelId}">
+              <div class="config-row">
+                <div class="config-field">
+                  <label>Intent</label>
+                  <div style="display:flex;gap:6px;">
+                    <select id="intent-${ch.channelId}" style="flex:1;">
+                      ${aiData.intents.map(i => `<option value="${i.id}" ${ch.intent === i.id ? 'selected' : ''}>${i.name}</option>`).join('')}
+                    </select>
+                    <button class="btn btn-secondary btn-small" style="font-size:11px;flex-shrink:0;" onclick="suggestIntent('${ch.channelId}')">Auto-Suggest</button>
+                  </div>
+                </div>
+                <div class="config-field">
+                  <label>Cooldown (seconds)</label>
+                  <input type="number" id="cooldown-${ch.channelId}" value="${ch.responseCooldown}" min="10" max="300">
+                </div>
+              </div>
+              <div class="config-field" style="margin-bottom:12px;">
+                <label>Custom Prompt (optional)</label>
+                <textarea id="prompt-${ch.channelId}" placeholder="Add extra instructions for the AI in this channel...">${escapeHtml(ch.customPrompt || '')}</textarea>
+              </div>
+              <div class="config-actions">
+                <button class="btn btn-primary btn-small" onclick="saveChannelConfig('${ch.channelId}')">Save</button>
+              </div>
+            </div>
+          `;
+          group.appendChild(row);
+        });
+
+        container.appendChild(group);
+      }
+    }
+
+    function toggleConfig(channelId) {
+      const panel = document.getElementById('config-' + channelId);
+      if (panel) panel.classList.toggle('visible');
+    }
+
+    async function toggleChannel(channelId, enabled) {
+      const guildId = getCurrentGuild();
+      const ch = aiData.channels.find(c => c.channelId === channelId);
+      try {
+        await api(`/api/guilds/${guildId}/channel-ai/${channelId}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            enabled,
+            intent: ch?.intent || 'help-support',
+            customPrompt: ch?.customPrompt || '',
+            responseCooldown: ch?.responseCooldown || 30,
+          }),
+        });
+        showToast(enabled ? 'AI enabled' : 'AI disabled', 'success');
+        await loadAiData();
+      } catch (err) { showToast('Failed: ' + err.message, 'error'); }
+    }
+
+    async function saveChannelConfig(channelId) {
+      const guildId = getCurrentGuild();
+      try {
+        await api(`/api/guilds/${guildId}/channel-ai/${channelId}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            enabled: true,
+            intent: document.getElementById('intent-' + channelId).value,
+            customPrompt: document.getElementById('prompt-' + channelId).value,
+            responseCooldown: parseInt(document.getElementById('cooldown-' + channelId).value) || 30,
+          }),
+        });
+        showToast('Channel AI config saved', 'success');
+        await loadAiData();
+      } catch (err) { showToast('Failed: ' + err.message, 'error'); }
+    }
+
+    async function suggestIntent(channelId) {
+      const guildId = getCurrentGuild();
+      try {
+        showToast('Analyzing channel...', 'info');
+        const data = await api(`/api/guilds/${guildId}/channel-ai/${channelId}/suggest-intent`, { method: 'POST' });
+        document.getElementById('intent-' + channelId).value = data.suggestedIntent;
+        showToast(`Suggested: ${data.suggestedIntent}`, 'success');
+      } catch (err) { showToast('Suggestion failed: ' + err.message, 'error'); }
+    }
+
+    // ── Intent Library ───────────────────────────────────────────────────
+    function renderIntentLibrary() {
+      const grid = document.getElementById('intent-grid');
+      grid.innerHTML = '';
+      (aiData.intents || []).forEach(intent => {
+        const card = document.createElement('div');
+        card.className = 'intent-card';
+        card.innerHTML = `
+          <h3>${escapeHtml(intent.name)}</h3>
+          <span class="intent-style">${intent.responseStyle}</span>
+          <p>${escapeHtml(intent.description)}</p>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    // ── Logout + Init ────────────────────────────────────────────────────
+    document.getElementById('logout-btn').addEventListener('click', async () => {
+      try { await api('/api/auth/logout', { method: 'POST' }); } catch {}
+      window.location.href = '/login.html';
+    });
+
+    document.addEventListener('DOMContentLoaded', () => { loadAiData(); });
+  </script>
+</body>
+</html>

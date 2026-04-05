@@ -2124,6 +2124,119 @@ router.put('/:guildId/setup/afk', async (req, res) => {
 });
 
 // ══════════════════════════════════════════════════════════════════════════
+// CHANNEL AI
+// ══════════════════════════════════════════════════════════════════════════
+
+const channelAi = require('../../systems/channelAi');
+
+/** List all channel AI configs + intents + AI status overview */
+router.get('/:guildId/channel-ai', (req, res) => {
+  try {
+    const guild = getGuild(req);
+    const configs = channelAi.getAllConfigs(req.params.guildId);
+
+    // Merge with live channel data
+    const configMap = {};
+    configs.forEach(c => { configMap[c.channel_id] = c; });
+
+    const channels = [];
+    if (guild) {
+      guild.channels.cache
+        .filter(c => c.type === 0)
+        .sort((a, b) => a.position - b.position)
+        .forEach(ch => {
+          const cfg = configMap[ch.id] || {};
+          channels.push({
+            channelId: ch.id,
+            channelName: ch.name,
+            channelTopic: ch.topic || '',
+            parentName: ch.parent?.name || '',
+            enabled: !!cfg.enabled,
+            intent: cfg.intent || 'help-support',
+            customPrompt: cfg.custom_prompt || '',
+            autoDetectIntent: cfg.auto_detect_intent != null ? !!cfg.auto_detect_intent : true,
+            responseCooldown: cfg.response_cooldown || 30,
+          });
+        });
+    }
+
+    // AI status overview
+    const agentSettings = db.get('SELECT * FROM agent_settings WHERE guild_id = ?', [req.params.guildId]);
+    const knowledgeCount = db.get('SELECT COUNT(*) as cnt FROM knowledge_base WHERE guild_id = ?', [req.params.guildId]);
+    const enabledCount = configs.filter(c => c.enabled).length;
+
+    res.json({
+      channels,
+      intents: channelAi.getIntents(),
+      aiStatus: {
+        chatEnabled: process.env.AI_CHAT_ENABLED === 'true',
+        moderationEnabled: process.env.AI_MODERATION_ENABLED === 'true',
+        agentEnabled: !!agentSettings?.enabled,
+        agentChannel: agentSettings?.channel_id || null,
+        knowledgeEntries: knowledgeCount?.cnt || 0,
+        channelAiCount: enabledCount,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/** Upsert a channel's AI config */
+router.put('/:guildId/channel-ai/:channelId', (req, res) => {
+  try {
+    const { enabled, intent, customPrompt, autoDetectIntent, responseCooldown } = req.body;
+
+    // Validate intent
+    if (intent && !channelAi.getIntentById(intent)) {
+      return res.status(400).json({ error: `Unknown intent: ${intent}` });
+    }
+    if (customPrompt && customPrompt.length > 2000) {
+      return res.status(400).json({ error: 'Custom prompt too long (max 2000 chars)' });
+    }
+
+    channelAi.upsertConfig(req.params.guildId, req.params.channelId, {
+      enabled, intent, customPrompt, autoDetectIntent,
+      responseCooldown: Math.max(10, Math.min(300, responseCooldown || 30)),
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/** AI-powered intent suggestion based on channel name/topic */
+router.post('/:guildId/channel-ai/:channelId/suggest-intent', async (req, res) => {
+  try {
+    const guild = getGuild(req);
+    if (!guild) return res.status(404).json({ error: 'Guild not found' });
+
+    const channel = guild.channels.cache.get(req.params.channelId);
+    if (!channel) return res.status(404).json({ error: 'Channel not found' });
+
+    const { chat } = require('../../utils/openrouter');
+    const intentsDesc = channelAi.getIntents().map(i => `${i.id}: ${i.name} — ${i.description}`).join('\n');
+
+    const result = await chat(
+      [{ role: 'user', content: `Channel name: #${channel.name}\nChannel topic: ${channel.topic || 'None'}\nCategory: ${channel.parent?.name || 'None'}` }],
+      {
+        systemPrompt: `You are an AI assistant that suggests the best intent for a Discord channel.\n\nAvailable intents:\n${intentsDesc}\n\nRespond with ONLY the intent ID (e.g., "help-support"). If unsure, respond with "help-support".`,
+        maxTokens: 20,
+        temperature: 0.1,
+      }
+    );
+
+    const suggested = result.trim().toLowerCase().replace(/[^a-z-]/g, '');
+    const validIntent = channelAi.getIntentById(suggested) ? suggested : 'help-support';
+
+    res.json({ suggestedIntent: validIntent });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════════════
 // STARBOARD SETTINGS
 // ══════════════════════════════════════════════════════════════════════════
 
