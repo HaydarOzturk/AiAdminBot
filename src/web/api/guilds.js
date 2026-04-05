@@ -1087,7 +1087,7 @@ router.get('/:guildId/role-menus/:menuId', (req, res) => {
 });
 
 /** Update a role menu's settings */
-router.put('/:guildId/role-menus/:menuId', (req, res) => {
+router.put('/:guildId/role-menus/:menuId', async (req, res) => {
   try {
     const menuId = parseInt(req.params.menuId, 10);
     const menu = roleMenus.getMenuWithItems(menuId);
@@ -1103,6 +1103,15 @@ router.put('/:guildId/role-menus/:menuId', (req, res) => {
     if (req.body.requiredRoleId !== undefined) fields.required_role_id = req.body.requiredRoleId || null;
 
     roleMenus.updateMenu(menuId, fields);
+
+    // Update published Discord messages to reflect changes
+    const client = getClient(req);
+    if (client) {
+      roleMenus.updatePublishedMenus(client, req.params.guildId, menuId).catch(err => {
+        console.warn('Failed to update published menus:', err.message);
+      });
+    }
+
     res.json({ menu: roleMenus.getMenuWithItems(menuId) });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1144,6 +1153,15 @@ router.post('/:guildId/role-menus/:menuId/items', async (req, res) => {
     }
 
     const itemId = await roleMenus.addMenuItem(menuId, { roleName, emoji, color, position });
+
+    // Update published Discord messages
+    const client = getClient(req);
+    if (client) {
+      roleMenus.updatePublishedMenus(client, req.params.guildId, menuId).catch(err => {
+        console.warn('Failed to update published menus:', err.message);
+      });
+    }
+
     res.json({ itemId, menu: roleMenus.getMenuWithItems(menuId) });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1171,6 +1189,15 @@ router.put('/:guildId/role-menus/:menuId/items/:itemId', (req, res) => {
     if (req.body.position != null) fields.position = req.body.position;
 
     roleMenus.updateMenuItem(itemId, fields);
+
+    // Update published Discord messages
+    const client = getClient(req);
+    if (client) {
+      roleMenus.updatePublishedMenus(client, req.params.guildId, menuId).catch(err => {
+        console.warn('Failed to update published menus:', err.message);
+      });
+    }
+
     res.json({ menu: roleMenus.getMenuWithItems(menuId) });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1192,6 +1219,15 @@ router.delete('/:guildId/role-menus/:menuId/items/:itemId', (req, res) => {
     }
 
     roleMenus.removeMenuItem(itemId);
+
+    // Update published Discord messages
+    const client = getClient(req);
+    if (client) {
+      roleMenus.updatePublishedMenus(client, req.params.guildId, menuId).catch(err => {
+        console.warn('Failed to update published menus:', err.message);
+      });
+    }
+
     res.json({ success: true, menu: roleMenus.getMenuWithItems(menuId) });
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -223,8 +223,12 @@ async function handleEdit(interaction, guildId) {
   }
 
   roleMenus.updateMenu(menuId, fields);
+
+  // Update published Discord messages in background
+  roleMenus.updatePublishedMenus(interaction.client, guildId, menuId).catch(() => {});
+
   return interaction.reply({
-    content: `✅ Menu **${menu.title}** updated!`,
+    content: `✅ Menu **${menu.title}** updated! Published messages will be refreshed.`,
     flags: MessageFlags.Ephemeral,
   });
 }
@@ -251,6 +255,9 @@ async function handleAddRole(interaction, guildId) {
   }
 
   await roleMenus.addMenuItem(menuId, { roleName, emoji, color });
+
+  roleMenus.updatePublishedMenus(interaction.client, guildId, menuId).catch(() => {});
+
   return interaction.reply({
     content: `✅ Added **${roleName}** to **${menu.title}**. (${menu.items.length + 1} roles total)`,
     flags: MessageFlags.Ephemeral,
@@ -273,6 +280,9 @@ async function handleRemoveRole(interaction, guildId) {
   }
 
   roleMenus.removeMenuItem(item.id);
+
+  roleMenus.updatePublishedMenus(interaction.client, guildId, menuId).catch(() => {});
+
   return interaction.reply({
     content: `✅ Removed **${roleName}** from **${menu.title}**.`,
     flags: MessageFlags.Ephemeral,
@@ -290,6 +300,8 @@ async function handleSetRequirement(interaction, guildId) {
   const role = interaction.options.getRole('role');
 
   roleMenus.updateMenu(menuId, { required_role_id: role ? role.id : null });
+
+  roleMenus.updatePublishedMenus(interaction.client, guildId, menuId).catch(() => {});
 
   if (role) {
     return interaction.reply({
