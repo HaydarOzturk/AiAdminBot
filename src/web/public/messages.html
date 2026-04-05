@@ -972,14 +972,56 @@
             </select>
           </div>
         </div>
-        <div class="editor-group"><label>Title</label><input type="text" id="die-title-${id}" value="${escapeHtml(content.title || '')}"></div>
-        <div class="editor-group"><label>Description</label><textarea id="die-desc-${id}" rows="3">${escapeHtml(content.description || '')}</textarea></div>
+        <div class="editor-group"><label>Title</label><input type="text" id="die-title-${id}" value="${escapeHtml(content.title || '')}" oninput="updateInlinePreview(${id})"></div>
+        <div class="editor-group"><label>Description</label><textarea id="die-desc-${id}" rows="3" oninput="updateInlinePreview(${id})">${escapeHtml(content.description || '')}</textarea></div>
+        <div class="editor-group"><label>Color</label>
+          <div class="color-input-wrap">
+            <input type="color" id="die-color-${id}" value="${content.color || '#5865f2'}" oninput="updateInlinePreview(${id})">
+            <span class="color-hex">${content.color || '#5865f2'}</span>
+          </div>
+        </div>
+        <div class="editor-group"><label>Footer</label><input type="text" id="die-footer-${id}" value="${escapeHtml(content.footer || '')}" oninput="updateInlinePreview(${id})"></div>
+        <div id="die-preview-${id}" class="embed-preview" style="display:none;margin-top:12px;"></div>
         <div style="display:flex;gap:8px;margin-top:10px;">
           <button class="btn btn-primary btn-small" onclick="saveDraftInline(${id})">Save</button>
+          <button class="btn btn-success btn-small" onclick="toggleInlinePreview(${id})">Preview</button>
           <button class="btn btn-secondary btn-small" onclick="this.closest('.draft-inline-editor').remove()">Cancel</button>
         </div>
       `;
       targetItem.after(editor);
+    }
+
+    function toggleInlinePreview(id) {
+      const preview = document.getElementById(`die-preview-${id}`);
+      if (preview.style.display === 'none') {
+        preview.style.display = '';
+        updateInlinePreview(id);
+      } else {
+        preview.style.display = 'none';
+      }
+    }
+
+    function updateInlinePreview(id) {
+      const preview = document.getElementById(`die-preview-${id}`);
+      if (!preview || preview.style.display === 'none') return;
+
+      const title = document.getElementById(`die-title-${id}`)?.value || '';
+      const desc = document.getElementById(`die-desc-${id}`)?.value || '';
+      const color = document.getElementById(`die-color-${id}`)?.value || '#5865f2';
+      const footer = document.getElementById(`die-footer-${id}`)?.value || '';
+
+      preview.style.borderLeftColor = color;
+
+      if (!title && !desc && !footer) {
+        preview.innerHTML = '<div class="ep-empty">Empty embed</div>';
+        return;
+      }
+
+      let html = '';
+      if (title) html += `<div class="ep-title">${escapeHtml(title)}</div>`;
+      if (desc) html += `<div class="ep-description">${escapeHtml(desc)}</div>`;
+      if (footer) html += `<div class="ep-footer">${escapeHtml(footer)}</div>`;
+      preview.innerHTML = html;
     }
 
     async function saveDraftInline(id) {
@@ -993,6 +1035,8 @@
             content: {
               title: document.getElementById(`die-title-${id}`).value,
               description: document.getElementById(`die-desc-${id}`).value,
+              color: document.getElementById(`die-color-${id}`)?.value || '#5865f2',
+              footer: document.getElementById(`die-footer-${id}`)?.value || '',
             },
           }),
         });
