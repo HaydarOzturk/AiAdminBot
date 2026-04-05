@@ -67,6 +67,21 @@
     .msg-type-badge.bot-action { background: rgba(168,162,158,0.15); color: #78716c; }
     .msg-type-badge.poll { background: rgba(88,101,242,0.1); color: #5865f2; }
     .msg-type-badge.giveaway { background: rgba(168,85,247,0.1); color: #a855f7; }
+    .msg-type-badge.stream-announcement { background: rgba(239,68,68,0.1); color: #ef4444; }
+
+    /* Drafts in templates tab */
+    .drafts-section { margin-top: 32px; border-top: 1px solid var(--border-color); padding-top: 20px; }
+    .drafts-section h3 { font-size: 14px; font-weight: 700; color: var(--text-primary); margin: 0 0 12px; }
+    .draft-item {
+      display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+      border: 1px solid var(--border-color); border-radius: 10px; margin-bottom: 8px;
+      background: var(--bg-card); transition: all 0.15s;
+    }
+    .draft-item:hover { border-color: var(--accent-primary); }
+    .draft-item-info { flex: 1; min-width: 0; }
+    .draft-item-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+    .draft-item-type { font-size: 11px; color: var(--text-muted); }
+    .draft-item select { font-size: 11px; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-family: inherit; max-width: 140px; }
     .msg-status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
     .msg-status-dot.published { background: #22c55e; }
     .msg-status-dot.draft { background: #a8a29e; }
@@ -198,6 +213,13 @@
         <div id="page-tab-templates" class="tab-content">
           <p style="color:var(--text-muted);font-size:13px;margin-bottom:16px;">Create a new bot message from a template. Placeholders like <code>{user}</code>, <code>{platform}</code> will be filled when the message is used.</p>
           <div class="template-grid" id="templates-tab-grid"></div>
+
+          <!-- Drafts Section -->
+          <div class="drafts-section" id="drafts-section">
+            <h3>Your Drafts</h3>
+            <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">Unpublished messages. Assign a channel and publish.</p>
+            <div id="drafts-list"></div>
+          </div>
         </div>
 
         <div id="page-tab-messages" class="tab-content active">
@@ -215,7 +237,7 @@
                 <button class="filter-chip" data-filter="info" onclick="setFilter('info')">Info</button>
                 <button class="filter-chip" data-filter="poll" onclick="setFilter('poll')">Polls</button>
                 <button class="filter-chip" data-filter="giveaway" onclick="setFilter('giveaway')">Giveaways</button>
-                <button class="filter-chip" data-filter="drafts" onclick="setFilter('drafts')">Drafts</button>
+                <button class="filter-chip" data-filter="stream-announcement" onclick="setFilter('stream-announcement')">Stream Alerts</button>
                 <button class="filter-chip" data-filter="system" onclick="setFilter('system')">System</button>
                 <button class="filter-chip" data-filter="custom" onclick="setFilter('custom')">Custom</button>
                 <button class="filter-chip active" data-filter="all" onclick="setFilter('all')">All</button>
@@ -272,6 +294,7 @@
                       <option value="rules">Rules</option>
                       <option value="announcement">Announcement</option>
                       <option value="info">Info</option>
+                      <option value="stream-announcement">Stream Announcement</option>
                       <option value="poll">Poll</option>
                       <option value="giveaway">Giveaway</option>
                       <option value="verification">Verification</option>
@@ -379,11 +402,9 @@
 
       let filtered = allMessages;
       if (currentFilter !== 'all') {
-        if (currentFilter === 'drafts') {
-          filtered = filtered.filter(m => !m.message_id);
-        } else if (currentFilter === 'system') {
+        if (currentFilter === 'system') {
           filtered = filtered.filter(m => m.is_system);
-        } else if (['poll', 'giveaway', 'verification'].includes(currentFilter)) {
+        } else if (['poll', 'giveaway', 'verification', 'stream-announcement'].includes(currentFilter)) {
           filtered = filtered.filter(m => m.message_type === currentFilter);
         } else {
           filtered = filtered.filter(m => m.message_type === currentFilter && !m.is_system);
@@ -748,6 +769,8 @@
     async function loadTemplatesTab() {
       const guildId = getCurrentGuild();
       if (!guildId) return;
+
+      // Load templates
       try {
         const data = await api(`/api/guilds/${guildId}/bot-messages/templates`);
         const grid = document.getElementById('templates-tab-grid');
@@ -757,7 +780,7 @@
           const previewColor = content.color || '#5865f2';
           const card = document.createElement('div');
           card.className = 'template-card';
-          card.onclick = () => createFromTemplate(t);
+          card.onclick = () => { createFromTemplate(t); switchPageTab('messages'); };
           card.innerHTML = `
             <h3>${escapeHtml(t.name)}</h3>
             <p style="margin-bottom:12px;">${escapeHtml(t.description)}</p>
@@ -773,6 +796,77 @@
       } catch (err) {
         showToast('Failed to load templates', 'error');
       }
+
+      // Load drafts (unpublished messages)
+      await renderDrafts();
+    }
+
+    async function renderDrafts() {
+      const guildId = getCurrentGuild();
+      if (!guildId) return;
+
+      const draftsList = document.getElementById('drafts-list');
+      const drafts = allMessages.filter(m => !m.message_id);
+
+      if (drafts.length === 0) {
+        draftsList.innerHTML = '<div style="padding:12px;text-align:center;color:var(--text-muted);font-size:13px;">No drafts yet. Use a template above to create one.</div>';
+        return;
+      }
+
+      // Load channels for dropdown
+      let channels = [];
+      try {
+        const chData = await api(`/api/guilds/${guildId}/channels`);
+        channels = (chData.channels || []).filter(c => c.type === 0);
+      } catch {}
+
+      draftsList.innerHTML = '';
+      drafts.forEach(draft => {
+        const div = document.createElement('div');
+        div.className = 'draft-item';
+
+        let channelOptions = '<option value="">Select channel...</option>';
+        channels.forEach(ch => {
+          channelOptions += `<option value="${ch.id}">#${escapeHtml(ch.name)}</option>`;
+        });
+
+        div.innerHTML = `
+          <div class="draft-item-info">
+            <div class="draft-item-name">${escapeHtml(draft.name)}</div>
+            <div class="draft-item-type">${draft.message_type}</div>
+          </div>
+          <select onchange="this.dataset.channelId=this.value">${channelOptions}</select>
+          <button class="btn btn-primary btn-small" style="font-size:11px;" onclick="publishDraft(${draft.id}, this.previousElementSibling.value)">Publish</button>
+          <button class="btn btn-secondary btn-small" style="font-size:11px;" onclick="switchPageTab('messages'); selectMessage(${draft.id});">Edit</button>
+          <button class="btn btn-danger btn-small" style="font-size:11px;" onclick="deleteDraft(${draft.id})">Delete</button>
+        `;
+        draftsList.appendChild(div);
+      });
+    }
+
+    async function publishDraft(id, channelId) {
+      if (!channelId) { showToast('Select a channel first', 'warning'); return; }
+      const guildId = getCurrentGuild();
+      try {
+        await api(`/api/guilds/${guildId}/bot-messages/${id}/publish`, {
+          method: 'POST',
+          body: JSON.stringify({ channelId }),
+        });
+        showToast('Published!', 'success');
+        await loadMessages();
+        renderDrafts();
+      } catch (err) { showToast('Failed: ' + (err.message || 'Error'), 'error'); }
+    }
+
+    async function deleteDraft(id) {
+      if (!await showConfirm('Delete this draft?', { title: 'Delete Draft', danger: true })) return;
+      const guildId = getCurrentGuild();
+      try {
+        await api(`/api/guilds/${guildId}/bot-messages/${id}`, { method: 'DELETE' });
+        showToast('Deleted', 'success');
+        await loadMessages();
+        renderDrafts();
+      } catch (err) { showToast('Failed: ' + err.message, 'error'); }
     }
 
     // ── Init ─────────────────────────────────────────────────────────────

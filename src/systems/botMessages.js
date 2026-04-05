@@ -466,6 +466,21 @@ async function scanChannel(client, guildId, channelId, remainingBudget) {
       } else if (isGiveaway) {
         messageType = 'giveaway';
         isSystem = 1;
+      } else {
+        // Check channel_mappings for feature-based categorization
+        const mapping = db.get(
+          'SELECT feature_id FROM channel_mappings WHERE guild_id = ? AND channel_id = ?',
+          [guildId, channelId]
+        );
+        if (mapping) {
+          const featureToType = {
+            'stream-announcements': 'stream-announcement',
+            'welcome': 'info',
+          };
+          if (featureToType[mapping.feature_id]) {
+            messageType = featureToType[mapping.feature_id];
+          }
+        }
       }
 
       db.run(`
