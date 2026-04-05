@@ -569,6 +569,95 @@
       }
     }
 
+    // ── Stream Links Section (appended to streaming panel) ──────────
+    async function loadStreamLinks() {
+      const guildId = getCurrentGuild();
+      if (!guildId) return;
+      const panel = document.getElementById('panel-streaming');
+      if (!panel) return;
+
+      // Don't duplicate
+      if (document.getElementById('stream-links-section')) return;
+
+      try {
+        const data = await api(`/api/guilds/${guildId}/stream-links`);
+        const links = data.links || [];
+
+        const platforms = ['kick', 'twitch', 'youtube'];
+        let html = `
+          <div id="stream-links-section" style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border-color);">
+            <h3 style="font-size:14px;font-weight:700;margin:0 0 12px;color:var(--text-primary);">Stream Links</h3>
+            <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">Platform links used for stream announcements. Edit or add links below.</p>
+        `;
+
+        for (const platform of platforms) {
+          const link = links.find(l => l.platform === platform);
+          const emoji = platform === 'kick' ? '🟢' : platform === 'twitch' ? '🟣' : '🔴';
+          const label = platform.charAt(0).toUpperCase() + platform.slice(1);
+          html += `
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:10px 14px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-card);">
+              <span style="font-size:18px;width:24px;text-align:center;">${emoji}</span>
+              <span style="font-size:13px;font-weight:600;width:70px;color:var(--text-primary);">${label}</span>
+              <input type="text" id="sl-handle-${platform}" value="${escapeHtml(link?.platform_handle || '')}" placeholder="Handle/username"
+                style="flex:0 0 140px;font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-tertiary);color:var(--text-primary);font-family:inherit;">
+              <input type="text" id="sl-url-${platform}" value="${escapeHtml(link?.platform_url || '')}" placeholder="Full URL"
+                style="flex:1;font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-tertiary);color:var(--text-primary);font-family:inherit;">
+              <button class="btn btn-primary btn-small" style="font-size:11px;" onclick="saveStreamLink('${platform}')">Save</button>
+              ${link ? `<button class="btn btn-danger btn-small" style="font-size:11px;" onclick="deleteStreamLink('${platform}')">Delete</button>` : ''}
+            </div>
+          `;
+        }
+
+        // Show any additional platforms
+        links.filter(l => !platforms.includes(l.platform)).forEach(link => {
+          html += `
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:10px 14px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-card);">
+              <span style="font-size:18px;width:24px;text-align:center;">🔗</span>
+              <span style="font-size:13px;font-weight:600;width:70px;color:var(--text-primary);">${escapeHtml(link.platform)}</span>
+              <input type="text" id="sl-handle-${link.platform}" value="${escapeHtml(link.platform_handle || '')}" placeholder="Handle"
+                style="flex:0 0 140px;font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-tertiary);color:var(--text-primary);font-family:inherit;">
+              <input type="text" id="sl-url-${link.platform}" value="${escapeHtml(link.platform_url || '')}" placeholder="URL"
+                style="flex:1;font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-tertiary);color:var(--text-primary);font-family:inherit;">
+              <button class="btn btn-primary btn-small" style="font-size:11px;" onclick="saveStreamLink('${link.platform}')">Save</button>
+              <button class="btn btn-danger btn-small" style="font-size:11px;" onclick="deleteStreamLink('${link.platform}')">Delete</button>
+            </div>
+          `;
+        });
+
+        html += `</div>`;
+        panel.insertAdjacentHTML('beforeend', html);
+      } catch (err) {
+        console.error('Failed to load stream links:', err);
+      }
+    }
+
+    async function saveStreamLink(platform) {
+      const guildId = getCurrentGuild();
+      const handle = document.getElementById('sl-handle-' + platform)?.value || '';
+      const url = document.getElementById('sl-url-' + platform)?.value || '';
+      if (!url) { showToast('URL is required', 'warning'); return; }
+      try {
+        await api(`/api/guilds/${guildId}/stream-links/${platform}`, {
+          method: 'PUT',
+          body: JSON.stringify({ handle, url }),
+        });
+        showToast(`${platform} link saved`, 'success');
+      } catch (err) { showToast('Failed: ' + err.message, 'error'); }
+    }
+
+    async function deleteStreamLink(platform) {
+      if (!await showConfirm(`Delete ${platform} link?`, { title: 'Delete Link', danger: true })) return;
+      const guildId = getCurrentGuild();
+      try {
+        await api(`/api/guilds/${guildId}/stream-links/${platform}`, { method: 'DELETE' });
+        showToast(`${platform} link deleted`, 'success');
+        // Reload
+        const section = document.getElementById('stream-links-section');
+        if (section) section.remove();
+        loadStreamLinks();
+      } catch (err) { showToast('Failed: ' + err.message, 'error'); }
+    }
+
     // ── Change tracking ────────────────────────────────────────────────
     function trackChange(key, value) {
       // If value matches original, remove from pending
@@ -917,10 +1006,16 @@
       if (tab && tab.dataset.panel === 'channels') {
         loadChannels();
       }
+      if (tab && tab.dataset.panel === 'streaming') {
+        loadStreamLinks();
+      }
     });
 
     // ── Init ───────────────────────────────────────────────────────────
-    document.addEventListener('DOMContentLoaded', loadSettings);
+    document.addEventListener('DOMContentLoaded', async () => {
+      await loadSettings();
+      loadStreamLinks();
+    });
   </script>
 </body>
 </html>

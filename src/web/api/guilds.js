@@ -2124,6 +2124,53 @@ router.put('/:guildId/setup/afk', async (req, res) => {
 });
 
 // ══════════════════════════════════════════════════════════════════════════
+// STREAM LINKS
+// ══════════════════════════════════════════════════════════════════════════
+
+/** List all stream links for a guild */
+router.get('/:guildId/stream-links', (req, res) => {
+  try {
+    const links = db.all('SELECT * FROM streaming_links WHERE guild_id = ? ORDER BY platform', [req.params.guildId]);
+    res.json({ links });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/** Add or update a stream link */
+router.put('/:guildId/stream-links/:platform', (req, res) => {
+  try {
+    const { userId, handle, url } = req.body;
+    if (!url) return res.status(400).json({ error: 'url is required' });
+
+    const ownerId = userId || process.env.STREAM_OWNER_ID || req.params.guildId;
+
+    db.run(`
+      INSERT INTO streaming_links (guild_id, user_id, platform, platform_handle, platform_url)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(guild_id, user_id, platform) DO UPDATE SET
+        platform_handle = excluded.platform_handle,
+        platform_url = excluded.platform_url,
+        added_at = CURRENT_TIMESTAMP
+    `, [req.params.guildId, ownerId, req.params.platform, handle || '', url]);
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/** Delete a stream link */
+router.delete('/:guildId/stream-links/:platform', (req, res) => {
+  try {
+    db.run('DELETE FROM streaming_links WHERE guild_id = ? AND platform = ?', [req.params.guildId, req.params.platform]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════════════
 // CHANNEL AI
 // ══════════════════════════════════════════════════════════════════════════
 
