@@ -317,10 +317,29 @@ function isBotActionMessage(channel, embed) {
 
 // ── Scan ─────────────────────────────────────────────────────────────────
 
+const MAX_MESSAGES_PER_CHANNEL = 30;
+const MAX_TOTAL_REGISTERED = 100;
+const CHANNEL_SCAN_DELAY_MS = 200;
+
+/**
+ * Collect all button custom IDs from a Discord message.
+ */
+function getButtonIds(msg) {
+  const ids = [];
+  for (const row of (msg.components || [])) {
+    for (const comp of (row.components || [])) {
+      if (comp.customId) ids.push(comp.customId);
+    }
+  }
+  return ids;
+}
+
 /**
  * Scan a channel for untracked bot messages and register them.
+ * Skips: log channels, bot-action messages, AI chat replies, agent confirmations.
+ * Keeps: polls, giveaways, verification, custom embeds.
  */
-async function scanChannel(client, guildId, channelId) {
+async function scanChannel(client, guildId, channelId, remainingBudget) {
   const guild = client.guilds.cache.get(guildId);
   if (!guild) return 0;
 
@@ -328,15 +347,23 @@ async function scanChannel(client, guildId, channelId) {
   if (!channel || channel.type !== 0) return 0;
   if (!channel.permissionsFor(guild.members.me)?.has('ViewChannel')) return 0;
 
+  // Skip log channels entirely — they only contain transient action messages
+  if (LOG_CHANNEL_PATTERNS.some(p => p.test(channel.name))) return 0;
+
   const botId = client.user.id;
   let registered = 0;
 
   try {
-    const messages = await channel.messages.fetch({ limit: 100 });
+    const messages = await channel.messages.fetch({ limit: MAX_MESSAGES_PER_CHANNEL });
 
     for (const [, msg] of messages) {
+      if (registered >= remainingBudget) break;
+
       if (msg.author.id !== botId) continue;
       if (!msg.embeds?.length) continue;
+
+      // Skip if it's a reply to a user message (AI chat responses)
+      if (msg.reference?.messageId) continue;
 
       // Skip if already tracked in bot_messages
       const existing = db.get(
@@ -345,32 +372,32 @@ async function scanChannel(client, guildId, channelId) {
       );
       if (existing) continue;
 
-      // Skip role menu messages
+      // Skip role menu messages (managed in Role Menus tab)
       const isRoleMenu = db.get(
         'SELECT id FROM role_menu_messages WHERE guild_id = ? AND message_id = ?',
         [guildId, msg.id]
       );
       if (isRoleMenu) continue;
 
-      // Collect all button custom IDs from this message
-      const allCustomIds = [];
-      for (const row of (msg.components || [])) {
-        for (const comp of (row.components || [])) {
-          if (comp.customId) allCustomIds.push(comp.customId);
-        }
-      }
+      const buttonIds = getButtonIds(msg);
 
-      // Skip messages with role_ buttons (role menus)
-      if (allCustomIds.some(id => id.startsWith('role_'))) continue;
+      // Skip role menus by button ID
+      if (buttonIds.some(id => id.startsWith('role_'))) continue;
 
-      // Detect special message types by button IDs
-      const isVerification = allCustomIds.includes('verify_button');
-      const isPoll = allCustomIds.some(id => id.startsWith('poll_vote_'));
-      const isGiveaway = allCustomIds.includes('giveaway_enter');
-      const isAgentConfirm = allCustomIds.some(id => id.startsWith('agent_confirm_') || id.startsWith('agent_cancel_'));
+      // Skip agent confirmation messages
+      if (buttonIds.some(id => id.startsWith('agent_confirm_') || id.startsWith('agent_cancel_'))) continue;
+
+      // Detect type by button IDs
+      const isPoll = buttonIds.some(id => id.startsWith('poll_vote_'));
+      const isGiveaway = buttonIds.includes('giveaway_enter');
+      const isVerification = buttonIds.includes('verify_button');
+
+      const embed = msg.embeds[0];
+
+      // Skip bot-action log messages (even if not in a log channel)
+      if (!isPoll && !isGiveaway && !isVerification && isBotActionMessage(channel, embed)) continue;
 
       // Extract embed data
-      const embed = msg.embeds[0];
       const content = {
         title: embed.title || '',
         description: embed.description || '',
@@ -381,24 +408,21 @@ async function scanChannel(client, guildId, channelId) {
       if (embed.thumbnail?.url) content.thumbnail = embed.thumbnail.url;
       if (embed.image?.url) content.image = embed.image.url;
 
-      // Skip agent confirmation messages (ephemeral-like)
-      if (isAgentConfirm) continue;
-
-      // Detect message type
+      // Determine type and system status
       const name = embed.title || `Untitled (#${channel.name})`;
       let messageType = 'custom';
+      let isSystem = 0;
 
       if (isVerification) {
         messageType = 'verification';
+        isSystem = 1;
       } else if (isPoll) {
         messageType = 'poll';
+        isSystem = 1;
       } else if (isGiveaway) {
         messageType = 'giveaway';
-      } else if (isBotActionMessage(channel, embed)) {
-        messageType = 'bot-action';
+        isSystem = 1;
       }
-
-      const isSystem = ['verification', 'bot-action', 'poll', 'giveaway'].includes(messageType) ? 1 : 0;
 
       db.run(`
         INSERT INTO bot_messages (guild_id, channel_id, message_id, message_type, name, content, is_system)
@@ -408,7 +432,7 @@ async function scanChannel(client, guildId, channelId) {
       registered++;
     }
   } catch {
-    // Can't read channel
+    // Can't read channel — skip
   }
 
   return registered;
@@ -416,16 +440,25 @@ async function scanChannel(client, guildId, channelId) {
 
 /**
  * Scan all text channels in a guild for untracked bot messages.
+ * Throttled: delays between channels, caps total registered messages.
  */
 async function scanAllChannels(client, guildId) {
   const guild = client.guilds.cache.get(guildId);
   if (!guild) return 0;
 
   let total = 0;
-  for (const [, channel] of guild.channels.cache) {
-    if (channel.type !== 0) continue;
-    const count = await scanChannel(client, guildId, channel.id);
+  const channels = guild.channels.cache.filter(c => c.type === 0);
+
+  for (const [, channel] of channels) {
+    if (total >= MAX_TOTAL_REGISTERED) break;
+
+    const count = await scanChannel(client, guildId, channel.id, MAX_TOTAL_REGISTERED - total);
     total += count;
+
+    // Throttle: small delay between channels to avoid rate limits
+    if (CHANNEL_SCAN_DELAY_MS > 0) {
+      await new Promise(r => setTimeout(r, CHANNEL_SCAN_DELAY_MS));
+    }
   }
 
   if (total > 0) {

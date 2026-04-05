@@ -198,7 +198,6 @@
                 <button class="filter-chip" data-filter="info" onclick="setFilter('info')">Info</button>
                 <button class="filter-chip" data-filter="poll" onclick="setFilter('poll')">Polls</button>
                 <button class="filter-chip" data-filter="giveaway" onclick="setFilter('giveaway')">Giveaways</button>
-                <button class="filter-chip" data-filter="bot-action" onclick="setFilter('bot-action')">Bot Actions</button>
                 <button class="filter-chip" data-filter="system" onclick="setFilter('system')">System</button>
               </div>
             </div>
@@ -253,6 +252,9 @@
                       <option value="rules">Rules</option>
                       <option value="announcement">Announcement</option>
                       <option value="info">Info</option>
+                      <option value="poll">Poll</option>
+                      <option value="giveaway">Giveaway</option>
+                      <option value="verification">Verification</option>
                     </select>
                   </div>
                 </div>
@@ -346,10 +348,9 @@
 
       let filtered = allMessages;
       if (currentFilter !== 'all') {
-        const specificTypes = ['bot-action', 'poll', 'giveaway'];
         if (currentFilter === 'system') {
-          filtered = filtered.filter(m => m.is_system && !specificTypes.includes(m.message_type));
-        } else if (specificTypes.includes(currentFilter)) {
+          filtered = filtered.filter(m => m.is_system && m.message_type === 'verification');
+        } else if (currentFilter === 'poll' || currentFilter === 'giveaway') {
           filtered = filtered.filter(m => m.message_type === currentFilter);
         } else {
           filtered = filtered.filter(m => m.message_type === currentFilter && !m.is_system);
