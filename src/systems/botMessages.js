@@ -303,6 +303,17 @@ const SKIP_TITLE_PATTERNS = [
   /Auto.?mod/i, /Uyarı/i,
 ];
 
+// Patterns for auto-categorization by embed title
+const STREAM_TITLE_PATTERNS = [
+  /🔴.*YAYINDA/i, /🔴.*is LIVE/i, /🔴.*LIVE/i,
+  /⚫.*yayınını sonlandırdı/i, /⚫.*stream ended/i,
+  /yayında/i, /is live/i, /go.?live/i,
+];
+
+const LEADERBOARD_TITLE_PATTERNS = [
+  /XP Sıralaması/i, /XP Leaderboard/i, /🏆.*Leaderboard/i, /🏆.*Sıralama/i,
+];
+
 /**
  * Detect if a message is a bot action/log message (not user-managed content).
  */
@@ -438,6 +449,12 @@ async function scanChannel(client, guildId, channelId, remainingBudget) {
         isSystem = 1;
       } else if (isGiveaway) {
         messageType = 'giveaway';
+        isSystem = 1;
+      } else if (STREAM_TITLE_PATTERNS.some(p => p.test(embedTitle))) {
+        messageType = 'stream';
+        isSystem = 1;
+      } else if (LEADERBOARD_TITLE_PATTERNS.some(p => p.test(embedTitle))) {
+        messageType = 'leaderboard';
         isSystem = 1;
       }
 
