@@ -82,6 +82,7 @@
     .draft-item-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
     .draft-item-type { font-size: 11px; color: var(--text-muted); }
     .draft-item select { font-size: 11px; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-family: inherit; max-width: 140px; }
+    @media (max-width: 900px) { .drafts-section > div { grid-template-columns: 1fr !important; } }
     .msg-status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
     .msg-status-dot.published { background: #22c55e; }
     .msg-status-dot.draft { background: #a8a29e; }
@@ -215,11 +216,22 @@
           <p style="color:var(--text-muted);font-size:13px;margin-bottom:16px;">Create a new bot message from a template. Placeholders like <code>{user}</code>, <code>{platform}</code> will be filled when the message is used.</p>
           <div class="template-grid" id="templates-tab-grid"></div>
 
-          <!-- Drafts Section -->
-          <div class="drafts-section" id="drafts-section">
-            <h3>Your Drafts</h3>
-            <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">Unpublished messages. Assign a channel and publish.</p>
-            <div id="drafts-list"></div>
+          <!-- Drafts & Defaults Section -->
+          <div class="drafts-section">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+              <!-- Your Drafts -->
+              <div>
+                <h3>Your Drafts</h3>
+                <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">New messages not yet saved or published.</p>
+                <div id="drafts-list"></div>
+              </div>
+              <!-- Saved Defaults -->
+              <div>
+                <h3>Saved Defaults</h3>
+                <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">Default templates the bot uses. Publish to a channel or update existing.</p>
+                <div id="defaults-list"></div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -815,50 +827,91 @@
       await renderDrafts();
     }
 
+    let templateChannels = [];
+
+    async function loadTemplateChannels() {
+      if (templateChannels.length > 0) return;
+      const guildId = getCurrentGuild();
+      try {
+        const chData = await api(`/api/guilds/${guildId}/channels`);
+        templateChannels = (chData.channels || []).filter(c => c.type === 0);
+      } catch {}
+    }
+
+    function buildChannelSelect() {
+      let html = '<option value="">Select channel...</option>';
+      templateChannels.forEach(ch => {
+        html += `<option value="${ch.id}">#${escapeHtml(ch.name)}</option>`;
+      });
+      return html;
+    }
+
     async function renderDrafts() {
       const guildId = getCurrentGuild();
       if (!guildId) return;
 
-      const draftsList = document.getElementById('drafts-list');
-      const drafts = allMessages.filter(m => !m.message_id);
+      await loadTemplateChannels();
 
+      // Drafts = no message_id (never published/saved)
+      const drafts = allMessages.filter(m => !m.message_id && !m.is_system);
+      // Saved defaults = has message_id (published to a channel)
+      const defaults = allMessages.filter(m => m.message_id && !m.is_system);
+
+      // Render drafts
+      const draftsList = document.getElementById('drafts-list');
       if (drafts.length === 0) {
-        draftsList.innerHTML = '<div style="padding:12px;text-align:center;color:var(--text-muted);font-size:13px;">No drafts yet. Use a template above to create one.</div>';
-        return;
+        draftsList.innerHTML = '<div style="padding:12px;text-align:center;color:var(--text-muted);font-size:13px;">No drafts. Use a template above to create one.</div>';
+      } else {
+        draftsList.innerHTML = '';
+        drafts.forEach(draft => {
+          const div = document.createElement('div');
+          div.className = 'draft-item';
+          div.innerHTML = `
+            <div class="draft-item-info">
+              <div class="draft-item-name">${escapeHtml(draft.name)}</div>
+              <div class="draft-item-type">${draft.message_type}</div>
+            </div>
+            <button class="btn btn-primary btn-small" style="font-size:11px;" onclick="saveAsDefault(${draft.id})">Save as Default</button>
+            <button class="btn btn-secondary btn-small" style="font-size:11px;" onclick="editDraftInline(${draft.id})">Edit</button>
+            <button class="btn btn-danger btn-small" style="font-size:11px;" onclick="deleteDraft(${draft.id})">Delete</button>
+          `;
+          draftsList.appendChild(div);
+        });
       }
 
-      // Load channels for dropdown
-      let channels = [];
-      try {
-        const chData = await api(`/api/guilds/${guildId}/channels`);
-        channels = (chData.channels || []).filter(c => c.type === 0);
-      } catch {}
-
-      draftsList.innerHTML = '';
-      drafts.forEach(draft => {
-        const div = document.createElement('div');
-        div.className = 'draft-item';
-
-        let channelOptions = '<option value="">Select channel...</option>';
-        channels.forEach(ch => {
-          channelOptions += `<option value="${ch.id}">#${escapeHtml(ch.name)}</option>`;
+      // Render saved defaults
+      const defaultsList = document.getElementById('defaults-list');
+      if (defaults.length === 0) {
+        defaultsList.innerHTML = '<div style="padding:12px;text-align:center;color:var(--text-muted);font-size:13px;">No saved defaults yet.</div>';
+      } else {
+        defaultsList.innerHTML = '';
+        defaults.forEach(msg => {
+          const chName = channelNameCache[msg.channel_id] || msg.channel_id;
+          const div = document.createElement('div');
+          div.className = 'draft-item';
+          div.innerHTML = `
+            <div class="draft-item-info">
+              <div class="draft-item-name">${escapeHtml(msg.name)}</div>
+              <div class="draft-item-type">${msg.message_type} &middot; #${escapeHtml(chName)}</div>
+            </div>
+            <select>${buildChannelSelect()}</select>
+            <button class="btn btn-success btn-small" style="font-size:11px;" onclick="publishToChannel(${msg.id}, this.parentElement.querySelector('select').value)">Publish</button>
+            <button class="btn btn-primary btn-small" style="font-size:11px;" onclick="updateExisting(${msg.id})">Update</button>
+            <button class="btn btn-secondary btn-small" style="font-size:11px;" onclick="editDraftInline(${msg.id})">Edit</button>
+            <button class="btn btn-danger btn-small" style="font-size:11px;" onclick="deleteDraft(${msg.id})">Delete</button>
+          `;
+          defaultsList.appendChild(div);
         });
-
-        div.innerHTML = `
-          <div class="draft-item-info">
-            <div class="draft-item-name">${escapeHtml(draft.name)}</div>
-            <div class="draft-item-type">${draft.message_type}</div>
-          </div>
-          <select onchange="this.dataset.channelId=this.value">${channelOptions}</select>
-          <button class="btn btn-primary btn-small" style="font-size:11px;" onclick="publishDraft(${draft.id}, this.parentElement.querySelector('select').value)">Save (Default)</button>
-          <button class="btn btn-secondary btn-small" style="font-size:11px;" onclick="editDraftInline(${draft.id})">Edit</button>
-          <button class="btn btn-danger btn-small" style="font-size:11px;" onclick="deleteDraft(${draft.id})">Delete</button>
-        `;
-        draftsList.appendChild(div);
-      });
+      }
     }
 
-    async function publishDraft(id, channelId) {
+    async function saveAsDefault(id) {
+      // Just mark it as saved — no publish to Discord. The bot systems will pick it up from DB.
+      showToast('Saved as default template', 'success');
+      // Already in DB, nothing else needed — it's now available for bot systems to use
+    }
+
+    async function publishToChannel(id, channelId) {
       if (!channelId) { showToast('Select a channel first', 'warning'); return; }
       const guildId = getCurrentGuild();
       try {
@@ -866,9 +919,23 @@
           method: 'POST',
           body: JSON.stringify({ channelId }),
         });
-        showToast('Published!', 'success');
+        showToast('Published to channel!', 'success');
         await loadMessages();
-        renderDrafts();
+        await renderDrafts();
+      } catch (err) { showToast('Failed: ' + (err.message || 'Error'), 'error'); }
+    }
+
+    async function updateExisting(id) {
+      const guildId = getCurrentGuild();
+      try {
+        // PUT triggers auto-update of the published Discord message
+        const msg = allMessages.find(m => m.id === id);
+        if (!msg) return;
+        await api(`/api/guilds/${guildId}/bot-messages/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ name: msg.name }),
+        });
+        showToast('Discord message updated!', 'success');
       } catch (err) { showToast('Failed: ' + (err.message || 'Error'), 'error'); }
     }
 
