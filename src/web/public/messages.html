@@ -210,14 +210,15 @@
                 <input type="text" id="msg-search" placeholder="Search..." oninput="renderMessageList()">
               </div>
               <div class="filter-chips">
-                <button class="filter-chip active" data-filter="all" onclick="setFilter('all')">All</button>
-                <button class="filter-chip" data-filter="custom" onclick="setFilter('custom')">Custom</button>
                 <button class="filter-chip" data-filter="rules" onclick="setFilter('rules')">Rules</button>
                 <button class="filter-chip" data-filter="announcement" onclick="setFilter('announcement')">Announcement</button>
                 <button class="filter-chip" data-filter="info" onclick="setFilter('info')">Info</button>
                 <button class="filter-chip" data-filter="poll" onclick="setFilter('poll')">Polls</button>
                 <button class="filter-chip" data-filter="giveaway" onclick="setFilter('giveaway')">Giveaways</button>
+                <button class="filter-chip" data-filter="drafts" onclick="setFilter('drafts')">Drafts</button>
                 <button class="filter-chip" data-filter="system" onclick="setFilter('system')">System</button>
+                <button class="filter-chip" data-filter="custom" onclick="setFilter('custom')">Custom</button>
+                <button class="filter-chip active" data-filter="all" onclick="setFilter('all')">All</button>
               </div>
             </div>
             <div class="msg-list-scroll" id="msg-list">
@@ -378,10 +379,11 @@
 
       let filtered = allMessages;
       if (currentFilter !== 'all') {
-        const systemTypes = ['poll', 'giveaway', 'stream', 'leaderboard', 'verification'];
-        if (currentFilter === 'system') {
+        if (currentFilter === 'drafts') {
+          filtered = filtered.filter(m => !m.message_id);
+        } else if (currentFilter === 'system') {
           filtered = filtered.filter(m => m.is_system);
-        } else if (systemTypes.includes(currentFilter)) {
+        } else if (['poll', 'giveaway', 'verification'].includes(currentFilter)) {
           filtered = filtered.filter(m => m.message_type === currentFilter);
         } else {
           filtered = filtered.filter(m => m.message_type === currentFilter && !m.is_system);
