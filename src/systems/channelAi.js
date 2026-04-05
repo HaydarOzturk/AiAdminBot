@@ -384,6 +384,8 @@ function startGameSession(channelId, userId) {
     startedAt: Date.now(),
     lastActivity: Date.now(),
     questionCount: 0,
+    joinPhase: true, // waiting for players to join
+    joinPhaseEndAt: Date.now() + 30000, // 30 seconds to join
   };
   gameSessions.set(channelId, session);
   return session;
@@ -455,10 +457,53 @@ async function handleChannelAi(message) {
   const cooldown = config.response_cooldown || 30;
   if (isOnCooldown(message.channel.id, cooldown)) return false;
 
-  // For mini-games: start a new game session
+  // For mini-games: start a new game session with join phase
   if (isGameIntent) {
     gameSession = startGameSession(message.channel.id, message.author.id);
-    return await handleGameMessage(message, intent, config, gameSession);
+
+    // Announce join phase
+    const joinMsg = message.content.toLowerCase().includes('tr') || /[çşğüöı]/.test(message.content.toLowerCase())
+      ? `🎮 **Oyun başlıyor!** Katılmak isteyenler 30 saniye içinde bir mesaj yazsın!\n\n⏳ 30 saniye bekleniyor... Hazır olduğunuzda "başla" yazın.`
+      : `🎮 **Game starting!** Type anything within 30 seconds to join!\n\n⏳ Waiting 30 seconds... Type "start" when ready.`;
+
+    await message.channel.send({ content: joinMsg });
+
+    // Auto-start after 30 seconds
+    setTimeout(async () => {
+      const currentSession = getGameSession(message.channel.id);
+      if (currentSession && currentSession.joinPhase) {
+        currentSession.joinPhase = false;
+        addToGameHistory(currentSession, 'user', `[JOIN_PHASE_OVER — ${currentSession.players.size} player(s) joined. Start the game now with the first question!]`);
+
+        // Build player names
+        const playerNames = [];
+        for (const pid of currentSession.players) {
+          try {
+            const m = await message.guild.members.fetch(pid);
+            playerNames.push(m.displayName || m.user.username);
+          } catch { playerNames.push(pid); }
+        }
+
+        let systemPrompt = GAME_SYSTEM_PROMPT
+          .replace('{players}', playerNames.join(', '))
+          .replace(/{maxQuestions}/g, String(MAX_QUESTIONS_PER_SESSION))
+          .replace('{questionCount}', '0');
+        if (config.custom_prompt) systemPrompt += '\n\nExtra instructions: ' + config.custom_prompt;
+
+        try {
+          const resp = await aiChat(currentSession.messages, { systemPrompt, maxTokens: 1024, temperature: 0.8 });
+          if (resp) {
+            addToGameHistory(currentSession, 'assistant', resp);
+            if (resp.includes('?')) currentSession.questionCount++;
+            await message.channel.send({ content: resp.substring(0, 2000) });
+          }
+        } catch (err) {
+          console.error('Game auto-start error:', err.message);
+        }
+      }
+    }, 30000);
+
+    return true;
   }
 
   // Non-game intent: one-shot response
@@ -506,16 +551,17 @@ CRITICAL RULES FOR GAME SESSIONS:
 1. You have FULL MEMORY of this conversation. Read the message history carefully.
 2. When you ask a question, WAIT for the user's answer before moving on.
 3. When a user answers, EVALUATE their answer against the correct answer.
-4. Say if they were RIGHT or WRONG, reveal the correct answer, and give a score update.
-5. Only then ask the next question.
-6. Track scores per player across the session.
-7. After {maxQuestions} questions, end the game with a final scoreboard.
-8. If someone says "stop", "end", "quit", "bitir", "dur" — end the game early with scores.
+4. Be LENIENT with typos and spelling errors — if the answer is close enough to be recognizable, count it as CORRECT. For example "Shakespare" = "Shakespeare" = CORRECT.
+5. Say if they were RIGHT or WRONG, reveal the correct answer, and give a score update.
+6. Only then ask the next question.
+7. Track scores per player across the session.
+8. After {maxQuestions} questions, end the game with a final scoreboard.
+9. If someone says "stop", "end", "quit", "bitir", "dur" — end the game early with scores.
 
-GAME FLOW:
-- Start: Welcome players, explain rules, ask first question
-- Each round: Ask question → Wait for answer → Evaluate → Score → Next question
-- End: Show final scores, congratulate winner
+GAME PHASES:
+- JOIN PHASE: When the game starts, say "Oyun başlıyor! Katılmak isteyenler 30 saniye içinde bir mesaj yazın!" (or equivalent in the user's language). Wait for the [JOIN_PHASE_OVER] marker before asking the first question.
+- PLAY PHASE: Ask question → Wait for answer → Evaluate → Score → Next question
+- END PHASE: Show final scores, congratulate winner
 
 Current players: {players}
 Questions asked so far: {questionCount}/{maxQuestions}
@@ -531,18 +577,37 @@ async function handleGameMessage(message, intent, config, session) {
   const resolvedContent = resolveMentions(message);
   const lower = resolvedContent.toLowerCase().trim();
 
-  // Check for game-end commands
-  if (['stop', 'end', 'quit', 'bitir', 'dur', 'bitti'].includes(lower)) {
-    // Ask AI to wrap up with final scores
-    addToGameHistory(session, 'user', `${message.author.username}: ${resolvedContent}`);
-    addToGameHistory(session, 'user', '[GAME OVER — User requested end. Show final scoreboard and congratulate.]');
-  } else {
-    addToGameHistory(session, 'user', `${message.author.username}: ${resolvedContent}`);
-  }
+  // Join phase: collect players, don't start the game yet
+  if (session.joinPhase) {
+    session.players.add(message.author.id);
+    session.lastActivity = Date.now();
 
-  // Check max questions
-  if (session.questionCount >= MAX_QUESTIONS_PER_SESSION) {
-    addToGameHistory(session, 'user', '[MAX QUESTIONS REACHED — End the game now with final scoreboard.]');
+    // Check if join phase should end (30s elapsed or someone says "start"/"başla")
+    const shouldStart = Date.now() >= session.joinPhaseEndAt ||
+                        ['start', 'başla', 'hadi', 'go', 'ready', 'hazır'].includes(lower);
+
+    if (shouldStart) {
+      session.joinPhase = false;
+      addToGameHistory(session, 'user', `[JOIN_PHASE_OVER — ${session.players.size} players joined. Start the game now with the first question!]`);
+    } else {
+      // Still in join phase — just acknowledge the player joined
+      return false; // Don't respond to every join message, let the timer handle it
+    }
+
+    // Fall through to AI call to start the game
+  } else {
+    // Check for game-end commands
+    if (['stop', 'end', 'quit', 'bitir', 'dur', 'bitti'].includes(lower)) {
+      addToGameHistory(session, 'user', `${message.author.username}: ${resolvedContent}`);
+      addToGameHistory(session, 'user', '[GAME OVER — User requested end. Show final scoreboard and congratulate.]');
+    } else {
+      addToGameHistory(session, 'user', `${message.author.username}: ${resolvedContent}`);
+    }
+
+    // Check max questions
+    if (session.questionCount >= MAX_QUESTIONS_PER_SESSION) {
+      addToGameHistory(session, 'user', '[MAX QUESTIONS REACHED — End the game now with final scoreboard.]');
+    }
   }
 
   try {
@@ -591,7 +656,7 @@ async function handleGameMessage(message, intent, config, session) {
                       response.toLowerCase().includes('final score') ||
                       response.toLowerCase().includes('game over');
 
-    // Send response
+    // Send response — use channel.send for games to avoid MESSAGE_REFERENCE errors
     const chunks = [];
     let remaining = response;
     while (remaining.length > 0) {
@@ -602,7 +667,7 @@ async function handleGameMessage(message, intent, config, session) {
     }
 
     for (const chunk of chunks) {
-      await message.reply({ content: chunk, allowedMentions: { repliedUser: false } });
+      await message.channel.send({ content: chunk });
     }
 
     // End session if game is over
@@ -613,6 +678,7 @@ async function handleGameMessage(message, intent, config, session) {
     return true;
   } catch (error) {
     console.error(`Game session error in #${message.channel.name}: ${error.message}`);
+    // Don't let a crash kill the session — just log it
     return false;
   }
 }
