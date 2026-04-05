@@ -461,10 +461,18 @@ async function handleChannelAi(message) {
   if (isGameIntent) {
     gameSession = startGameSession(message.channel.id, message.author.id);
 
-    // Announce join phase
-    const joinMsg = message.content.toLowerCase().includes('tr') || /[çşğüöı]/.test(message.content.toLowerCase())
-      ? `🎮 **Oyun başlıyor!** Katılmak isteyenler 30 saniye içinde bir mesaj yazsın!\n\n⏳ 30 saniye bekleniyor... Hazır olduğunuzda "başla" yazın.`
-      : `🎮 **Game starting!** Type anything within 30 seconds to join!\n\n⏳ Waiting 30 seconds... Type "start" when ready.`;
+    // Announce join phase in the guild's configured language
+    const locale = getLocale(message.guild.id);
+    const joinMessages = {
+      tr: '🎮 **Oyun başlıyor!** Katılmak isteyenler 30 saniye içinde bir mesaj yazsın!\n\n⏳ 30 saniye bekleniyor... Hazır olduğunuzda "başla" yazın.',
+      de: '🎮 **Spiel startet!** Schreibt etwas innerhalb von 30 Sekunden um teilzunehmen!\n\n⏳ 30 Sekunden warten... Schreibt "start" wenn bereit.',
+      es: '🎮 **¡El juego comienza!** ¡Escribe algo en 30 segundos para unirte!\n\n⏳ Esperando 30 segundos... Escribe "start" cuando estés listo.',
+      fr: '🎮 **Le jeu commence !** Tapez quelque chose dans les 30 secondes pour rejoindre !\n\n⏳ 30 secondes d\'attente... Tapez "start" quand vous êtes prêt.',
+      pt: '🎮 **Jogo começando!** Digite algo em 30 segundos para participar!\n\n⏳ Aguardando 30 segundos... Digite "start" quando estiver pronto.',
+      ru: '🎮 **Игра начинается!** Напишите что-нибудь в течение 30 секунд чтобы присоединиться!\n\n⏳ Ожидание 30 секунд... Напишите "start" когда будете готовы.',
+      ar: '🎮 **اللعبة تبدأ!** اكتب أي شيء خلال 30 ثانية للانضمام!\n\n⏳ انتظار 30 ثانية... اكتب "start" عندما تكون جاهزاً.',
+    };
+    const joinMsg = joinMessages[locale] || '🎮 **Game starting!** Type anything within 30 seconds to join!\n\n⏳ Waiting 30 seconds... Type "start" when ready.';
 
     await message.channel.send({ content: joinMsg });
 
@@ -484,10 +492,13 @@ async function handleChannelAi(message) {
           } catch { playerNames.push(pid); }
         }
 
+        const langNames = { tr: 'Turkish', en: 'English', de: 'German', es: 'Spanish', fr: 'French', pt: 'Portuguese', ru: 'Russian', ar: 'Arabic' };
+        const srvLang = langNames[getLocale(message.guild.id)] || 'English';
         let systemPrompt = GAME_SYSTEM_PROMPT
           .replace('{players}', playerNames.join(', '))
           .replace(/{maxQuestions}/g, String(MAX_QUESTIONS_PER_SESSION))
-          .replace('{questionCount}', '0');
+          .replace('{questionCount}', '0')
+          .replace(/{serverLanguage}/g, srvLang);
         if (config.custom_prompt) systemPrompt += '\n\nExtra instructions: ' + config.custom_prompt;
 
         try {
@@ -566,7 +577,8 @@ GAME PHASES:
 Current players: {players}
 Questions asked so far: {questionCount}/{maxQuestions}
 
-Keep responses fun with emojis. Respond in the same language the user writes in.
+Keep responses fun with emojis.
+IMPORTANT: The server language is {serverLanguage}. Always respond in {serverLanguage}. If users write in another language, still respond in {serverLanguage}.
 Keep each response under 1500 characters.`;
 
 /**
@@ -622,10 +634,13 @@ async function handleGameMessage(message, intent, config, session) {
       }
     }
 
+    const langNames = { tr: 'Turkish', en: 'English', de: 'German', es: 'Spanish', fr: 'French', pt: 'Portuguese', ru: 'Russian', ar: 'Arabic' };
+    const srvLang = langNames[getLocale(message.guild.id)] || 'English';
     let systemPrompt = GAME_SYSTEM_PROMPT
       .replace('{players}', playerNames.join(', '))
       .replace(/{maxQuestions}/g, String(MAX_QUESTIONS_PER_SESSION))
-      .replace('{questionCount}', String(session.questionCount));
+      .replace('{questionCount}', String(session.questionCount))
+      .replace(/{serverLanguage}/g, srvLang);
 
     // Add custom prompt if set
     if (config.custom_prompt) {
