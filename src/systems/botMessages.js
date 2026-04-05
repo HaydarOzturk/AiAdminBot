@@ -27,9 +27,9 @@ const TEMPLATE_I18N = {
     streamLive: { name: 'Stream Announcement (Live)', desc: 'Template for live stream announcements',
       title: '🔴 {user} is LIVE!', body: '📺 **{title}**\n\n**{user}** is now live! Come watch and show your support!',
       fields: [
-        { name: 'Platform Status', value: '🟢 **{platform}** — LIVE • 🎮 **{game}**' },
+        { name: 'Platform Status', value: '🟢 **{platform}** — 🔴 LIVE • 👁️ {viewers}\n🎮 **{game}**' },
       ],
-      footer: 'Click Watch Now to join!' },
+      footer: '' },
     streamEnded: { name: 'Stream Ended', desc: 'Template for when a stream ends',
       title: '⚫ {user}', body: 'Stream has ended. Thanks for watching!' },
     blank: { name: 'Blank Embed', desc: 'Start from scratch' },
@@ -53,11 +53,11 @@ const TEMPLATE_I18N = {
     announcement: { name: 'Duyuru', desc: 'Genel duyuru şablonu', title: 'Duyuru',
       body: 'Duyuru metninizi buraya yazın.', footer: 'Yönetim ekibi tarafından yayınlandı' },
     streamLive: { name: 'Yayın Duyurusu (Canlı)', desc: 'Canlı yayın duyuru şablonu',
-      title: '🔴 {user} YAYINDA!', body: '📺 **{title}**\n\n**{user}** şu anda yayında! Gel izle ve destek ol!',
+      title: '🔴 {user} şu anda YAYINDA!', body: '📺 **{title}**\n\n**{user}** şu anda yayında! Gel izle ve destek ol!',
       fields: [
-        { name: 'Platform Durumu', value: '🟢 **{platform}** — LIVE • 🎮 **{game}**' },
+        { name: 'Platform Durumu', value: '🟢 **{platform}** — 🔴 LIVE • 👁️ {viewers}\n🎮 **{game}**' },
       ],
-      footer: 'İzlemek için Watch Now\'a tıkla!' },
+      footer: '' },
     streamEnded: { name: 'Yayın Sona Erdi', desc: 'Yayın bittiğinde kullanılan şablon',
       title: '⚫ {user}', body: 'Yayın sona erdi. İzlediğiniz için teşekkürler!' },
     blank: { name: 'Boş Embed', desc: 'Sıfırdan başla' },
@@ -700,6 +700,12 @@ async function scanAllChannels(client, guildId) {
 
   // Build channel→feature map once for the whole scan
   const featureMap = buildChannelFeatureMap(guild);
+  if (Object.keys(featureMap).length > 0) {
+    console.log(`📋 Channel feature map for ${guild.name}:`, Object.entries(featureMap).map(([id, feature]) => {
+      const ch = guild.channels.cache.get(id);
+      return `#${ch?.name || id} → ${feature}`;
+    }).join(', '));
+  }
 
   let total = 0;
   const channels = guild.channels.cache.filter(c => c.type === 0);

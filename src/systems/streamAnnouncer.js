@@ -90,7 +90,8 @@ function replacePlaceholders(text, vars) {
     .replace(/\{platform\}/gi, vars.platform || '')
     .replace(/\{game\}/gi, vars.game || '')
     .replace(/\{title\}/gi, vars.title || '')
-    .replace(/\{url\}/gi, vars.url || '');
+    .replace(/\{url\}/gi, vars.url || '')
+    .replace(/\{viewers\}/gi, vars.viewers || '');
 }
 
 /**
@@ -107,7 +108,8 @@ function buildLiveMessage(member, streamActivity, guildId) {
   const title = streamActivity.details || streamActivity.name || 'Live Stream';
   const userName = member.displayName || member.user.username;
 
-  const vars = { user: userName, platform, game, title, url };
+  const viewers = streamActivity.state?.match?.(/(\d+)/)?.[1] || '';
+  const vars = { user: userName, platform, game, title, url, viewers };
 
   // Check for custom template from dashboard
   const customTemplate = findCustomTemplate(guildId, 'Live');
