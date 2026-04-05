@@ -399,6 +399,9 @@ async function scanChannel(client, guildId, channelId, remainingBudget) {
       // Skip if it's a reply to a user message (AI chat responses)
       if (msg.reference?.messageId) continue;
 
+      // Skip slash command responses (leaderboard, rank, help, etc.)
+      if (msg.interaction) continue;
+
       // Skip if already tracked in bot_messages
       const existing = db.get(
         'SELECT id FROM bot_messages WHERE guild_id = ? AND message_id = ?',

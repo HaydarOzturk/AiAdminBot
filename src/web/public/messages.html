@@ -6,6 +6,14 @@
   <title>Bot Messages - Admin+AI</title>
   <link rel="stylesheet" href="/css/dashboard.css">
   <style>
+    /* Tabs */
+    .tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 2px solid var(--border-color); padding-bottom: 0; }
+    .tab { font-size: 14px; font-weight: 600; padding: 10px 20px; border: none; background: none; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s; font-family: inherit; }
+    .tab:hover { color: var(--text-primary); background: var(--bg-tertiary); border-radius: 8px 8px 0 0; }
+    .tab.active { color: var(--accent-primary); border-bottom-color: var(--accent-primary); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
     /* Split layout */
     .msg-layout { display: grid; grid-template-columns: 320px 1fr; gap: 20px; min-height: calc(100vh - 140px); }
     @media (max-width: 900px) { .msg-layout { grid-template-columns: 1fr; } }
@@ -182,6 +190,17 @@
       </div>
 
       <div class="content-area">
+        <div class="tabs">
+          <button class="tab active" onclick="switchPageTab('messages')">Messages</button>
+          <button class="tab" onclick="switchPageTab('templates')">Templates</button>
+        </div>
+
+        <div id="page-tab-templates" class="tab-content">
+          <p style="color:var(--text-muted);font-size:13px;margin-bottom:16px;">Create a new bot message from a template. Placeholders like <code>{user}</code>, <code>{platform}</code> will be filled when the message is used.</p>
+          <div class="template-grid" id="templates-tab-grid"></div>
+        </div>
+
+        <div id="page-tab-messages" class="tab-content active">
         <div class="msg-layout">
           <!-- Left: Message List -->
           <div class="msg-list-panel">
@@ -310,6 +329,7 @@
             </div>
           </div>
         </div>
+        </div><!-- /page-tab-messages -->
       </div>
     </div>
   </div>
@@ -712,6 +732,46 @@
       try { await api('/api/auth/logout', { method: 'POST' }); } catch {}
       window.location.href = '/login.html';
     });
+
+    // ── Page Tab Switching ──────────────────────────────────────────────
+    function switchPageTab(tabName) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      document.getElementById('page-tab-' + tabName).classList.add('active');
+      document.querySelector(`.tab[onclick="switchPageTab('${tabName}')"]`).classList.add('active');
+
+      if (tabName === 'templates') loadTemplatesTab();
+    }
+
+    async function loadTemplatesTab() {
+      const guildId = getCurrentGuild();
+      if (!guildId) return;
+      try {
+        const data = await api(`/api/guilds/${guildId}/bot-messages/templates`);
+        const grid = document.getElementById('templates-tab-grid');
+        grid.innerHTML = '';
+        (data.templates || []).forEach(t => {
+          const content = t.content || {};
+          const previewColor = content.color || '#5865f2';
+          const card = document.createElement('div');
+          card.className = 'template-card';
+          card.onclick = () => createFromTemplate(t);
+          card.innerHTML = `
+            <h3>${escapeHtml(t.name)}</h3>
+            <p style="margin-bottom:12px;">${escapeHtml(t.description)}</p>
+            <div class="embed-preview" style="border-left-color:${previewColor};padding:10px 12px;margin:0;font-size:12px;">
+              ${content.title ? `<div class="ep-title" style="font-size:13px;">${escapeHtml(content.title)}</div>` : ''}
+              ${content.description ? `<div class="ep-description" style="font-size:11px;max-height:60px;overflow:hidden;">${escapeHtml(content.description).substring(0, 120)}${content.description.length > 120 ? '...' : ''}</div>` : ''}
+              ${content.footer ? `<div class="ep-footer" style="font-size:10px;">${escapeHtml(content.footer)}</div>` : ''}
+            </div>
+            <button class="btn btn-primary btn-small" style="margin-top:10px;font-size:11px;width:100%;">Use Template</button>
+          `;
+          grid.appendChild(card);
+        });
+      } catch (err) {
+        showToast('Failed to load templates', 'error');
+      }
+    }
 
     // ── Init ─────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', () => { loadMessages(); });
