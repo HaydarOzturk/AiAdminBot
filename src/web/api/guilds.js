@@ -1282,6 +1282,167 @@ router.delete('/:guildId/role-menus/:menuId/messages/:msgId', async (req, res) =
 });
 
 // ══════════════════════════════════════════════════════════════════════════
+// BOT MESSAGES
+// ══════════════════════════════════════════════════════════════════════════
+
+const botMessages = require('../../systems/botMessages');
+
+/** List all bot messages for a guild */
+router.get('/:guildId/bot-messages', (req, res) => {
+  try {
+    const messages = botMessages.getMessagesForGuild(req.params.guildId, {
+      type: req.query.type || undefined,
+      channelId: req.query.channelId || undefined,
+    });
+    res.json({ messages });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/** Get message templates */
+router.get('/:guildId/bot-messages/templates', (req, res) => {
+  res.json({ templates: botMessages.getTemplates() });
+});
+
+/** Scan all channels for untracked bot messages */
+router.post('/:guildId/bot-messages/scan', async (req, res) => {
+  try {
+    const client = getClient(req);
+    if (!client) return res.status(500).json({ error: 'Bot client not available' });
+
+    const count = await botMessages.scanAllChannels(client, req.params.guildId);
+    const messages = botMessages.getMessagesForGuild(req.params.guildId);
+    res.json({ success: true, registered: count, messages });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/** Get single bot message */
+router.get('/:guildId/bot-messages/:id', (req, res) => {
+  try {
+    const msg = botMessages.getMessage(parseInt(req.params.id, 10));
+    if (!msg || msg.guild_id !== req.params.guildId) {
+      return res.status(404).json({ error: 'Message not found' });
+    }
+    res.json({ message: msg });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/** Create a new bot message (draft) */
+router.post('/:guildId/bot-messages', (req, res) => {
+  try {
+    const { name, messageType, content, channelId } = req.body;
+    if (!name) return res.status(400).json({ error: 'name is required' });
+
+    const id = botMessages.createMessage(req.params.guildId, {
+      name,
+      messageType: messageType || 'custom',
+      content: content || {},
+      channelId: channelId || null,
+      createdBy: null,
+    });
+    res.json({ message: botMessages.getMessage(id) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/** Update a bot message */
+router.put('/:guildId/bot-messages/:id', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const msg = botMessages.getMessage(id);
+    if (!msg || msg.guild_id !== req.params.guildId) {
+      return res.status(404).json({ error: 'Message not found' });
+    }
+    if (msg.is_system) {
+      return res.status(403).json({ error: 'System messages cannot be edited' });
+    }
+
+    const fields = {};
+    if (req.body.name != null) fields.name = req.body.name;
+    if (req.body.messageType != null) fields.messageType = req.body.messageType;
+    if (req.body.content != null) fields.content = req.body.content;
+
+    botMessages.updateMessage(id, fields);
+
+    // Auto-update published Discord message
+    if (msg.message_id) {
+      const client = getClient(req);
+      if (client) {
+        botMessages.updatePublishedMessage(client, id).catch(err => {
+          console.warn('Failed to update published bot message:', err.message);
+        });
+      }
+    }
+
+    res.json({ message: botMessages.getMessage(id) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/** Delete a bot message */
+router.delete('/:guildId/bot-messages/:id', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const msg = botMessages.getMessage(id);
+    if (!msg || msg.guild_id !== req.params.guildId) {
+      return res.status(404).json({ error: 'Message not found' });
+    }
+
+    const client = getClient(req);
+    await botMessages.deleteMessage(client, id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/** Publish a bot message to a channel */
+router.post('/:guildId/bot-messages/:id/publish', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const msg = botMessages.getMessage(id);
+    if (!msg || msg.guild_id !== req.params.guildId) {
+      return res.status(404).json({ error: 'Message not found' });
+    }
+
+    const { channelId } = req.body;
+    if (!channelId) return res.status(400).json({ error: 'channelId is required' });
+
+    const client = getClient(req);
+    if (!client) return res.status(500).json({ error: 'Bot client not available' });
+
+    const discordMsg = await botMessages.publishMessage(client, id, channelId);
+    res.json({ success: true, messageId: discordMsg.id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/** Unpublish a bot message (delete from Discord, keep draft) */
+router.post('/:guildId/bot-messages/:id/unpublish', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const msg = botMessages.getMessage(id);
+    if (!msg || msg.guild_id !== req.params.guildId) {
+      return res.status(404).json({ error: 'Message not found' });
+    }
+
+    const client = getClient(req);
+    if (client) await botMessages.unpublishMessage(client, id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════════════
 // LEVELING
 // ══════════════════════════════════════════════════════════════════════════
 

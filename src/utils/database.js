@@ -373,6 +373,24 @@ async function initDatabase() {
     )
   `);
 
+  // ── Bot Messages System table ──────────────────────────────────────────
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS bot_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      guild_id TEXT NOT NULL,
+      channel_id TEXT,
+      message_id TEXT,
+      message_type TEXT NOT NULL DEFAULT 'custom',
+      name TEXT NOT NULL,
+      content TEXT NOT NULL DEFAULT '{}',
+      created_by TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      is_system INTEGER DEFAULT 0
+    )
+  `);
+
   db.run(`
     CREATE TABLE IF NOT EXISTS channel_mappings (
       guild_id TEXT NOT NULL,
