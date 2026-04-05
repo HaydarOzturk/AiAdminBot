@@ -898,8 +898,9 @@
             <select>${buildChannelSelect(msg.channel_id)}</select>
             <button class="btn btn-success btn-small" style="font-size:11px;" onclick="publishToChannel(${msg.id}, this.parentElement.querySelector('select').value)">Publish</button>
             <button class="btn btn-primary btn-small" style="font-size:11px;" onclick="updateExisting(${msg.id})">Update</button>
+            ${msg.message_id ? `<button class="btn btn-secondary btn-small" style="font-size:11px;" onclick="unpublishDefault(${msg.id})">Unpublish</button>` : ''}
             <button class="btn btn-secondary btn-small" style="font-size:11px;" onclick="editDraftInline(${msg.id})">Edit</button>
-            <button class="btn btn-danger btn-small" style="font-size:11px;" onclick="deleteDefault(${msg.id}, ${msg.message_id ? 'true' : 'false'})">Delete</button>
+            <button class="btn btn-danger btn-small" style="font-size:11px;" onclick="deleteDefault(${msg.id})">Delete</button>
           `;
           defaultsList.appendChild(div);
         });
@@ -1066,55 +1067,26 @@
       } catch (err) { showToast('Failed: ' + err.message, 'error'); }
     }
 
-    async function deleteDefault(id, hasPublished) {
+    async function unpublishDefault(id) {
+      if (!await showConfirm('Remove the Discord message but keep this template?', { title: 'Unpublish', warning: true, confirmText: 'Unpublish' })) return;
       const guildId = getCurrentGuild();
+      try {
+        await api(`/api/guilds/${guildId}/bot-messages/${id}/unpublish`, { method: 'POST' });
+        showToast('Discord message removed', 'success');
+        await loadMessages();
+        await renderDrafts();
+      } catch (err) { showToast('Failed: ' + err.message, 'error'); }
+    }
 
-      if (hasPublished) {
-        // Show options: delete everything, keep Discord message, or cancel
-        const choice = await showConfirm(
-          'This default has a published Discord message.\n\nChoose what to delete:',
-          {
-            title: 'Delete Default',
-            danger: true,
-            confirmText: 'Delete Everything',
-            cancelText: 'Cancel',
-          }
-        );
-
-        if (!choice) {
-          // User clicked Cancel — offer "Keep Message, Delete Draft" option
-          const keepMsg = await showConfirm(
-            'Would you like to keep the Discord message but remove this default template?',
-            { title: 'Keep Message?', warning: true, confirmText: 'Yes, Keep Message', cancelText: 'No, Cancel' }
-          );
-          if (keepMsg) {
-            try {
-              await api(`/api/guilds/${guildId}/bot-messages/${id}?keepMessage=true`, { method: 'DELETE' });
-              showToast('Default removed (Discord message kept)', 'success');
-              await loadMessages();
-              await renderDrafts();
-            } catch (err) { showToast('Failed: ' + err.message, 'error'); }
-          }
-          return;
-        }
-
-        // Delete everything
-        try {
-          await api(`/api/guilds/${guildId}/bot-messages/${id}`, { method: 'DELETE' });
-          showToast('Deleted (including Discord message)', 'success');
-          await loadMessages();
-          await renderDrafts();
-        } catch (err) { showToast('Failed: ' + err.message, 'error'); }
-      } else {
-        // No published message — simple delete
-        if (!await showConfirm('Delete this default template?', { title: 'Delete Default', danger: true })) return;
-        try {
-          await api(`/api/guilds/${guildId}/bot-messages/${id}`, { method: 'DELETE' });
-          showToast('Deleted', 'success');
-          await loadMessages();
-          await renderDrafts();
-        } catch (err) { showToast('Failed: ' + err.message, 'error'); }
-      }
+    async function deleteDefault(id) {
+      if (!await showConfirm('Delete this default template and its Discord message (if published)?', { title: 'Delete Default', danger: true })) return;
+      const guildId = getCurrentGuild();
+      try {
+        await api(`/api/guilds/${guildId}/bot-messages/${id}`, { method: 'DELETE' });
+        showToast('Deleted', 'success');
+        await loadMessages();
+        await renderDrafts();
+      } catch (err) { showToast('Failed: ' + err.message, 'error'); }
     }
 
     // ── Init ─────────────────────────────────────────────────────────────
