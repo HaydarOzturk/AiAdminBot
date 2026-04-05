@@ -15,6 +15,7 @@
 const { ActivityType, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 const { channelName, t } = require('../utils/locale');
 const { createEmbed } = require('../utils/embedBuilder');
+const db = require('../utils/database');
 
 // Track active stream announcements: Map<guildId, { messageId, channelId }>
 const activeAnnouncements = new Map();
@@ -60,6 +61,39 @@ function detectPlatform(url) {
 }
 
 /**
+ * Find a saved stream announcement template from bot_messages DB.
+ * @param {string} guildId
+ * @param {string} templateName - e.g. 'Stream Announcement (Live)' or 'Stream Ended'
+ * @returns {object|null} Parsed content object or null
+ */
+function findCustomTemplate(guildId, templateName) {
+  // Look for a saved template by name and type
+  const record = db.get(
+    "SELECT content FROM bot_messages WHERE guild_id = ? AND message_type = 'stream-announcement' AND name LIKE ? ORDER BY updated_at DESC LIMIT 1",
+    [guildId, `%${templateName}%`]
+  );
+  if (!record) return null;
+  try {
+    return typeof record.content === 'string' ? JSON.parse(record.content) : record.content;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Replace template placeholders with actual stream data.
+ */
+function replacePlaceholders(text, vars) {
+  if (!text) return text;
+  return text
+    .replace(/\{user\}/gi, vars.user || '')
+    .replace(/\{platform\}/gi, vars.platform || '')
+    .replace(/\{game\}/gi, vars.game || '')
+    .replace(/\{title\}/gi, vars.title || '')
+    .replace(/\{url\}/gi, vars.url || '');
+}
+
+/**
  * Build the "LIVE" announcement embed + button row.
  * @param {import('discord.js').GuildMember} member
  * @param {object} streamActivity - The Streaming activity object
@@ -73,28 +107,54 @@ function buildLiveMessage(member, streamActivity, guildId) {
   const title = streamActivity.details || streamActivity.name || 'Live Stream';
   const userName = member.displayName || member.user.username;
 
-  const embed = new EmbedBuilder()
-    .setColor(0xFF0000) // Red for LIVE
-    .setTitle(t('streaming.liveTitle', { user: userName }, guildId))
-    .setDescription(
-      t('streaming.liveDescription', {
-        user: userName,
-        platform,
-        game,
-        title,
-      }, guildId)
-    )
-    .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 256 }))
-    .setTimestamp();
+  const vars = { user: userName, platform, game, title, url };
+
+  // Check for custom template from dashboard
+  const customTemplate = findCustomTemplate(guildId, 'Live');
+
+  let embed;
+  if (customTemplate) {
+    embed = new EmbedBuilder()
+      .setColor(customTemplate.color?.startsWith('#') ? parseInt(customTemplate.color.replace('#', ''), 16) : 0xFF0000)
+      .setTimestamp();
+
+    if (customTemplate.title) embed.setTitle(replacePlaceholders(customTemplate.title, vars));
+    if (customTemplate.description) embed.setDescription(replacePlaceholders(customTemplate.description, vars));
+    if (customTemplate.footer) embed.setFooter({ text: replacePlaceholders(customTemplate.footer, vars) });
+    if (customTemplate.thumbnail) {
+      embed.setThumbnail(customTemplate.thumbnail);
+    } else {
+      embed.setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 256 }));
+    }
+
+    // Apply custom fields
+    if (Array.isArray(customTemplate.fields)) {
+      for (const field of customTemplate.fields) {
+        if (field.name && field.value) {
+          embed.addFields({
+            name: replacePlaceholders(field.name, vars),
+            value: replacePlaceholders(field.value, vars),
+            inline: !!field.inline,
+          });
+        }
+      }
+    }
+  } else {
+    // Default: use locale-based template
+    embed = new EmbedBuilder()
+      .setColor(0xFF0000)
+      .setTitle(t('streaming.liveTitle', { user: userName }, guildId))
+      .setDescription(t('streaming.liveDescription', { user: userName, platform, game, title }, guildId))
+      .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 256 }))
+      .setTimestamp();
+  }
 
   if (streamActivity.assets?.largeImage) {
-    // Discord streaming activities sometimes include a large image
     const imgUrl = streamActivity.assets.largeImageURL?.({ size: 512 });
     if (imgUrl) embed.setImage(imgUrl);
   }
 
   const components = [];
-
   if (url) {
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
@@ -117,13 +177,29 @@ function buildLiveMessage(member, streamActivity, guildId) {
  */
 function buildEndedMessage(member, guildId) {
   const userName = member.displayName || member.user.username;
+  const vars = { user: userName, platform: '', game: '', title: '', url: '' };
 
-  const embed = new EmbedBuilder()
-    .setColor(0x808080) // Gray for ended
-    .setTitle(`⚫ ${userName}`)
-    .setDescription(t('streaming.liveEnded', {}, guildId))
-    .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 128 }))
-    .setTimestamp();
+  // Check for custom "ended" template from dashboard
+  const customTemplate = findCustomTemplate(guildId, 'Ended');
+
+  let embed;
+  if (customTemplate) {
+    embed = new EmbedBuilder()
+      .setColor(customTemplate.color?.startsWith('#') ? parseInt(customTemplate.color.replace('#', ''), 16) : 0x808080)
+      .setTimestamp();
+
+    if (customTemplate.title) embed.setTitle(replacePlaceholders(customTemplate.title, vars));
+    if (customTemplate.description) embed.setDescription(replacePlaceholders(customTemplate.description, vars));
+    if (customTemplate.footer) embed.setFooter({ text: replacePlaceholders(customTemplate.footer, vars) });
+    embed.setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 128 }));
+  } else {
+    embed = new EmbedBuilder()
+      .setColor(0x808080)
+      .setTitle(`⚫ ${userName}`)
+      .setDescription(t('streaming.liveEnded', {}, guildId))
+      .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 128 }))
+      .setTimestamp();
+  }
 
   return { embeds: [embed], components: [] };
 }
