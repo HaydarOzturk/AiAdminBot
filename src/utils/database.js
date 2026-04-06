@@ -455,6 +455,15 @@ async function initDatabase() {
     )
   `);
 
+  db.run(`
+    CREATE TABLE IF NOT EXISTS active_announcements (
+      guild_id TEXT PRIMARY KEY,
+      message_id TEXT NOT NULL,
+      channel_id TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   // Migration: clean up levels table
   // Fixes two bugs:
   // 1. Old fallback code created duplicate entries for same user+guild

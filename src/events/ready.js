@@ -68,8 +68,14 @@ module.exports = {
     afkManager.initAfkTracking(client);
     afkManager.startAfkTimer(client);
 
-    // Start automatic stream watcher (Twitch/YouTube/Kick polling)
+    // Load persisted stream announcements + start automatic stream watcher
     if (process.env.STREAMING_ENABLED !== 'false') {
+      try {
+        const { loadActiveAnnouncements } = require('../systems/streamAnnouncer');
+        loadActiveAnnouncements();
+      } catch (err) {
+        console.warn('⚠️ Failed to load persisted announcements:', err.message);
+      }
       try {
         const { startStreamWatcher } = require('../systems/streamWatcher');
         startStreamWatcher(client).catch(err => {

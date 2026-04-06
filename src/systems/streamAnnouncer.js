@@ -18,10 +18,38 @@ const { createEmbed } = require('../utils/embedBuilder');
 const db = require('../utils/database');
 
 // Track active stream announcements: Map<guildId, { messageId, channelId }>
+// Backed by active_announcements DB table — survives restarts
 const activeAnnouncements = new Map();
 
 // Lock to prevent concurrent announcements for the same guild: Set<guildId>
 const _announceLocks = new Set();
+
+/**
+ * Load persisted announcements from DB into the in-memory map.
+ * Called once at startup from ready.js.
+ */
+function loadActiveAnnouncements() {
+  const rows = db.all('SELECT guild_id, message_id, channel_id FROM active_announcements');
+  if (rows) {
+    for (const row of rows) {
+      activeAnnouncements.set(row.guild_id, { messageId: row.message_id, channelId: row.channel_id });
+    }
+    if (rows.length > 0) console.log(`📢 Loaded ${rows.length} persisted stream announcement(s)`);
+  }
+}
+
+/** Persist an announcement to DB */
+function _persistAnnouncement(guildId, messageId, channelId) {
+  db.run(
+    'INSERT OR REPLACE INTO active_announcements (guild_id, message_id, channel_id) VALUES (?, ?, ?)',
+    [guildId, messageId, channelId]
+  );
+}
+
+/** Remove a persisted announcement from DB */
+function _removePersistedAnnouncement(guildId) {
+  db.run('DELETE FROM active_announcements WHERE guild_id = ?', [guildId]);
+}
 
 // Debounce rapid presence flickers: Map<guildId, timeoutId>
 const pendingEndTimers = new Map();
@@ -116,14 +144,14 @@ async function buildLiveMessage(member, streamActivity, guildId, preFetchedResul
   const userName = member.displayName || member.user.username;
   const ownerAvatar = member.user.displayAvatarURL({ dynamic: true, size: 256 });
 
-  const { checkAllPlatforms, PLATFORMS } = require('./streamingChecker');
+  const { checkAllPlatformsCached, PLATFORMS } = require('./streamingChecker');
 
   let platformResults = [];
   let platformsStatus = '';
   let streamTitle = title;
   let allButtons = [];
 
-  // Use pre-fetched results if provided, otherwise fetch fresh
+  // Use pre-fetched results if provided, otherwise use cached fetch
   if (preFetchedResults) {
     platformResults = preFetchedResults;
   } else {
@@ -134,7 +162,7 @@ async function buildLiveMessage(member, streamActivity, guildId, preFetchedResul
     );
     if (links && links.length > 0) {
       try {
-        platformResults = await checkAllPlatforms(links);
+        platformResults = await checkAllPlatformsCached(links, guildId);
       } catch (err) {
         console.warn('Failed to fetch platform data for announcement:', err.message);
       }
@@ -369,6 +397,7 @@ async function announceStreamStart(guild, member, presenceOrStreamInfo) {
       messageId: msg.id,
       channelId: channel.id,
     });
+    _persistAnnouncement(guild.id, msg.id, channel.id);
 
     _announceLocks.delete(guild.id);
     console.log(`🔴 Stream announcement posted for ${member.user.tag} in ${guild.name}`);
@@ -388,6 +417,7 @@ async function announceStreamEnd(guild, member) {
   if (!announcement) return;
 
   activeAnnouncements.delete(guild.id);
+  _removePersistedAnnouncement(guild.id);
   console.log(`⚫ Stream ended for ${member.user.tag} in ${guild.name}`);
 }
 
@@ -406,6 +436,8 @@ module.exports = {
   findAnnouncementChannel,
   activeAnnouncements,
   cleanup,
+  loadActiveAnnouncements,
+  _persistAnnouncement,
   // Reusable building blocks for streamWatcher.js
   buildLiveMessage,
   detectPlatform,

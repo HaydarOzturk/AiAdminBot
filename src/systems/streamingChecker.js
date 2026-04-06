@@ -396,36 +396,18 @@ async function _youTubeScrapeLive(handle) {
       return null;
     }
 
-    // Extract the page's channel handle for ownership verification
-    const pageChannelHandle = html.match(/"channelHandle"\s*:\s*"@?([\w.-]+)"/i)
-                           || html.match(/"vanityChannelUrl"\s*:\s*"[^"]*\/@?([\w.-]+)"/i);
-
-    // Extract the page's channel ID (useful for caching + API fallback)
+    // Extract the page's channel ID (useful for caching + API verification)
     const pageChannelId = html.match(/"externalChannelId"\s*:\s*"(UC[\w-]+)"/i)
                        || html.match(/"channelId"\s*:\s*"(UC[\w-]+)"/i);
-
-    // Cache channel ID if found
     if (pageChannelId?.[1]) {
       _ytChannelIdCache.set(handle, pageChannelId[1]);
     }
 
     // YouTube embeds live indicators in various formats across page versions
     const liveMatch = html.match(/"isLiveBroadcast"\s*:\s*true/i)
-                   || html.match(/"isLive"\s*:\s*true/i)
-                   || html.match(/"style"\s*:\s*"LIVE"/i)
-                   || html.match(/"isLiveContent"\s*:\s*true/i)
-                   || html.match(/"liveBadge"/i);
+                   || html.match(/"isLive"\s*:\s*true/i);
     if (!liveMatch) {
       return { isLive: false, title: '', videoId: '', viewers: 0 };
-    }
-
-    // Verify the live content belongs to THIS channel, not a recommendation
-    if (pageChannelHandle?.[1]) {
-      const pageHandle = pageChannelHandle[1].toLowerCase();
-      if (pageHandle !== handle.toLowerCase()) {
-        console.log(`⚠️ YouTube scrape: page channel @${pageHandle} ≠ expected @${handle} — not our stream`);
-        return { isLive: false, title: '', videoId: '', viewers: 0 };
-      }
     }
 
     // Extract video ID from canonical URL (most reliable for the current page's video)
@@ -436,13 +418,15 @@ async function _youTubeScrapeLive(handle) {
       videoId = canonicalMatch[1];
     } else {
       const ogMatch = html.match(/<meta\s+property="og:url"\s+content="[^"]*\/watch\?v=([\w-]{11})"/i);
-      if (ogMatch) {
-        videoId = ogMatch[1];
-      } else {
-        // Player config videoId (the one loaded in the embedded player)
-        const playerMatch = html.match(/"videoId"\s*:\s*"([\w-]{11})"/);
-        if (playerMatch) videoId = playerMatch[1];
-      }
+      if (ogMatch) videoId = ogMatch[1];
+    }
+
+    // STRICT ownership verification: if we can't confirm the video belongs
+    // to this channel, DON'T trust the scrape — return null to fall through to API.
+    // YouTube's /@handle/live page often shows recommended live content from OTHER channels.
+    if (!videoId) {
+      console.warn(`⚠️ YouTube scrape: live detected but no videoId found for @${handle} — falling back to API`);
+      return null;
     }
 
     // Extract title
@@ -453,14 +437,41 @@ async function _youTubeScrapeLive(handle) {
     // Extract viewer count directly from HTML (saves an API call)
     let viewers = 0;
     const viewerMatch = html.match(/"viewCount"\s*:\s*"(\d+)"/i)
-                     || html.match(/"concurrentViewers"\s*:\s*"(\d+)"/i)
-                     || html.match(/"shortViewCount"\s*:\s*\{[^}]*"simpleText"\s*:\s*"([\d,.]+)/i);
+                     || html.match(/"concurrentViewers"\s*:\s*"(\d+)"/i);
     if (viewerMatch) {
       viewers = parseInt(viewerMatch[1].replace(/[,.]/g, ''), 10) || 0;
     }
 
-    console.log(`✅ YouTube scrape verified: @${handle} is LIVE (videoId: ${videoId || 'unknown'}, viewers: ${viewers})`);
+    // Return scrape result — videoId will be verified by checkYouTube via API
     return { isLive: true, title, videoId, viewers };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Verify a scraped videoId actually belongs to the expected channel.
+ * Uses videos.list API (1 quota unit) — much cheaper than search.list (100 units).
+ * Returns { verified, viewers } or null on API failure.
+ */
+async function _verifyYouTubeVideo(videoId, expectedChannelId, apiKey) {
+  if (!videoId || !apiKey) return null;
+  try {
+    const url = `https://www.googleapis.com/youtube/v3/videos?part=snippet,liveStreamingDetails&id=${videoId}&key=${apiKey}`;
+    const data = await fetchJson(url);
+    const item = data?.items?.[0];
+    if (!item) return { verified: false, viewers: 0 };
+
+    // Check channel ownership
+    if (expectedChannelId && item.snippet?.channelId !== expectedChannelId) {
+      console.log(`⚠️ YouTube API: video ${videoId} belongs to ${item.snippet?.channelId}, not ${expectedChannelId}`);
+      return { verified: false, viewers: 0 };
+    }
+
+    // Check if actually live
+    const isLive = item.snippet?.liveBroadcastContent === 'live';
+    const viewers = parseInt(item.liveStreamingDetails?.concurrentViewers || '0', 10);
+    return { verified: isLive, viewers, title: item.snippet?.title || '', channelId: item.snippet?.channelId };
   } catch {
     return null;
   }
@@ -496,31 +507,59 @@ async function checkYouTube(handleOrUrl, platform = 'youtube') {
   const parsed = parseYouTubeInput(handleOrUrl);
   const handle = parsed.type === 'handle' || parsed.type === 'custom' ? parsed.value : null;
 
-  // ── Strategy 1: Free page scrape ──────────────────────────────────────
+  // ── Strategy 1: Scrape + API verification (1 quota unit) ──────────────
   if (handle) {
+    const channelUrl = `https://youtube.com/@${handle}`;
+    const liveUrl = `https://youtube.com/@${handle}/live`;
     const scrapeResult = await _youTubeScrapeLive(handle);
-    if (scrapeResult !== null) {
-      const channelUrl = `https://youtube.com/@${handle}`;
-      // Always use /@handle/live as the live URL — it reliably redirects to
-      // the correct stream in browsers, unlike scraped videoIds which can
-      // point to wrong videos from recommendations
-      const liveUrl = `https://youtube.com/@${handle}/live`;
 
-      // Use scraped viewer count first; only call API if scrape didn't get it
-      let viewers = scrapeResult.viewers || 0;
-      if (scrapeResult.isLive && !viewers && scrapeResult.videoId && apiKey) {
-        viewers = await _getYouTubeViewerCount(scrapeResult.videoId, apiKey);
+    if (scrapeResult !== null) {
+      // Not live according to scrape — trust it (no false negatives)
+      if (!scrapeResult.isLive) {
+        return { isLive: false, title: '', viewers: 0, url: channelUrl };
       }
 
-      console.log(`✅ YouTube scrape for "@${handle}" → isLive: ${scrapeResult.isLive}${viewers ? `, viewers: ${viewers}` : ''}`);
-      return {
-        isLive: scrapeResult.isLive,
-        title: scrapeResult.title || '',
-        viewers,
-        url: scrapeResult.isLive ? liveUrl : channelUrl,
-      };
+      // Scrape says live — verify the videoId actually belongs to this channel via API
+      if (scrapeResult.videoId && apiKey) {
+        const cachedChannelId = _ytChannelIdCache.get(handle) || null;
+        const verification = await _verifyYouTubeVideo(scrapeResult.videoId, cachedChannelId, apiKey);
+
+        if (verification) {
+          if (verification.verified) {
+            // Cache the channel ID if we learned it
+            if (verification.channelId) _ytChannelIdCache.set(handle, verification.channelId);
+            console.log(`✅ YouTube verified: @${handle} is LIVE (videoId: ${scrapeResult.videoId}, viewers: ${verification.viewers})`);
+            return {
+              isLive: true,
+              title: verification.title || scrapeResult.title || '',
+              viewers: verification.viewers || scrapeResult.viewers || 0,
+              url: liveUrl,
+            };
+          } else {
+            // Video doesn't belong to this channel or isn't actually live
+            console.log(`⚠️ YouTube: scraped video ${scrapeResult.videoId} failed verification for @${handle}`);
+            // Fall through to search.list API
+          }
+        }
+        // API call failed — don't trust unverified scrape, fall through
+      }
+
+      // No API key or verification failed — scrape is untrustworthy, fall through
+      if (!apiKey) {
+        // No way to verify — return scrape result as best effort
+        console.log(`⚠️ YouTube scrape (unverified, no API key): @${handle} → isLive: ${scrapeResult.isLive}`);
+        return {
+          isLive: scrapeResult.isLive,
+          title: scrapeResult.title || '',
+          viewers: scrapeResult.viewers || 0,
+          url: liveUrl,
+        };
+      }
     }
-    console.warn(`⚠️ YouTube scrape failed for "@${handle}" — falling back to API`);
+    // Scrape returned null or live detection unverified — fall through to API
+    if (scrapeResult === null) {
+      console.warn(`⚠️ YouTube scrape failed for "@${handle}" — falling back to API`);
+    }
   }
 
   // ── Strategy 2: API fallback (search.list — 100 units) ───────────────
@@ -557,7 +596,7 @@ async function checkYouTube(handleOrUrl, platform = 'youtube') {
     isLive: true,
     title: live.snippet?.title || '',
     viewers,
-    url: videoId ? `https://youtube.com/watch?v=${videoId}` : `https://youtube.com/channel/${channelId}`,
+    url: handle ? `https://youtube.com/@${handle}/live` : (videoId ? `https://youtube.com/watch?v=${videoId}` : `https://youtube.com/channel/${channelId}`),
   };
 }
 
@@ -621,11 +660,42 @@ async function checkAllPlatforms(links) {
     .map(r => r.value);
 }
 
+// ─── Platform result cache ─────────────────────────────────────────────────
+// Prevents redundant API/scrape calls within a short window.
+// All consumers get consistent data from the same check cycle.
+
+const _platformCache = new Map(); // key: guildId, value: { results, timestamp }
+const PLATFORM_CACHE_TTL = 60000; // 60 seconds
+
+/**
+ * Cached version of checkAllPlatforms.
+ * Returns cached results if within TTL, otherwise fetches fresh.
+ * @param {Array} links - Streaming links from DB
+ * @param {string} guildId - Guild ID for cache key
+ * @returns {Promise<Array>}
+ */
+async function checkAllPlatformsCached(links, guildId) {
+  const cached = _platformCache.get(guildId);
+  if (cached && Date.now() - cached.timestamp < PLATFORM_CACHE_TTL) {
+    return cached.results;
+  }
+  const results = await checkAllPlatforms(links);
+  _platformCache.set(guildId, { results, timestamp: Date.now() });
+  return results;
+}
+
+/** Invalidate the cache for a guild (e.g. after manual /go-live) */
+function invalidatePlatformCache(guildId) {
+  _platformCache.delete(guildId);
+}
+
 module.exports = {
   checkKick,
   checkTwitch,
   checkYouTube,
   checkAllPlatforms,
+  checkAllPlatformsCached,
+  invalidatePlatformCache,
   PLATFORMS,
   PLATFORM_CHECKERS,
   extractKickSlug,

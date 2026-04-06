@@ -13,7 +13,7 @@ const { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } = require('disc
 const { hasPermission } = require('../../utils/permissions');
 const { t } = require('../../utils/locale');
 const { all, run } = require('../../utils/database');
-const { checkAllPlatforms } = require('../../systems/streamingChecker');
+const { checkAllPlatforms, invalidatePlatformCache } = require('../../systems/streamingChecker');
 const { findAnnouncementChannel, buildLiveMessage } = require('../../systems/streamAnnouncer');
 
 module.exports = {
@@ -82,7 +82,8 @@ module.exports = {
       return interaction.editReply({ content: t('streaming.noLinks', {}, g) });
     }
 
-    // Check all platforms in parallel
+    // Check all platforms fresh (manual command — invalidate cache first)
+    invalidatePlatformCache(guild.id);
     const results = await checkAllPlatforms(links);
     const liveResults = results.filter(r => r.isLive);
 
@@ -132,8 +133,8 @@ module.exports = {
     const messagePayload = await buildLiveMessage(ownerMember, streamActivity, guild.id, results);
     const { embeds, components } = messagePayload;
 
-    // Check if there's already an active announcement to update
-    const { activeAnnouncements } = require('../../systems/streamAnnouncer');
+    // Check if there's already an active announcement to update (persisted across restarts)
+    const { activeAnnouncements, _persistAnnouncement } = require('../../systems/streamAnnouncer');
     const existingAnnouncement = activeAnnouncements.get(guild.id);
 
     if (existingAnnouncement) {
@@ -166,11 +167,12 @@ module.exports = {
       components,
     });
 
-    // Track it so future /go-live calls can update it
+    // Track it so future /go-live calls can update it (persisted to DB)
     activeAnnouncements.set(guild.id, {
       messageId: sentMsg.id,
       channelId: announcementChannel.id,
     });
+    _persistAnnouncement(guild.id, sentMsg.id, announcementChannel.id);
 
     // Ephemeral reply to command user
     const liveNames = liveResults.map(r => r.label).join(', ') || t('streaming.linkOnlyMode', {}, g);
