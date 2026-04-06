@@ -276,12 +276,27 @@ async function handlePresenceUpdate(oldPresence, newPresence) {
       try {
         const freshMember = await guild.members.fetch(member.id);
         const stillStreaming = freshMember.presence?.activities?.some(a => a.type === ActivityType.Streaming);
-        if (!stillStreaming) {
-          await announceStreamEnd(guild, member);
+        if (stillStreaming) return;
+      } catch { /* member fetch failed — continue with platform cross-check */ }
+
+      // Cross-check: ask platform APIs if stream is actually still live
+      const { checkAllPlatforms } = require('./streamingChecker');
+      const ownerId = process.env.STREAM_OWNER_ID || guild.ownerId;
+      const links = db.all(
+        'SELECT * FROM streaming_links WHERE guild_id = ? AND user_id = ?',
+        [guild.id, ownerId]
+      );
+
+      if (links && links.length > 0) {
+        const results = await checkAllPlatforms(links);
+        const anyLive = results.some(r => r.isLive);
+        if (anyLive) {
+          console.log(`❌ Presence ended but platform API still live — skipping stream end for ${guild.name}`);
+          return;
         }
-      } catch {
-        await announceStreamEnd(guild, member);
       }
+
+      await announceStreamEnd(guild, member);
     }, END_DELAY));
   }
 }

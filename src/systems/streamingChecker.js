@@ -248,7 +248,7 @@ async function checkKick(handleOrUrl) {
   }
 
   console.warn(`⚠️ Kick: all strategies failed for slug "${slug}" — check PM2 logs for HTTP status codes`);
-  return { isLive: false, title: '', viewers: 0, url: channelUrl };
+  return { isLive: false, title: '', viewers: 0, url: channelUrl, error: true };
 }
 
 // ─── Twitch ──────────────────────────────────────────────────────────────────
@@ -301,7 +301,7 @@ async function checkTwitch(handleOrUrl) {
   const token = await getTwitchToken();
   if (!token) {
     console.warn('⚠️ TWITCH_CLIENT_ID / TWITCH_CLIENT_SECRET not set — skipping Twitch live check');
-    return { isLive: false, title: '', viewers: 0, url: channelUrl };
+    return { isLive: false, title: '', viewers: 0, url: channelUrl, error: true };
   }
 
   const apiUrl = `https://api.twitch.tv/helix/streams?user_login=${encodeURIComponent(login)}`;
@@ -310,7 +310,12 @@ async function checkTwitch(handleOrUrl) {
     'Authorization': `Bearer ${token}`,
   });
 
-  if (!data?.data?.length) {
+  if (!data) {
+    console.warn(`⚠️ Twitch API request failed for "${login}" — network error`);
+    return { isLive: false, title: '', viewers: 0, url: channelUrl, error: true };
+  }
+
+  if (!data.data?.length) {
     console.log(`✅ Twitch API for "${login}" → isLive: false`);
     return { isLive: false, title: '', viewers: 0, url: channelUrl };
   }
@@ -436,19 +441,24 @@ async function checkYouTube(handleOrUrl, platform = 'youtube') {
   // ── Strategy 2: API fallback (search.list — 100 units) ───────────────
   if (!apiKey) {
     console.warn('⚠️ YOUTUBE_API_KEY not set — skipping YouTube API fallback');
-    return { isLive: false, title: '', viewers: 0, url: handleOrUrl };
+    return { isLive: false, title: '', viewers: 0, url: handleOrUrl, error: true };
   }
 
   let channelId = parsed.type === 'id' ? parsed.value : await resolveYouTubeChannelId(parsed.value, apiKey);
 
   if (!channelId) {
-    return { isLive: false, title: '', viewers: 0, url: handleOrUrl };
+    return { isLive: false, title: '', viewers: 0, url: handleOrUrl, error: true };
   }
 
   const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&eventType=live&type=video&key=${apiKey}`;
   const data = await fetchJson(searchUrl);
 
-  if (!data?.items?.length) {
+  if (!data) {
+    console.warn(`⚠️ YouTube API request failed for "${channelId}" — network error`);
+    return { isLive: false, title: '', viewers: 0, url: `https://youtube.com/channel/${channelId}`, error: true };
+  }
+
+  if (!data.items?.length) {
     console.log(`✅ YouTube API for "${channelId}" → isLive: false`);
     return { isLive: false, title: '', viewers: 0, url: `https://youtube.com/channel/${channelId}` };
   }

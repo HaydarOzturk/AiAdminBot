@@ -20,6 +20,7 @@
  *   real-time Twitch detection becomes a priority.
  */
 
+const { ActivityType } = require('discord.js');
 const { all } = require('../utils/database');
 const {
   checkTwitch,
@@ -38,6 +39,7 @@ const {
 
 const POLL_INTERVAL_MS = (parseInt(process.env.STREAM_WATCHER_POLL_INTERVAL_SECONDS) || 120) * 1000;
 const CONFIRMATION_DELAY_MS = (parseInt(process.env.STREAM_WATCHER_CONFIRMATION_DELAY_SECONDS) || 60) * 1000;
+const END_CONFIRMATION_DELAY_MS = (parseInt(process.env.STREAM_WATCHER_END_CONFIRMATION_DELAY_SECONDS) || 60) * 1000;
 // YouTube uses a longer interval to conserve API quota (search.list = 100 units/call, daily limit = 10k)
 const YT_POLL_INTERVAL_MS = (parseInt(process.env.STREAM_WATCHER_YT_POLL_INTERVAL_SECONDS) || 600) * 1000;
 
@@ -53,11 +55,17 @@ let _lastYouTubePoll = 0; // timestamp of last YouTube poll
 // Confirmation timers: Map<"guildId|userId|platform", timeoutId>
 const _confirmationTimers = new Map();
 
+// End-confirmation timers: Map<"guildId|userId|platform", timeoutId>
+const _endConfirmationTimers = new Map();
+
 // Active streams tracked by the watcher: Map<"guildId|userId|platform", { messageId, channelId, detectedAt }>
 const _activeWatcherStreams = new Map();
 
 // Previous poll state for detecting transitions: Map<"guildId|userId|platform", boolean>
 const _previousPollState = new Map();
+
+// First poll flag — skip transitions on first cycle after restart to avoid false positives
+let _firstPoll = true;
 
 // ─── Public API ─────────────────────────────────────────────────────────────
 
@@ -101,9 +109,16 @@ function stopStreamWatcher() {
   }
   _confirmationTimers.clear();
 
+  // Cancel all pending end-confirmation timers
+  for (const timerId of _endConfirmationTimers.values()) {
+    clearTimeout(timerId);
+  }
+  _endConfirmationTimers.clear();
+
   // Clear state
   _activeWatcherStreams.clear();
   _previousPollState.clear();
+  _firstPoll = true;
 
   _client = null;
   console.log('🛑 Stream watcher stopped');
@@ -123,6 +138,7 @@ function getStreamWatcherStatus() {
     },
     streams: {
       pendingConfirmations: _confirmationTimers.size,
+      pendingEndConfirmations: _endConfirmationTimers.size,
       activeAnnouncements: _activeWatcherStreams.size,
       trackedPlatforms: [..._previousPollState.keys()],
     },
@@ -155,6 +171,11 @@ async function _pollAllGuilds() {
     } catch (err) {
       console.error(`⚠️ Polling error for ${guild.name}: ${err.message}`);
     }
+  }
+
+  if (_firstPoll) {
+    _firstPoll = false;
+    console.log('📡 First poll complete — state seeded, transitions active from next cycle');
   }
 }
 
@@ -191,20 +212,42 @@ async function _pollGuild(guild) {
       const key = `${guild.id}|${streamOwnerId}|${link.platform}`;
       const wasLive = _previousPollState.get(key) || false;
 
+      // On first poll after restart, just seed state — don't trigger transitions
+      if (_firstPoll) {
+        _previousPollState.set(key, result.isLive);
+        continue;
+      }
+
       _previousPollState.set(key, result.isLive);
 
       if (!wasLive && result.isLive) {
         // Transition: offline → online
         console.log(`📡 Polling detected: ${link.platform} went LIVE for ${guild.name}`);
+
+        // Cancel any pending end-confirmation (stream came back)
+        const endTimer = _endConfirmationTimers.get(key);
+        if (endTimer) {
+          clearTimeout(endTimer);
+          _endConfirmationTimers.delete(key);
+          console.log(`⏹️ End confirmation cancelled: stream came back live for ${key}`);
+        }
+
         _startConfirmation(key, guild.id, streamOwnerId, link.platform, {
           title: result.title,
           viewers: result.viewers,
           url: result.url || link.platform_url,
         });
       } else if (wasLive && !result.isLive) {
-        // Transition: online → offline
+        // If this was an API error, don't treat as offline transition
+        if (result.error) {
+          console.log(`⚠️ API error for ${link.platform} in ${guild.name} — ignoring offline transition`);
+          _previousPollState.set(key, true); // keep previous "live" state
+          continue;
+        }
+
+        // Transition: online → offline — start end confirmation
         console.log(`📡 Polling detected: ${link.platform} went OFFLINE for ${guild.name}`);
-        await _handleStreamEnd(key, guild.id, streamOwnerId);
+        _startEndConfirmation(key, guild.id, streamOwnerId, link.platform);
       }
       // online → online: no action (stream continues)
     } catch (err) {
@@ -285,6 +328,70 @@ function _startConfirmation(key, guildId, userId, platform, initialInfo) {
   }, CONFIRMATION_DELAY_MS);
 
   _confirmationTimers.set(key, timer);
+}
+
+/**
+ * Start the end-confirmation window before marking a stream as ended.
+ * Mirrors the start-confirmation pipeline: wait, re-check API, cross-check presence.
+ */
+function _startEndConfirmation(key, guildId, userId, platform) {
+  // Already confirming end? Skip.
+  if (_endConfirmationTimers.has(key)) return;
+
+  console.log(`⏳ End confirmation started: ${platform} for guild ${guildId} (waiting ${END_CONFIRMATION_DELAY_MS / 1000}s)`);
+
+  const timer = setTimeout(async () => {
+    _endConfirmationTimers.delete(key);
+
+    try {
+      // Re-check the platform API to confirm still offline
+      const links = all(
+        'SELECT * FROM streaming_links WHERE guild_id = ? AND user_id = ? AND platform = ?',
+        [guildId, userId, platform]
+      );
+
+      if (!links || links.length === 0) return;
+
+      const result = await _checkSinglePlatform(links[0]);
+
+      if (result.isLive) {
+        console.log(`❌ End confirmation failed: ${platform} is back LIVE for guild ${guildId}`);
+        _previousPollState.set(key, true);
+        return;
+      }
+
+      if (result.error) {
+        console.log(`⚠️ End confirmation inconclusive (API error) for ${platform} — aborting end`);
+        return;
+      }
+
+      // Cross-check: is Discord presence still showing streaming?
+      if (_client) {
+        const guild = _client.guilds.cache.get(guildId);
+        if (guild) {
+          try {
+            const member = await guild.members.fetch(userId);
+            const stillStreaming = member.presence?.activities?.some(
+              a => a.type === ActivityType.Streaming
+            );
+            if (stillStreaming) {
+              console.log(`❌ End confirmation blocked: Discord presence still streaming for ${guild.name}`);
+              _previousPollState.set(key, true);
+              return;
+            }
+          } catch { /* member fetch failed — proceed with end */ }
+        }
+      }
+
+      // Confirmed offline — proceed with stream end
+      console.log(`✅ End confirmation passed: ${platform} confirmed offline for guild ${guildId}`);
+      await _handleStreamEnd(key, guildId, userId);
+    } catch (err) {
+      console.error(`⚠️ End confirmation check failed for ${key}: ${err.message}`);
+    }
+  }, END_CONFIRMATION_DELAY_MS);
+
+  _endConfirmationTimers.set(key, timer);
 }
 
 /**
