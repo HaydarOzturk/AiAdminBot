@@ -234,41 +234,6 @@ async function buildLiveMessage(member, streamActivity, guildId) {
 }
 
 /**
- * Build the "stream ended" embed (edits the existing announcement).
- * @param {import('discord.js').GuildMember} member
- * @param {string} guildId
- * @returns {{ embeds: EmbedBuilder[], components: [] }}
- */
-function buildEndedMessage(member, guildId) {
-  const userName = member.displayName || member.user.username;
-  const vars = { user: userName, platform: '', game: '', title: '', url: '' };
-
-  // Check for custom "ended" template from dashboard
-  const customTemplate = findCustomTemplate(guildId, 'Ended');
-
-  let embed;
-  if (customTemplate) {
-    embed = new EmbedBuilder()
-      .setColor(customTemplate.color?.startsWith('#') ? parseInt(customTemplate.color.replace('#', ''), 16) : 0x808080)
-      .setTimestamp();
-
-    if (customTemplate.title) embed.setTitle(replacePlaceholders(customTemplate.title, vars));
-    if (customTemplate.description) embed.setDescription(replacePlaceholders(customTemplate.description, vars));
-    if (customTemplate.footer) embed.setFooter({ text: replacePlaceholders(customTemplate.footer, vars) });
-    embed.setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 128 }));
-  } else {
-    embed = new EmbedBuilder()
-      .setColor(0x808080)
-      .setTitle(`⚫ ${userName}`)
-      .setDescription(t('streaming.liveEnded', {}, guildId))
-      .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 128 }))
-      .setTimestamp();
-  }
-
-  return { embeds: [embed], components: [] };
-}
-
-/**
  * Handle a presence update — detect streaming start/stop for guild owners.
  * @param {import('discord.js').Presence|null} oldPresence
  * @param {import('discord.js').Presence} newPresence
@@ -380,25 +345,8 @@ async function announceStreamEnd(guild, member) {
   const announcement = activeAnnouncements.get(guild.id);
   if (!announcement) return;
 
-  try {
-    const channel = guild.channels.cache.get(announcement.channelId);
-    if (!channel) {
-      activeAnnouncements.delete(guild.id);
-      return;
-    }
-
-    const msg = await channel.messages.fetch(announcement.messageId).catch(() => null);
-    if (msg) {
-      const endPayload = buildEndedMessage(member, guild.id);
-      await msg.edit(endPayload);
-    }
-
-    activeAnnouncements.delete(guild.id);
-    console.log(`⚫ Stream ended for ${member.user.tag} in ${guild.name}`);
-  } catch (err) {
-    console.error(`Stream end update failed in ${guild.name}:`, err.message);
-    activeAnnouncements.delete(guild.id);
-  }
+  activeAnnouncements.delete(guild.id);
+  console.log(`⚫ Stream ended for ${member.user.tag} in ${guild.name}`);
 }
 
 /**
@@ -418,7 +366,6 @@ module.exports = {
   cleanup,
   // Reusable building blocks for streamWatcher.js
   buildLiveMessage,
-  buildEndedMessage,
   detectPlatform,
   announceStreamStart,
   announceStreamEnd,
