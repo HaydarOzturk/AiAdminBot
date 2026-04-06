@@ -7,8 +7,10 @@
  * - Mention spam detection
  * - Caps lock detection
  * - Invite link blocking
- * - Regex keyword patterns
  * - Progressive punishments (warn → mute → kick → ban)
+ *
+ * AI-based content analysis is handled by aiModeration.js,
+ * which shares the infraction table for unified progressive punishment.
  */
 
 const db = require('../utils/database');
@@ -16,7 +18,6 @@ const { createEmbed } = require('../utils/embedBuilder');
 const { t, channelName } = require('../utils/locale');
 const { getPermissionLevel } = require('../utils/permissions');
 const { sendModLog, logModAction } = require('../utils/modLogger');
-const { chat, isConfigured } = require('../utils/openrouter');
 
 // ── In-memory trackers ─────────────────────────────────────────────────────
 
@@ -153,53 +154,6 @@ function checkInvites(message, settings) {
   return null;
 }
 
-// ── AI Context Analysis ────────────────────────────────────────────────────
-
-/**
- * Use Gemini to analyze messages that pass rule-based checks but may still
- * contain subtle toxicity, passive aggression, or evasion attempts.
- * Only called when AI is configured and message is long enough.
- */
-async function aiContextCheck(message, settings) {
-  if (!isConfigured()) return null;
-  if (message.content.length < 15) return null;
-
-  try {
-    const result = await chat(
-      [{ role: 'user', content: `Analyze this Discord message for hidden toxicity, passive aggression, harassment, or rule evasion:\n"${message.content.slice(0, 500)}"` }],
-      {
-        systemPrompt: `You are a Discord automod AI. Detect subtle toxicity that keyword filters miss: passive aggression, coded slurs, harassment patterns, zalgo text, and creative bypass attempts.
-
-Respond ONLY in this JSON format:
-{"flagged": true/false, "type": "toxicity|harassment|evasion|none", "confidence": 0.0-1.0, "reason": "brief explanation"}
-
-Rules:
-- Normal conversation, jokes, gaming talk = NOT flagged
-- Only flag with confidence >= 0.85
-- Sarcastic insults targeting specific users = flag
-- Creative spelling of slurs = flag
-- Repeated borderline messages = flag`,
-        maxTokens: 128,
-        temperature: 0.1,
-      }
-    );
-
-    const jsonMatch = result.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) return null;
-
-    let parsed;
-    try { parsed = JSON.parse(jsonMatch[0]); } catch { return null; }
-
-    if (parsed.flagged && parsed.confidence >= 0.85) {
-      return { type: `ai_${parsed.type || 'toxicity'}`, reason: parsed.reason || 'AI-detected violation' };
-    }
-  } catch {
-    // AI unavailable — fail open
-  }
-
-  return null;
-}
-
 // ── Progressive Punishment ─────────────────────────────────────────────────
 
 function getInfractionCount(userId, guildId) {
@@ -275,17 +229,13 @@ async function checkMessage(message) {
   if (!member) return false;
   if (getPermissionLevel(member) >= 2) return false;
 
-  // Run rule-based checks first (fast, no API calls)
-  let violation =
+  // Run rule-based checks (fast, no API calls)
+  // AI-based analysis is handled separately by aiModeration.js
+  const violation =
     checkSpam(message, settings) ||
     checkMentionSpam(message, settings) ||
     checkCaps(message, settings) ||
     checkInvites(message, settings);
-
-  // If no rule-based violation, try AI context analysis
-  if (!violation) {
-    violation = await aiContextCheck(message, settings);
-  }
 
   if (!violation) return false;
 
@@ -360,4 +310,7 @@ async function checkMessage(message) {
   }
 }
 
-module.exports = { checkMessage, trackJoin, getAutomodSettings };
+module.exports = {
+  checkMessage, trackJoin, getAutomodSettings,
+  addInfraction, getInfractionCount, getPunishment,
+};
