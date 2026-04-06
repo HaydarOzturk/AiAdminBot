@@ -144,7 +144,7 @@ module.exports = {
           const existingMsg = await existingChannel.messages.fetch(existingAnnouncement.messageId).catch(() => null);
           if (existingMsg) {
             await existingMsg.edit({
-              content: `@everyone\n🔴 **${ownerName}** ${t('streaming.isLiveNow', {}, g)}`,
+              content: `🔴 **${ownerName}** ${t('streaming.isLiveNow', {}, g)}`,
               embeds,
               components,
             });
@@ -161,7 +161,7 @@ module.exports = {
 
     // Send new announcement
     const sentMsg = await announcementChannel.send({
-      content: `@everyone\n🔴 **${ownerName}** ${t('streaming.isLiveNow', {}, g)}`,
+      content: `🔴 **${ownerName}** ${t('streaming.isLiveNow', {}, g)}`,
       embeds,
       components,
     });

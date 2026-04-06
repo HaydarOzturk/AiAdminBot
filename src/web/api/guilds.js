@@ -1522,7 +1522,7 @@ router.post('/:guildId/bot-messages/:id/publish', async (req, res) => {
 
       // Send or edit
       const channel = await guild.channels.fetch(channelId);
-      const payload = { content: `@everyone\n🔴 **${userName}** ${require('../../utils/locale').t('streaming.isLiveNow', {}, guild.id) || 'şu anda YAYINDA!'}`, embeds: [embed], components };
+      const payload = { content: `🔴 **${userName}** ${require('../../utils/locale').t('streaming.isLiveNow', {}, guild.id) || 'şu anda YAYINDA!'}`, embeds: [embed], components };
 
       // Check for existing announcement to edit
       const existing = activeAnnouncements.get(guild.id);
