@@ -103,7 +103,7 @@ function extractKickSlug(input) {
 /**
  * Fetch raw HTML/text from a URL (not JSON). Used for page scraping fallback.
  */
-function fetchText(url, ms = 10000) {
+function fetchText(url, ms = 10000, maxRedirects = 5) {
   const parsed = new URL(url);
   const options = {
     hostname: parsed.hostname,
@@ -118,6 +118,14 @@ function fetchText(url, ms = 10000) {
 
   return new Promise(resolve => {
     const req = https.get(options, res => {
+      // Follow redirects (YouTube /@handle/live redirects to the live video)
+      if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location && maxRedirects > 0) {
+        res.resume();
+        const redirectUrl = res.headers.location.startsWith('http')
+          ? res.headers.location
+          : `https://${parsed.hostname}${res.headers.location}`;
+        return fetchText(redirectUrl, ms, maxRedirects - 1).then(resolve);
+      }
       if (res.statusCode !== 200) {
         console.warn(`⚠️ fetchText ${parsed.hostname}${parsed.pathname} → HTTP ${res.statusCode}`);
         res.resume();
@@ -388,10 +396,25 @@ async function _youTubeScrapeLive(handle) {
       return { isLive: false, title: '', videoId: '' };
     }
 
-    // Extract video ID from canonical URL or og:url
+    // Extract video ID from reliable sources (in priority order):
+    // 1. Canonical URL — YouTube sets this to the actual video being viewed
+    // 2. og:url meta tag — same purpose
+    // 3. "videoId":"XXX" from player config — tied to the embedded player
     let videoId = '';
-    const vidMatch = html.match(/\/watch\?v=([\w-]{11})/);
-    if (vidMatch) videoId = vidMatch[1];
+    const canonicalMatch = html.match(/<link\s+rel="canonical"\s+href="[^"]*\/watch\?v=([\w-]{11})"/i)
+                        || html.match(/<link\s+href="[^"]*\/watch\?v=([\w-]{11})"\s+rel="canonical"/i);
+    if (canonicalMatch) {
+      videoId = canonicalMatch[1];
+    } else {
+      const ogMatch = html.match(/<meta\s+property="og:url"\s+content="[^"]*\/watch\?v=([\w-]{11})"/i);
+      if (ogMatch) {
+        videoId = ogMatch[1];
+      } else {
+        // Player config videoId (the one actually loaded in the player)
+        const playerMatch = html.match(/"videoId"\s*:\s*"([\w-]{11})"/);
+        if (playerMatch) videoId = playerMatch[1];
+      }
+    }
 
     // Extract title
     let title = '';
