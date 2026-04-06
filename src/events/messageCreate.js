@@ -167,5 +167,16 @@ module.exports = {
     } catch {
       // Silent fail — logging should never block message flow
     }
+
+    // ── Memory Scoring: track replies and bot mentions ───────────────────
+    try {
+      const memoryLearner = require('../systems/memoryLearner');
+      if (message.reference?.messageId) {
+        memoryLearner.trackReply(message);
+      }
+      if (message.mentions.users.has(message.client.user.id)) {
+        memoryLearner.trackBotMention(message);
+      }
+    } catch {}
   },
 };

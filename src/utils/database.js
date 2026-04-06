@@ -418,6 +418,43 @@ async function initDatabase() {
     )
   `);
 
+  // ── Message Scoring for Auto Memory Learning ──────────────────────────
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS message_scores (
+      message_log_id INTEGER PRIMARY KEY,
+      guild_id TEXT NOT NULL,
+      channel_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      reaction_count INTEGER DEFAULT 0,
+      reply_count INTEGER DEFAULT 0,
+      bot_mentioned INTEGER DEFAULT 0,
+      computed_score REAL DEFAULT 0,
+      scored_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // ── Memory Learning Configuration per Guild ───────────────────────────
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS memory_config (
+      guild_id TEXT PRIMARY KEY,
+      reaction_weight REAL DEFAULT 1.0,
+      reply_weight REAL DEFAULT 2.0,
+      bot_mention_weight REAL DEFAULT 10.0,
+      candidacy_threshold REAL DEFAULT 5.0,
+      confidence_threshold REAL DEFAULT 0.75,
+      min_user_level INTEGER DEFAULT 1,
+      decay_rate REAL DEFAULT 0.993,
+      prune_threshold REAL DEFAULT 0.2,
+      max_auto_memories INTEGER DEFAULT 50,
+      extraction_enabled INTEGER DEFAULT 0,
+      extraction_interval INTEGER DEFAULT 6,
+      channel_weights TEXT DEFAULT '{}',
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   // Migration: clean up levels table
   // Fixes two bugs:
   // 1. Old fallback code created duplicate entries for same user+guild
@@ -501,6 +538,31 @@ async function initDatabase() {
       db.run('ALTER TABLE channel_ai_config ADD COLUMN allow_temp_channels INTEGER DEFAULT 0');
       db.run('ALTER TABLE channel_ai_config ADD COLUMN max_concurrent_games INTEGER DEFAULT 2');
       console.log('🔄 Migration: added game config columns to channel_ai_config');
+    }
+  } catch {}
+
+  // Migration: add discord_message_id to message_log for reaction/reply tracking
+  try {
+    const cols = db.exec('PRAGMA table_info(message_log)');
+    const hasMsgId = cols[0]?.values?.some(row => row[1] === 'discord_message_id');
+    if (!hasMsgId) {
+      db.run('ALTER TABLE message_log ADD COLUMN discord_message_id TEXT');
+      console.log('🔄 Migration: added discord_message_id to message_log');
+    }
+  } catch {}
+
+  // Migration: add auto-learning columns to ai_memories
+  try {
+    const cols = db.exec('PRAGMA table_info(ai_memories)');
+    const hasSource = cols[0]?.values?.some(row => row[1] === 'source');
+    if (!hasSource) {
+      db.run("ALTER TABLE ai_memories ADD COLUMN source TEXT DEFAULT 'manual'");
+      db.run('ALTER TABLE ai_memories ADD COLUMN confidence REAL DEFAULT 1.0');
+      db.run('ALTER TABLE ai_memories ADD COLUMN decay_score REAL DEFAULT 1.0');
+      db.run('ALTER TABLE ai_memories ADD COLUMN last_reinforced DATETIME DEFAULT CURRENT_TIMESTAMP');
+      db.run('ALTER TABLE ai_memories ADD COLUMN source_channel TEXT');
+      db.run('ALTER TABLE ai_memories ADD COLUMN source_messages TEXT');
+      console.log('🔄 Migration: added auto-learning columns to ai_memories');
     }
   } catch {}
 

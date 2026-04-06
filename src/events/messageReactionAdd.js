@@ -24,5 +24,11 @@ module.exports = {
     } catch (error) {
       console.error('❌ Starboard reaction error:', error.message);
     }
+
+    // ── Memory Scoring ──────────────────────────────────────────────────
+    try {
+      const memoryLearner = require('../systems/memoryLearner');
+      memoryLearner.trackReaction(reaction);
+    } catch {}
   },
 };

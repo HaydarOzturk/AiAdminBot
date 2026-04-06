@@ -43,6 +43,7 @@ function cleanupTestDatabase() {
     'knowledge_base', 'message_log', 'channel_summaries',
     'role_menus', 'role_menu_items', 'role_menu_messages',
     'bot_messages', 'channel_ai_config', 'channel_mappings',
+    'message_scores', 'memory_config',
   ];
   for (const table of tables) {
     try { db.run(`DELETE FROM ${table}`, []); } catch {}

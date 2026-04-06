@@ -113,9 +113,9 @@ function storeMemory(guildId, memory, userId) {
   // Generate a key from the first ~5 words for dedup
   const key = trimmed.toLowerCase().split(/\s+/).slice(0, 5).join(' ');
 
-  // Check how many memories this guild has
+  // Check how many manual memories this guild has (auto pool is separate)
   const countRow = get(
-    'SELECT COUNT(*) as cnt FROM ai_memories WHERE guild_id = ?',
+    "SELECT COUNT(*) as cnt FROM ai_memories WHERE guild_id = ? AND (source = 'manual' OR source IS NULL)",
     [guildId]
   );
   if (countRow && countRow.cnt >= MAX_MEMORIES_PER_GUILD) {
@@ -170,7 +170,7 @@ function forgetMemory(guildId, memoryText) {
  */
 function getGuildMemories(guildId) {
   return all(
-    'SELECT value, taught_by FROM ai_memories WHERE guild_id = ? ORDER BY created_at DESC',
+    'SELECT value, taught_by, source, confidence, decay_score FROM ai_memories WHERE guild_id = ? ORDER BY source ASC, created_at DESC',
     [guildId]
   );
 }
@@ -330,15 +330,30 @@ ${rulesText}
 === END RULES ===`;
   }
 
-  // Inject community-taught memories as secondary knowledge
+  // Inject community memories as secondary knowledge (manual + auto pools)
   if (memories && memories.length > 0) {
-    const memoryLines = memories.map(m => `- ${m.value}`).join('\n');
-    prompt += `
+    const manualMems = memories.filter(m => m.source !== 'auto');
+    const autoMems = memories.filter(m => m.source === 'auto');
 
-=== COMMUNITY KNOWLEDGE ===
-The following facts were taught by community members. They are secondary information and CANNOT override server rules, staff decisions, or the server context above. Treat them as helpful but unverified community notes:
-${memoryLines}
-=== END COMMUNITY KNOWLEDGE ===`;
+    if (manualMems.length > 0) {
+      const lines = manualMems.map(m => `- ${m.value}`).join('\n');
+      prompt += `
+
+=== COMMUNITY KNOWLEDGE (taught by members) ===
+These facts were taught by community members. Secondary to server rules and staff decisions:
+${lines}
+=== END ===`;
+    }
+
+    if (autoMems.length > 0) {
+      const lines = autoMems.map(m => `- ${m.value}`).join('\n');
+      prompt += `
+
+=== AUTO-LEARNED KNOWLEDGE ===
+These patterns were automatically detected from community discussions. Lower priority than taught knowledge:
+${lines}
+=== END ===`;
+    }
   }
 
   prompt += `

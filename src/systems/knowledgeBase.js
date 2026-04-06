@@ -29,8 +29,8 @@ function logMessage(message) {
 
   try {
     db.run(
-      'INSERT INTO message_log (guild_id, channel_id, user_id, user_name, content) VALUES (?, ?, ?, ?, ?)',
-      [message.guild.id, message.channel.id, message.author.id, message.author.username, content]
+      'INSERT INTO message_log (guild_id, channel_id, user_id, user_name, content, discord_message_id) VALUES (?, ?, ?, ?, ?, ?)',
+      [message.guild.id, message.channel.id, message.author.id, message.author.username, content, message.id]
     );
   } catch {
     // Silent fail — logging should never block message flow
@@ -361,7 +361,17 @@ let _pruneInterval = null;
 function startKnowledgeMaintenance(client) {
   if (_pruneInterval) return;
   // Run every 6 hours
-  _pruneInterval = setInterval(() => pruneAndSummarize(client), 6 * 60 * 60 * 1000);
+  _pruneInterval = setInterval(async () => {
+    await pruneAndSummarize(client);
+
+    // Auto memory learning cycle
+    try {
+      const memoryLearner = require('./memoryLearner');
+      await memoryLearner.runExtractionCycle(client);
+    } catch (err) {
+      console.error('❌ Memory learner error:', err.message);
+    }
+  }, 6 * 60 * 60 * 1000);
   console.log('✅ Knowledge base maintenance started (prune every 6h)');
 }
 
