@@ -120,8 +120,12 @@ LOCALE=en
 - [ ] `/blocklist remove word:"badword"` — removes word
 - [ ] Send blocked word in chat → message deleted
 
-### AutoMod
-- [ ] `/automod enable` — activates all features
+### Moderation System (AutoMod + AI — Unified)
+
+AutoMod handles rule-based checks (fast, no API calls). AI Moderation handles subtle toxicity detection. Both share the same infraction table for unified progressive punishment: warn → 5min timeout → 30min → 24h.
+
+**Rule-Based (AutoMod)**
+- [ ] `/automod enable` — activates all rule-based features
 - [ ] `/automod status` — shows all settings
 - [ ] `/automod toggle feature:anti_spam`
 - [ ] `/automod toggle feature:anti_caps`
@@ -134,8 +138,24 @@ LOCALE=en
 - [ ] Send ALL CAPS MESSAGE → triggered (anti_caps)
 - [ ] Send discord.gg/test → deleted (anti_invites)
 - [ ] Tag 5+ people → triggered (anti_mention_spam)
-- [ ] Repeat violations → warn → 5min → 30min → 24h (progressive)
 - [ ] `/automod disable` — deactivates all
+
+**AI-Powered (AI Moderation)**
+- [ ] Send toxic message → auto-detected by AI
+- [ ] Keyword pre-filter catches obvious slurs without AI
+- [ ] AI analyzes subtle toxicity with server rules context
+- [ ] High confidence (0.95+) → action taken
+- [ ] Logged to punishment-log channel
+- [ ] Staff members exempt
+- [ ] Use `DEBUG_OWNER_ID` to test on yourself
+
+**Unified Progressive Punishment**
+- [ ] 1st offense (either source) → warn + delete message
+- [ ] 2nd offense → 5 min timeout
+- [ ] 3rd offense → 30 min timeout
+- [ ] 4th+ offense → 24h timeout
+- [ ] AutoMod spam 2x + AI toxicity 1x → 3rd-offense (30min)
+- [ ] Infractions from both systems count toward escalation
 
 ### Leveling & XP
 - [ ] Send messages → XP accumulates (check with /rank)
@@ -182,14 +202,8 @@ LOCALE=en
 - [ ] `/ai-memory clear` — removes all memories
 - [ ] AI chat references stored memories in responses
 
-### AI Moderation (unified with AutoMod)
-- [ ] Send toxic message → auto-detected and handled
-- [ ] High confidence (0.95+) → progressive timeout (shared with AutoMod)
-- [ ] Logged to punishment-log channel
-- [ ] Staff members exempt
-- [ ] Use `DEBUG_OWNER_ID` to test on yourself
-- [ ] Trigger AutoMod spam 2x, then AI toxicity 1x → 3rd-offense punishment (30min)
-- [ ] Infractions from both AutoMod and AI count toward progressive escalation
+### AI Moderation
+See **Moderation System** section above — AI moderation is unified with AutoMod.
 
 ### AI Admin Agent
 - [ ] `/ai-agent enable channel:#admin` — dedicated channel
