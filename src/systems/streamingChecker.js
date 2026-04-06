@@ -389,35 +389,42 @@ async function _youTubeScrapeLive(handle) {
     const html = await fetchText(`https://www.youtube.com/@${encodeURIComponent(handle)}/live`, 10000);
     if (!html) return null;
 
-    // Verify this page actually belongs to the expected channel.
-    // YouTube /@handle/live can show content from other channels in recommendations.
-    // Check that the page's channel identifier matches our handle.
-    const pageChannelHandle = html.match(/"channelHandle"\s*:\s*"@?([\w.-]+)"/i)
-                           || html.match(/"vanityChannelUrl"\s*:\s*"[^"]*\/@?([\w.-]+)"/i)
-                           || html.match(/<meta\s+itemprop="channelId"[^>]*content="(UC[\w-]+)"/i);
+    // Detect YouTube consent/cookie wall pages — return null to fall through to API
+    if (html.includes('consent.youtube.com') || html.includes('consent.google.com')
+        || (html.includes('CONSENT') && html.includes('<form') && html.length < 20000)) {
+      console.warn(`⚠️ YouTube scrape: consent page detected for @${handle} — falling back to API`);
+      return null;
+    }
 
-    // Extract the page's external channel ID for ownership verification
+    // Extract the page's channel handle for ownership verification
+    const pageChannelHandle = html.match(/"channelHandle"\s*:\s*"@?([\w.-]+)"/i)
+                           || html.match(/"vanityChannelUrl"\s*:\s*"[^"]*\/@?([\w.-]+)"/i);
+
+    // Extract the page's channel ID (useful for caching + API fallback)
     const pageChannelId = html.match(/"externalChannelId"\s*:\s*"(UC[\w-]+)"/i)
                        || html.match(/"channelId"\s*:\s*"(UC[\w-]+)"/i);
 
-    // YouTube embeds isLiveBroadcast in JSON-LD or page data
-    const liveMatch = html.match(/"isLiveBroadcast"\s*:\s*true/i)
-                   || html.match(/"isLive"\s*:\s*true/i);
-    if (!liveMatch) {
-      return { isLive: false, title: '', videoId: '' };
+    // Cache channel ID if found
+    if (pageChannelId?.[1]) {
+      _ytChannelIdCache.set(handle, pageChannelId[1]);
     }
 
-    // Verify the live content belongs to THIS channel, not a recommendation.
-    // The page's ownerChannelName or author should match our handle.
-    const ownerMatch = html.match(/"ownerChannelName"\s*:\s*"([^"]+)"/i)
-                    || html.match(/"author"\s*:\s*"([^"]+)"/i);
+    // YouTube embeds live indicators in various formats across page versions
+    const liveMatch = html.match(/"isLiveBroadcast"\s*:\s*true/i)
+                   || html.match(/"isLive"\s*:\s*true/i)
+                   || html.match(/"style"\s*:\s*"LIVE"/i)
+                   || html.match(/"isLiveContent"\s*:\s*true/i)
+                   || html.match(/"liveBadge"/i);
+    if (!liveMatch) {
+      return { isLive: false, title: '', videoId: '', viewers: 0 };
+    }
 
-    // If we can identify the page channel and it doesn't match, this is someone else's stream
-    if (pageChannelHandle && pageChannelHandle[1]) {
+    // Verify the live content belongs to THIS channel, not a recommendation
+    if (pageChannelHandle?.[1]) {
       const pageHandle = pageChannelHandle[1].toLowerCase();
       if (pageHandle !== handle.toLowerCase()) {
         console.log(`⚠️ YouTube scrape: page channel @${pageHandle} ≠ expected @${handle} — not our stream`);
-        return { isLive: false, title: '', videoId: '' };
+        return { isLive: false, title: '', videoId: '', viewers: 0 };
       }
     }
 
@@ -429,13 +436,13 @@ async function _youTubeScrapeLive(handle) {
       videoId = canonicalMatch[1];
     } else {
       const ogMatch = html.match(/<meta\s+property="og:url"\s+content="[^"]*\/watch\?v=([\w-]{11})"/i);
-      if (ogMatch) videoId = ogMatch[1];
-    }
-
-    // If we got a videoId, verify it belongs to this channel using the page's channel data
-    if (videoId && pageChannelId?.[1]) {
-      // Store the channel ID for later API verification if needed
-      _ytChannelIdCache.set(handle, pageChannelId[1]);
+      if (ogMatch) {
+        videoId = ogMatch[1];
+      } else {
+        // Player config videoId (the one loaded in the embedded player)
+        const playerMatch = html.match(/"videoId"\s*:\s*"([\w-]{11})"/);
+        if (playerMatch) videoId = playerMatch[1];
+      }
     }
 
     // Extract title
@@ -443,8 +450,17 @@ async function _youTubeScrapeLive(handle) {
     const titleMatch = html.match(/"title"\s*:\s*"([^"]{1,200})"/);
     if (titleMatch) title = titleMatch[1];
 
-    console.log(`✅ YouTube scrape verified: @${handle} is LIVE (videoId: ${videoId || 'unknown'})`);
-    return { isLive: true, title, videoId };
+    // Extract viewer count directly from HTML (saves an API call)
+    let viewers = 0;
+    const viewerMatch = html.match(/"viewCount"\s*:\s*"(\d+)"/i)
+                     || html.match(/"concurrentViewers"\s*:\s*"(\d+)"/i)
+                     || html.match(/"shortViewCount"\s*:\s*\{[^}]*"simpleText"\s*:\s*"([\d,.]+)/i);
+    if (viewerMatch) {
+      viewers = parseInt(viewerMatch[1].replace(/[,.]/g, ''), 10) || 0;
+    }
+
+    console.log(`✅ YouTube scrape verified: @${handle} is LIVE (videoId: ${videoId || 'unknown'}, viewers: ${viewers})`);
+    return { isLive: true, title, videoId, viewers };
   } catch {
     return null;
   }
@@ -490,10 +506,11 @@ async function checkYouTube(handleOrUrl, platform = 'youtube') {
       // point to wrong videos from recommendations
       const liveUrl = `https://youtube.com/@${handle}/live`;
 
-      // Fetch viewer count if live and we have a videoId + API key
-      const viewers = scrapeResult.isLive && scrapeResult.videoId
-        ? await _getYouTubeViewerCount(scrapeResult.videoId, apiKey)
-        : 0;
+      // Use scraped viewer count first; only call API if scrape didn't get it
+      let viewers = scrapeResult.viewers || 0;
+      if (scrapeResult.isLive && !viewers && scrapeResult.videoId && apiKey) {
+        viewers = await _getYouTubeViewerCount(scrapeResult.videoId, apiKey);
+      }
 
       console.log(`✅ YouTube scrape for "@${handle}" → isLive: ${scrapeResult.isLive}${viewers ? `, viewers: ${viewers}` : ''}`);
       return {

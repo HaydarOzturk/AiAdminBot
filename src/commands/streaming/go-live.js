@@ -9,12 +9,12 @@
  *  5. The announcement always shows the stream owner's name/avatar, not whoever ran the command
  */
 
-const { SlashCommandBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
 const { hasPermission } = require('../../utils/permissions');
 const { t } = require('../../utils/locale');
 const { all, run } = require('../../utils/database');
-const { checkAllPlatforms, PLATFORMS } = require('../../systems/streamingChecker');
-const { findAnnouncementChannel } = require('../../systems/streamAnnouncer');
+const { checkAllPlatforms } = require('../../systems/streamingChecker');
+const { findAnnouncementChannel, buildLiveMessage } = require('../../systems/streamAnnouncer');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -111,9 +111,8 @@ module.exports = {
     }
 
     const ownerName = ownerMember.displayName || ownerMember.user.username;
-    const ownerAvatar = ownerMember.user.displayAvatarURL({ dynamic: true, size: 256 });
 
-    // ── Build the embed ──────────────────────────────────────────────────
+    // ── Build the embed using shared builder (respects saved draft templates) ──
 
     // Find the "main" live stream for the title (prefer YouTube > Twitch > Kick)
     const mainLive = liveResults.find(r => r.platform === 'youtube')
@@ -121,54 +120,17 @@ module.exports = {
       || liveResults.find(r => r.platform === 'kick')
       || liveResults[0];
 
-    const streamTitle = mainLive?.title || '';
+    // Build a streamActivity-like object for buildLiveMessage
+    const streamActivity = {
+      url: mainLive?.liveUrl || mainLive?.url || '',
+      details: mainLive?.title || '',
+      state: '',
+      name: mainLive?.label || 'Live Stream',
+      assets: null,
+    };
 
-    const embed = new EmbedBuilder()
-      .setColor(0xFF0000)
-      .setAuthor({ name: `${ownerName} ${t('streaming.isLiveNow', {}, g)}`, iconURL: ownerAvatar })
-      .setThumbnail(ownerAvatar)
-      .setTimestamp();
-
-    // Stream title as description if available
-    if (streamTitle) {
-      embed.setTitle(`📺 ${streamTitle}`);
-    }
-
-    embed.setDescription(t('streaming.goLiveDesc', { user: ownerName }, g));
-
-    // Add live platforms with status
-    const statusLines = results.map(r => {
-      if (r.isLive) {
-        const viewerStr = r.viewers > 0 ? ` • 👥 ${r.viewers}` : '';
-        return `${r.emoji} **${r.label}** — 🔴 LIVE${viewerStr}`;
-      } else if (PLATFORMS[r.platform]?.canDetectLive) {
-        return `${r.emoji} **${r.label}** — ⚫ ${t('streaming.offline', {}, g)}`;
-      } else {
-        return `${r.emoji} **${r.label}**`;
-      }
-    });
-
-    embed.addFields({
-      name: t('streaming.platformStatus', {}, g),
-      value: statusLines.join('\n'),
-      inline: false,
-    });
-
-    // ── Build button rows (ALL platforms get a link button) ──────────────
-
-    const allButtons = results.map(r =>
-      new ButtonBuilder()
-        .setLabel(r.isLive ? `🔴 ${r.label}` : r.label)
-        .setStyle(ButtonStyle.Link)
-        .setURL(r.isLive ? r.liveUrl : r.url)
-        .setEmoji(r.emoji)
-    );
-
-    // Discord allows max 5 buttons per row
-    const components = [];
-    for (let i = 0; i < allButtons.length; i += 5) {
-      components.push(new ActionRowBuilder().addComponents(...allButtons.slice(i, i + 5)));
-    }
+    const messagePayload = await buildLiveMessage(ownerMember, streamActivity, guild.id);
+    const { embeds, components } = messagePayload;
 
     // Check if there's already an active announcement to update
     const { activeAnnouncements } = require('../../systems/streamAnnouncer');
@@ -183,7 +145,7 @@ module.exports = {
           if (existingMsg) {
             await existingMsg.edit({
               content: `@everyone\n🔴 **${ownerName}** ${t('streaming.isLiveNow', {}, g)}`,
-              embeds: [embed],
+              embeds,
               components,
             });
             await interaction.editReply({
@@ -200,7 +162,7 @@ module.exports = {
     // Send new announcement
     const sentMsg = await announcementChannel.send({
       content: `@everyone\n🔴 **${ownerName}** ${t('streaming.isLiveNow', {}, g)}`,
-      embeds: [embed],
+      embeds,
       components,
     });
 
