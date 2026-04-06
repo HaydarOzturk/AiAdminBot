@@ -53,7 +53,7 @@ module.exports = {
 
     if (sub === 'list') {
       const memories = all(
-        'SELECT id, value, taught_by, created_at FROM ai_memories WHERE guild_id = ? ORDER BY created_at DESC',
+        'SELECT id, value, taught_by, created_at, source, confidence, decay_score FROM ai_memories WHERE guild_id = ? ORDER BY source ASC, created_at DESC',
         [guildId]
       );
 
@@ -64,17 +64,36 @@ module.exports = {
         });
       }
 
-      const list = memories.map((m, i) => {
-        const member = interaction.guild.members.cache.get(m.taught_by);
-        const name = member?.displayName || 'Unknown';
-        return `**${m.id}.** ${m.value}\n   _— ${name}_`;
-      }).join('\n\n');
+      const manualMems = memories.filter(m => m.source !== 'auto');
+      const autoMems = memories.filter(m => m.source === 'auto');
+
+      let list = '';
+
+      if (manualMems.length > 0) {
+        list += `**Manual Memories** (${manualMems.length}/50)\n`;
+        list += manualMems.map(m => {
+          const member = interaction.guild.members.cache.get(m.taught_by);
+          const name = member?.displayName || 'Unknown';
+          return `**${m.id}.** ${m.value}\n   _— ${name}_`;
+        }).join('\n\n');
+      }
+
+      if (autoMems.length > 0) {
+        if (list) list += '\n\n';
+        list += `**Auto-Learned** (${autoMems.length}/50)\n`;
+        list += autoMems.map(m => {
+          const ds = m.decay_score ?? 1;
+          const health = ds >= 0.7 ? '🟢 Strong' : ds >= 0.4 ? '🟡 Fading' : '🔴 Weak';
+          const conf = m.confidence ? ` (${Math.round(m.confidence * 100)}%)` : '';
+          return `**${m.id}.** [${health}${conf}] ${m.value}`;
+        }).join('\n\n');
+      }
 
       const embed = createEmbed({
         title: t('aiMemory.listTitle', {}, g),
         description: list.slice(0, 4000),
         color: 'info',
-        footer: t('aiMemory.listFooter', { count: memories.length }, g),
+        footer: `${manualMems.length} manual + ${autoMems.length} auto-learned`,
         timestamp: true,
       });
 
@@ -137,7 +156,7 @@ module.exports = {
       const key = text.toLowerCase().split(/\s+/).slice(0, 5).join(' ');
 
       const countRow = get(
-        'SELECT COUNT(*) as cnt FROM ai_memories WHERE guild_id = ?',
+        "SELECT COUNT(*) as cnt FROM ai_memories WHERE guild_id = ? AND (source = 'manual' OR source IS NULL)",
         [guildId]
       );
       if (countRow && countRow.cnt >= 50) {

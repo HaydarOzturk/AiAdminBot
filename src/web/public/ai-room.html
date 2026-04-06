@@ -48,6 +48,30 @@
     .toggle-slider { position: absolute; inset: 0; background: #d6d3d1; border-radius: 12px; cursor: pointer; transition: background 0.2s; }
     .toggle-slider::before { content: ''; position: absolute; width: 18px; height: 18px; border-radius: 50%; background: white; bottom: 3px; left: 3px; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
     .toggle input:checked + .toggle-slider { background: var(--accent-primary); }
+
+    /* Culture Library */
+    .culture-sub { border-radius: 8px !important; }
+    .culture-sub.active { background: var(--accent-primary) !important; color: white !important; }
+    .culture-panel { animation: fadeIn 0.2s; }
+    .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+    .config-group { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; }
+    .config-group h4 { margin: 0 0 14px 0; font-size: 13px; color: var(--accent-primary); text-transform: uppercase; letter-spacing: 0.5px; }
+    .config-row-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border-color); }
+    .config-row-item:last-child { border-bottom: none; }
+    .config-row-item label { font-size: 13px; color: var(--text-primary); }
+    .config-row-item input[type="number"] { width: 80px; padding: 6px 8px; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-primary); font-size: 13px; }
+    .memory-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 10px; margin-bottom: 6px; background: var(--bg-card); }
+    .memory-row .memory-text { flex: 1; font-size: 13px; color: var(--text-primary); }
+    .memory-row .memory-meta { font-size: 11px; color: var(--text-muted); display: flex; gap: 12px; align-items: center; }
+    .health-badge { font-size: 10px; padding: 2px 8px; border-radius: 6px; font-weight: 600; }
+    .health-strong { background: rgba(34,197,94,0.15); color: #22c55e; }
+    .health-fading { background: rgba(234,179,8,0.15); color: #eab308; }
+    .health-weak { background: rgba(239,68,68,0.15); color: #ef4444; }
+    .score-row { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border: 1px solid var(--border-color); border-radius: 10px; margin-bottom: 6px; background: var(--bg-card); font-size: 13px; }
+    .score-value { font-weight: 700; color: var(--accent-primary); min-width: 50px; }
+    .score-content { flex: 1; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .score-meta { font-size: 11px; color: var(--text-muted); display: flex; gap: 8px; }
+    @media (max-width: 768px) { .config-grid { grid-template-columns: 1fr; } }
     .toggle input:checked + .toggle-slider::before { transform: translateX(18px); }
 
     /* Channel config panel */
@@ -111,6 +135,7 @@
           <button class="tab active" onclick="switchTab('overview')">Overview</button>
           <button class="tab" onclick="switchTab('channel-ai')">Channel AI</button>
           <button class="tab" onclick="switchTab('intents')">Intent Library</button>
+          <button class="tab" onclick="switchTab('culture')">Culture Library</button>
         </div>
 
         <!-- Tab: Overview -->
@@ -132,6 +157,39 @@
         <div id="tab-intents" class="tab-content">
           <p style="color:var(--text-muted);font-size:13px;margin-bottom:16px;">Available AI intents. Each intent defines how the AI behaves in a channel — what triggers it, how it responds, and what tone it uses.</p>
           <div class="intent-grid" id="intent-grid"></div>
+        </div>
+
+        <!-- Tab: Culture Library -->
+        <div id="tab-culture" class="tab-content">
+          <p style="color:var(--text-muted);font-size:13px;margin-bottom:16px;">The AI automatically learns community culture from high-engagement messages. Configure scoring, view learned memories, and monitor extraction activity.</p>
+
+          <!-- Sub-tabs -->
+          <div style="display:flex;gap:8px;margin-bottom:20px;">
+            <button class="btn btn-secondary btn-small culture-sub active" onclick="switchCultureSub('config')">Configuration</button>
+            <button class="btn btn-secondary btn-small culture-sub" onclick="switchCultureSub('memories')">Auto Memories</button>
+            <button class="btn btn-secondary btn-small culture-sub" onclick="switchCultureSub('activity')">Scoring Activity</button>
+          </div>
+
+          <!-- Sub: Configuration -->
+          <div id="culture-config" class="culture-panel">
+            <div id="culture-config-form">
+              <div style="padding:20px;color:var(--text-muted);">Loading configuration...</div>
+            </div>
+          </div>
+
+          <!-- Sub: Auto Memories -->
+          <div id="culture-memories" class="culture-panel" style="display:none;">
+            <div id="auto-memories-list">
+              <div style="padding:20px;color:var(--text-muted);">Loading memories...</div>
+            </div>
+          </div>
+
+          <!-- Sub: Scoring Activity -->
+          <div id="culture-activity" class="culture-panel" style="display:none;">
+            <div id="scoring-activity-list">
+              <div style="padding:20px;color:var(--text-muted);">Loading activity...</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -346,13 +404,234 @@
       });
     }
 
+    // ── Culture Library ────────────────────────────────────────────────────
+
+    let cultureConfig = null;
+
+    function switchCultureSub(name) {
+      document.querySelectorAll('.culture-sub').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.culture-panel').forEach(p => p.style.display = 'none');
+      document.getElementById('culture-' + name).style.display = 'block';
+      event.target.classList.add('active');
+
+      if (name === 'memories') loadAutoMemories();
+      if (name === 'activity') loadScoringActivity();
+    }
+
+    async function loadCultureConfig() {
+      const guildId = getCurrentGuild();
+      if (!guildId) return;
+      try {
+        cultureConfig = await api(`/api/settings/${guildId}/memory-config`);
+        renderCultureConfig();
+      } catch (err) {
+        console.error('Failed to load culture config:', err);
+      }
+    }
+
+    function renderCultureConfig() {
+      const c = cultureConfig;
+      const form = document.getElementById('culture-config-form');
+      form.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+          <div>
+            <h3 style="margin:0;font-size:16px;color:var(--text-primary);">Auto Memory Learning</h3>
+            <p style="margin:4px 0 0;font-size:12px;color:var(--text-muted);">AI extracts community knowledge from high-engagement messages</p>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="cfg-enabled" ${c.extraction_enabled ? 'checked' : ''}>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="config-grid">
+          <div class="config-group">
+            <h4>Scoring Weights</h4>
+            <div class="config-row-item">
+              <label>Reaction Weight</label>
+              <input type="number" id="cfg-reaction" value="${c.reaction_weight}" step="0.5" min="0">
+            </div>
+            <div class="config-row-item">
+              <label>Reply Weight</label>
+              <input type="number" id="cfg-reply" value="${c.reply_weight}" step="0.5" min="0">
+            </div>
+            <div class="config-row-item">
+              <label>Bot Mention Weight</label>
+              <input type="number" id="cfg-botmention" value="${c.bot_mention_weight}" step="1" min="0">
+            </div>
+          </div>
+
+          <div class="config-group">
+            <h4>Thresholds</h4>
+            <div class="config-row-item">
+              <label>Min Score to Consider</label>
+              <input type="number" id="cfg-candidacy" value="${c.candidacy_threshold}" step="1" min="1">
+            </div>
+            <div class="config-row-item">
+              <label>AI Confidence Threshold</label>
+              <input type="number" id="cfg-confidence" value="${c.confidence_threshold}" step="0.05" min="0.5" max="1">
+            </div>
+            <div class="config-row-item">
+              <label>Min User Level</label>
+              <input type="number" id="cfg-minlevel" value="${c.min_user_level}" min="0" max="50">
+            </div>
+          </div>
+
+          <div class="config-group">
+            <h4>Decay & Lifecycle</h4>
+            <div class="config-row-item">
+              <label>Decay Rate (per 6h)</label>
+              <input type="number" id="cfg-decay" value="${c.decay_rate}" step="0.001" min="0.9" max="1">
+            </div>
+            <div class="config-row-item">
+              <label>Prune Below</label>
+              <input type="number" id="cfg-prune" value="${c.prune_threshold}" step="0.05" min="0.05" max="0.5">
+            </div>
+            <div class="config-row-item">
+              <label>Max Auto Memories</label>
+              <input type="number" id="cfg-maxmem" value="${c.max_auto_memories}" min="10" max="200">
+            </div>
+          </div>
+
+          <div class="config-group">
+            <h4>Extraction</h4>
+            <div class="config-row-item">
+              <label>Interval (hours)</label>
+              <input type="number" id="cfg-interval" value="${c.extraction_interval}" min="1" max="24">
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="saveCultureConfig()">Save Configuration</button>
+      `;
+    }
+
+    async function saveCultureConfig() {
+      const guildId = getCurrentGuild();
+      try {
+        await api(`/api/settings/${guildId}/memory-config`, {
+          method: 'POST',
+          body: JSON.stringify({
+            extraction_enabled: document.getElementById('cfg-enabled').checked,
+            reaction_weight: parseFloat(document.getElementById('cfg-reaction').value),
+            reply_weight: parseFloat(document.getElementById('cfg-reply').value),
+            bot_mention_weight: parseFloat(document.getElementById('cfg-botmention').value),
+            candidacy_threshold: parseFloat(document.getElementById('cfg-candidacy').value),
+            confidence_threshold: parseFloat(document.getElementById('cfg-confidence').value),
+            min_user_level: parseInt(document.getElementById('cfg-minlevel').value),
+            decay_rate: parseFloat(document.getElementById('cfg-decay').value),
+            prune_threshold: parseFloat(document.getElementById('cfg-prune').value),
+            max_auto_memories: parseInt(document.getElementById('cfg-maxmem').value),
+            extraction_interval: parseInt(document.getElementById('cfg-interval').value),
+            channel_weights: cultureConfig.channel_weights || '{}',
+          }),
+        });
+        showToast('Culture config saved', 'success');
+      } catch (err) {
+        showToast('Failed: ' + err.message, 'error');
+      }
+    }
+
+    async function loadAutoMemories() {
+      const guildId = getCurrentGuild();
+      if (!guildId) return;
+      try {
+        const memories = await api(`/api/settings/${guildId}/auto-memories`);
+        const container = document.getElementById('auto-memories-list');
+
+        if (!memories || memories.length === 0) {
+          container.innerHTML = '<div style="padding:20px;color:var(--text-muted);text-align:center;">No auto-learned memories yet. Enable extraction and let the community chat!</div>';
+          return;
+        }
+
+        container.innerHTML = `<p style="color:var(--text-muted);font-size:12px;margin-bottom:12px;">${memories.length} auto-learned memories</p>`;
+        memories.forEach(m => {
+          const ds = m.decay_score ?? 1;
+          const healthClass = ds >= 0.7 ? 'health-strong' : ds >= 0.4 ? 'health-fading' : 'health-weak';
+          const healthLabel = ds >= 0.7 ? 'Strong' : ds >= 0.4 ? 'Fading' : 'Weak';
+          const conf = m.confidence ? Math.round(m.confidence * 100) + '%' : '';
+          const date = m.created_at ? new Date(m.created_at).toLocaleDateString() : '';
+
+          const row = document.createElement('div');
+          row.className = 'memory-row';
+          row.innerHTML = `
+            <div class="memory-text">${escapeHtml(m.value)}</div>
+            <div class="memory-meta">
+              <span class="health-badge ${healthClass}">${healthLabel}</span>
+              ${conf ? `<span>${conf}</span>` : ''}
+              <span>${date}</span>
+              <button class="btn btn-secondary btn-small" style="font-size:10px;" onclick="promoteMemory(${m.id})">Promote</button>
+              <button class="btn btn-secondary btn-small" style="font-size:10px;color:#ef4444;" onclick="deleteAutoMemory(${m.id})">Delete</button>
+            </div>
+          `;
+          container.appendChild(row);
+        });
+      } catch (err) {
+        console.error('Failed to load memories:', err);
+      }
+    }
+
+    async function deleteAutoMemory(id) {
+      const guildId = getCurrentGuild();
+      try {
+        await api(`/api/settings/${guildId}/auto-memories/${id}`, { method: 'DELETE' });
+        showToast('Memory deleted', 'success');
+        loadAutoMemories();
+      } catch (err) { showToast('Failed: ' + err.message, 'error'); }
+    }
+
+    async function promoteMemory(id) {
+      const guildId = getCurrentGuild();
+      try {
+        await api(`/api/settings/${guildId}/auto-memories/${id}/promote`, { method: 'POST' });
+        showToast('Memory promoted to manual', 'success');
+        loadAutoMemories();
+      } catch (err) { showToast('Failed: ' + err.message, 'error'); }
+    }
+
+    async function loadScoringActivity() {
+      const guildId = getCurrentGuild();
+      if (!guildId) return;
+      try {
+        const scores = await api(`/api/settings/${guildId}/memory-scores`);
+        const container = document.getElementById('scoring-activity-list');
+
+        if (!scores || scores.length === 0) {
+          container.innerHTML = '<div style="padding:20px;color:var(--text-muted);text-align:center;">No scored messages yet. Reactions and replies on messages will appear here.</div>';
+          return;
+        }
+
+        container.innerHTML = `<p style="color:var(--text-muted);font-size:12px;margin-bottom:12px;">Top ${scores.length} scored messages</p>`;
+        scores.forEach(s => {
+          const row = document.createElement('div');
+          row.className = 'score-row';
+          row.innerHTML = `
+            <div class="score-value">${(s.computed_score || 0).toFixed(1)}</div>
+            <div class="score-content">${escapeHtml((s.content || '').slice(0, 100))}</div>
+            <div class="score-meta">
+              <span>by ${escapeHtml(s.user_name || '?')}</span>
+              <span>reactions: ${s.reaction_count || 0}</span>
+              <span>replies: ${s.reply_count || 0}</span>
+              ${s.bot_mentioned ? '<span>@bot</span>' : ''}
+            </div>
+          `;
+          container.appendChild(row);
+        });
+      } catch (err) {
+        console.error('Failed to load scoring activity:', err);
+      }
+    }
+
     // ── Logout + Init ────────────────────────────────────────────────────
     document.getElementById('logout-btn').addEventListener('click', async () => {
       try { await api('/api/auth/logout', { method: 'POST' }); } catch {}
       window.location.href = '/login.html';
     });
 
-    document.addEventListener('DOMContentLoaded', () => { loadAiData(); });
+    document.addEventListener('DOMContentLoaded', () => {
+      loadAiData();
+      loadCultureConfig();
+    });
   </script>
 </body>
 </html>

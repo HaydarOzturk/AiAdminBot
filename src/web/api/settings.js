@@ -524,4 +524,140 @@ router.delete('/channels/assign', (req, res) => {
   }
 });
 
+// ── Culture Library (Memory Learning) ─────────────────────────────────────
+
+const db = require('../../utils/database');
+
+// GET /api/settings/:guildId/memory-config
+router.get('/:guildId/memory-config', (req, res) => {
+  try {
+    const { guildId } = req.params;
+    const row = db.get('SELECT * FROM memory_config WHERE guild_id = ?', [guildId]);
+
+    const config = row || {
+      guild_id: guildId,
+      reaction_weight: 1.0,
+      reply_weight: 2.0,
+      bot_mention_weight: 10.0,
+      candidacy_threshold: 5.0,
+      confidence_threshold: 0.75,
+      min_user_level: 1,
+      decay_rate: 0.993,
+      prune_threshold: 0.2,
+      max_auto_memories: 50,
+      extraction_enabled: 0,
+      extraction_interval: 6,
+      channel_weights: '{}',
+    };
+
+    res.json(config);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/settings/:guildId/memory-config
+router.post('/:guildId/memory-config', (req, res) => {
+  try {
+    const { guildId } = req.params;
+    const c = req.body;
+
+    db.run(
+      `INSERT INTO memory_config (guild_id, reaction_weight, reply_weight, bot_mention_weight, candidacy_threshold, confidence_threshold, min_user_level, decay_rate, prune_threshold, max_auto_memories, extraction_enabled, extraction_interval, channel_weights, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+       ON CONFLICT(guild_id) DO UPDATE SET
+         reaction_weight = excluded.reaction_weight,
+         reply_weight = excluded.reply_weight,
+         bot_mention_weight = excluded.bot_mention_weight,
+         candidacy_threshold = excluded.candidacy_threshold,
+         confidence_threshold = excluded.confidence_threshold,
+         min_user_level = excluded.min_user_level,
+         decay_rate = excluded.decay_rate,
+         prune_threshold = excluded.prune_threshold,
+         max_auto_memories = excluded.max_auto_memories,
+         extraction_enabled = excluded.extraction_enabled,
+         extraction_interval = excluded.extraction_interval,
+         channel_weights = excluded.channel_weights,
+         updated_at = CURRENT_TIMESTAMP`,
+      [
+        guildId,
+        c.reaction_weight ?? 1.0,
+        c.reply_weight ?? 2.0,
+        c.bot_mention_weight ?? 10.0,
+        c.candidacy_threshold ?? 5.0,
+        c.confidence_threshold ?? 0.75,
+        c.min_user_level ?? 1,
+        c.decay_rate ?? 0.993,
+        c.prune_threshold ?? 0.2,
+        c.max_auto_memories ?? 50,
+        c.extraction_enabled ? 1 : 0,
+        c.extraction_interval ?? 6,
+        typeof c.channel_weights === 'string' ? c.channel_weights : JSON.stringify(c.channel_weights || {}),
+      ]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/settings/:guildId/auto-memories
+router.get('/:guildId/auto-memories', (req, res) => {
+  try {
+    const { guildId } = req.params;
+    const memories = db.all(
+      "SELECT id, value, confidence, decay_score, source_channel, source_messages, created_at, last_reinforced FROM ai_memories WHERE guild_id = ? AND source = 'auto' ORDER BY created_at DESC",
+      [guildId]
+    );
+    res.json(memories);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/settings/:guildId/auto-memories/:id
+router.delete('/:guildId/auto-memories/:id', (req, res) => {
+  try {
+    const { guildId, id } = req.params;
+    db.run("DELETE FROM ai_memories WHERE id = ? AND guild_id = ? AND source = 'auto'", [id, guildId]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/settings/:guildId/auto-memories/:id/promote — promote auto to manual
+router.post('/:guildId/auto-memories/:id/promote', (req, res) => {
+  try {
+    const { guildId, id } = req.params;
+    db.run(
+      "UPDATE ai_memories SET source = 'manual', decay_score = 1.0, confidence = 1.0 WHERE id = ? AND guild_id = ? AND source = 'auto'",
+      [id, guildId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/settings/:guildId/memory-scores — recent scored messages
+router.get('/:guildId/memory-scores', (req, res) => {
+  try {
+    const { guildId } = req.params;
+    const scores = db.all(
+      `SELECT ms.*, ml.content, ml.user_name, ml.channel_id, ml.created_at as message_date
+       FROM message_scores ms
+       JOIN message_log ml ON ml.id = ms.message_log_id
+       WHERE ms.guild_id = ?
+       ORDER BY ms.computed_score DESC
+       LIMIT 50`,
+      [guildId]
+    );
+    res.json(scores);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
