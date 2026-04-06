@@ -407,6 +407,22 @@ async function _youTubeScrapeLive(handle) {
 /**
  * Check if a YouTube channel is currently live.
  *
+ * Fetch concurrent viewer count for a live YouTube video.
+ * Uses videos.list API (1 quota unit per call).
+ */
+async function _getYouTubeViewerCount(videoId, apiKey) {
+  if (!videoId || !apiKey) return 0;
+  try {
+    const url = `https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id=${videoId}&key=${apiKey}`;
+    const data = await fetchJson(url);
+    const viewers = data?.items?.[0]?.liveStreamingDetails?.concurrentViewers;
+    return viewers ? parseInt(viewers, 10) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+/**
  * Strategy (quota-friendly):
  *  1. Free page scrape of /@handle/live (0 API units)
  *  2. Fallback: search.list API (100 units) — only if scrape fails
@@ -427,11 +443,16 @@ async function checkYouTube(handleOrUrl, platform = 'youtube') {
         ? `https://youtube.com/watch?v=${scrapeResult.videoId}`
         : channelUrl;
 
-      console.log(`✅ YouTube scrape for "@${handle}" → isLive: ${scrapeResult.isLive}`);
+      // Fetch viewer count if live and we have a videoId + API key
+      const viewers = scrapeResult.isLive && scrapeResult.videoId
+        ? await _getYouTubeViewerCount(scrapeResult.videoId, apiKey)
+        : 0;
+
+      console.log(`✅ YouTube scrape for "@${handle}" → isLive: ${scrapeResult.isLive}${viewers ? `, viewers: ${viewers}` : ''}`);
       return {
         isLive: scrapeResult.isLive,
         title: scrapeResult.title || '',
-        viewers: 0,
+        viewers,
         url: scrapeResult.isLive ? liveUrl : channelUrl,
       };
     }
@@ -465,12 +486,13 @@ async function checkYouTube(handleOrUrl, platform = 'youtube') {
 
   const live = data.items[0];
   const videoId = live.id?.videoId || '';
+  const viewers = videoId ? await _getYouTubeViewerCount(videoId, apiKey) : 0;
 
-  console.log(`✅ YouTube API for "${channelId}" → isLive: true`);
+  console.log(`✅ YouTube API for "${channelId}" → isLive: true${viewers ? `, viewers: ${viewers}` : ''}`);
   return {
     isLive: true,
     title: live.snippet?.title || '',
-    viewers: 0,
+    viewers,
     url: videoId ? `https://youtube.com/watch?v=${videoId}` : `https://youtube.com/channel/${channelId}`,
   };
 }

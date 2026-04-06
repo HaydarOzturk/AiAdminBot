@@ -33,6 +33,7 @@ const {
   announceStreamStart,
   announceStreamEnd,
   activeAnnouncements,
+  buildLiveMessage,
 } = require('./streamAnnouncer');
 
 // ─── Configuration ──────────────────────────────────────────────────────────
@@ -42,6 +43,8 @@ const CONFIRMATION_DELAY_MS = (parseInt(process.env.STREAM_WATCHER_CONFIRMATION_
 const END_CONFIRMATION_DELAY_MS = (parseInt(process.env.STREAM_WATCHER_END_CONFIRMATION_DELAY_SECONDS) || 60) * 1000;
 // YouTube uses a longer interval to conserve API quota (search.list = 100 units/call, daily limit = 10k)
 const YT_POLL_INTERVAL_MS = (parseInt(process.env.STREAM_WATCHER_YT_POLL_INTERVAL_SECONDS) || 600) * 1000;
+// How often to refresh viewer counts on active announcements
+const UPDATE_INTERVAL_MS = (parseInt(process.env.STREAM_WATCHER_UPDATE_INTERVAL_SECONDS) || 150) * 1000;
 
 // ─── Internal state ─────────────────────────────────────────────────────────
 
@@ -50,6 +53,7 @@ let _client = null;
 
 // Polling
 let _pollInterval = null;
+let _updateInterval = null;
 let _lastYouTubePoll = 0; // timestamp of last YouTube poll
 
 // Confirmation timers: Map<"guildId|userId|platform", timeoutId>
@@ -86,9 +90,13 @@ async function startStreamWatcher(client) {
   // Start polling for all platforms (Twitch, YouTube, Kick)
   _startPolling();
 
+  // Start periodic announcement updates (viewer count refresh)
+  _updateInterval = setInterval(() => _updateActiveAnnouncements(), UPDATE_INTERVAL_MS);
+
   console.log('✅ Stream watcher running');
   console.log(`   Polling interval: ${POLL_INTERVAL_MS / 1000}s (Twitch/Kick), ${YT_POLL_INTERVAL_MS / 1000}s (YouTube)`);
   console.log(`   Confirmation delay: ${CONFIRMATION_DELAY_MS / 1000}s`);
+  console.log(`   Announcement update interval: ${UPDATE_INTERVAL_MS / 1000}s`);
   console.log('   Platforms: Twitch, YouTube, Kick (all via polling)');
 }
 
@@ -101,6 +109,12 @@ function stopStreamWatcher() {
   if (_pollInterval) {
     clearInterval(_pollInterval);
     _pollInterval = null;
+  }
+
+  // Stop announcement updates
+  if (_updateInterval) {
+    clearInterval(_updateInterval);
+    _updateInterval = null;
   }
 
   // Cancel all pending confirmation timers
@@ -271,6 +285,46 @@ async function _checkSinglePlatform(link) {
       return checkKick(handle);
     default:
       return { isLive: false, title: '', viewers: 0, url: link.platform_url };
+  }
+}
+
+// ─── Announcement Updates ──────────────────────────────────────────────────
+
+/**
+ * Periodically refresh viewer counts on active announcements.
+ * Rebuilds the embed with fresh platform data and edits the message.
+ */
+async function _updateActiveAnnouncements() {
+  if (!_client) return;
+  if (activeAnnouncements.size === 0) return;
+
+  for (const [guildId, announcement] of activeAnnouncements.entries()) {
+    try {
+      const guild = _client.guilds.cache.get(guildId);
+      if (!guild) continue;
+
+      const channel = guild.channels.cache.get(announcement.channelId);
+      if (!channel) continue;
+
+      const msg = await channel.messages.fetch(announcement.messageId).catch(() => null);
+      if (!msg) continue;
+
+      const ownerId = process.env.STREAM_OWNER_ID || guild.ownerId;
+      let member;
+      try {
+        member = await guild.members.fetch(ownerId);
+      } catch { continue; }
+
+      // Build a minimal streamActivity — buildLiveMessage fetches fresh platform data internally
+      const streamActivity = { url: '', name: 'Live Stream', state: '', details: '' };
+
+      const updatedPayload = await buildLiveMessage(member, streamActivity, guildId);
+      // Edit only embeds + components — don't touch content to avoid re-pinging @everyone
+      await msg.edit({ embeds: updatedPayload.embeds, components: updatedPayload.components });
+      console.log(`🔄 Announcement updated with fresh viewer counts for ${guild.name}`);
+    } catch (err) {
+      console.warn(`⚠️ Failed to update announcement for guild ${guildId}: ${err.message}`);
+    }
   }
 }
 
