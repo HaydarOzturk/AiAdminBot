@@ -102,8 +102,13 @@ function replacePlaceholders(text, vars) {
 /**
  * Build the "LIVE" announcement embed + button row.
  * Fetches ALL platform data (like /go-live) for rich per-platform status.
+ *
+ * @param {import('discord.js').GuildMember} member
+ * @param {object} streamActivity - Stream info (url, details, state, name, assets)
+ * @param {string} guildId
+ * @param {Array|null} [preFetchedResults=null] - Pre-fetched checkAllPlatforms results to avoid redundant scraping
  */
-async function buildLiveMessage(member, streamActivity, guildId) {
+async function buildLiveMessage(member, streamActivity, guildId, preFetchedResults = null) {
   const url = streamActivity.url || '';
   const platform = detectPlatform(url);
   const game = streamActivity.state || streamActivity.details || '-';
@@ -111,22 +116,33 @@ async function buildLiveMessage(member, streamActivity, guildId) {
   const userName = member.displayName || member.user.username;
   const ownerAvatar = member.user.displayAvatarURL({ dynamic: true, size: 256 });
 
-  // Fetch ALL platform data (same as /go-live)
   const { checkAllPlatforms, PLATFORMS } = require('./streamingChecker');
-  const ownerId = process.env.STREAM_OWNER_ID || member.guild.ownerId;
-  const links = db.all(
-    'SELECT * FROM streaming_links WHERE guild_id = ? AND user_id = ?',
-    [guildId, ownerId]
-  );
 
   let platformResults = [];
   let platformsStatus = '';
   let streamTitle = title;
   let allButtons = [];
 
-  if (links && links.length > 0) {
+  // Use pre-fetched results if provided, otherwise fetch fresh
+  if (preFetchedResults) {
+    platformResults = preFetchedResults;
+  } else {
+    const ownerId = process.env.STREAM_OWNER_ID || member.guild.ownerId;
+    const links = db.all(
+      'SELECT * FROM streaming_links WHERE guild_id = ? AND user_id = ?',
+      [guildId, ownerId]
+    );
+    if (links && links.length > 0) {
+      try {
+        platformResults = await checkAllPlatforms(links);
+      } catch (err) {
+        console.warn('Failed to fetch platform data for announcement:', err.message);
+      }
+    }
+  }
+
+  if (platformResults.length > 0) {
     try {
-      platformResults = await checkAllPlatforms(links);
 
       // Build per-platform status lines (same as go-live lines 140-149)
       const statusLines = platformResults.map(r => {
@@ -154,7 +170,7 @@ async function buildLiveMessage(member, streamActivity, guildId) {
           .setEmoji(r.emoji)
       );
     } catch (err) {
-      console.warn('Failed to fetch platform data for announcement:', err.message);
+      console.warn('Failed to build platform status for announcement:', err.message);
     }
   }
 

@@ -129,7 +129,7 @@ module.exports = {
       assets: null,
     };
 
-    const messagePayload = await buildLiveMessage(ownerMember, streamActivity, guild.id);
+    const messagePayload = await buildLiveMessage(ownerMember, streamActivity, guild.id, results);
     const { embeds, components } = messagePayload;
 
     // Check if there's already an active announcement to update
