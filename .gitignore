@@ -38,3 +38,16 @@ Desktop.ini
 
 # npm
 npm-debug.log*
+
+# Claude Code
+CLAUDE.md
+.claude/
+
+# Local architecture docs
+docs/architecture.md
+docs/dependencies.md
+docs/systems.md
+
+# One-off utility scripts
+generate_pdf.js
+generate_testing_pdf.py
