@@ -430,6 +430,10 @@ function cleanupOrphanedScores() {
 // ── Main Extraction Cycle ─────────────────────────────────────────────────
 
 async function runExtractionCycle(client) {
+  // Always cleanup orphaned scores (prevents memory leak)
+  // message_log has 7-day retention; scores for pruned messages are useless
+  cleanupOrphanedScores();
+
   if (!isConfigured()) return;
 
   // Get all guilds that have scored messages recently
@@ -439,24 +443,20 @@ async function runExtractionCycle(client) {
 
   for (const { guild_id } of guilds) {
     const config = getConfig(guild_id);
-    if (!config.extraction_enabled) continue;
 
     try {
-      // Apply decay
+      // Always apply decay and prune (even if extraction disabled)
       applyDecay(guild_id, config.decay_rate);
-
-      // Prune dead memories
       pruneDecayedMemories(guild_id, config.prune_threshold);
 
-      // Extract new memories
-      await extractForGuild(guild_id, client);
+      // Only extract if enabled for this guild
+      if (config.extraction_enabled) {
+        await extractForGuild(guild_id, client);
+      }
     } catch (err) {
       console.error(`Memory learner cycle failed for guild ${guild_id}:`, err.message);
     }
   }
-
-  // Cleanup orphaned score entries
-  cleanupOrphanedScores();
 }
 
 module.exports = {
