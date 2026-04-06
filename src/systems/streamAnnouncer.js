@@ -20,6 +20,9 @@ const db = require('../utils/database');
 // Track active stream announcements: Map<guildId, { messageId, channelId }>
 const activeAnnouncements = new Map();
 
+// Lock to prevent concurrent announcements for the same guild: Set<guildId>
+const _announceLocks = new Set();
+
 // Debounce rapid presence flickers: Map<guildId, timeoutId>
 const pendingEndTimers = new Map();
 
@@ -315,8 +318,14 @@ async function handlePresenceUpdate(oldPresence, newPresence) {
  */
 async function announceStreamStart(guild, member, presenceOrStreamInfo) {
   try {
+    // Synchronous lock to prevent concurrent announcements for the same guild
+    // (multiple platforms can detect "live" at the same time and race here)
+    if (_announceLocks.has(guild.id)) return null;
+    if (activeAnnouncements.has(guild.id)) return null;
+    _announceLocks.add(guild.id);
+
     const channel = findAnnouncementChannel(guild);
-    if (!channel) return null;
+    if (!channel) { _announceLocks.delete(guild.id); return null; }
 
     let streamActivity;
 
@@ -345,9 +354,11 @@ async function announceStreamStart(guild, member, presenceOrStreamInfo) {
       channelId: channel.id,
     });
 
+    _announceLocks.delete(guild.id);
     console.log(`🔴 Stream announcement posted for ${member.user.tag} in ${guild.name}`);
     return msg;
   } catch (err) {
+    _announceLocks.delete(guild.id);
     console.error(`Stream announcement failed in ${guild.name}:`, err.message);
     return null;
   }
