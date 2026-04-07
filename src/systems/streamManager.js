@@ -180,10 +180,10 @@ function _detectPlatform(url) {
   return 'Stream';
 }
 
-function _findCustomTemplate(guildId, templateName) {
+function _findCustomTemplate(guildId) {
   const record = db.get(
-    "SELECT content FROM bot_messages WHERE guild_id = ? AND message_type = 'stream-announcement' AND created_by = 'default' AND name LIKE ? ORDER BY updated_at DESC LIMIT 1",
-    [guildId, `%${templateName}%`]
+    "SELECT content FROM bot_messages WHERE guild_id = ? AND message_type = 'stream-announcement' AND created_by = 'default' ORDER BY updated_at DESC LIMIT 1",
+    [guildId]
   );
   if (!record) return null;
   try {
@@ -263,7 +263,7 @@ function _buildAnnouncementMessage(member, guildId, platformResults) {
   };
 
   // Check for custom template from dashboard
-  const customTemplate = _findCustomTemplate(guildId, 'Live');
+  const customTemplate = _findCustomTemplate(guildId);
 
   let embed;
   if (customTemplate) {
