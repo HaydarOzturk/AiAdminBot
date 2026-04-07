@@ -68,22 +68,14 @@ module.exports = {
     afkManager.initAfkTracking(client);
     afkManager.startAfkTimer(client);
 
-    // Load persisted stream announcements + start automatic stream watcher
-    if (process.env.STREAMING_ENABLED !== 'false') {
-      try {
-        const { loadActiveAnnouncements } = require('../systems/streamAnnouncer');
-        loadActiveAnnouncements();
-      } catch (err) {
-        console.warn('⚠️ Failed to load persisted announcements:', err.message);
-      }
-      try {
-        const { startStreamWatcher } = require('../systems/streamWatcher');
-        startStreamWatcher(client).catch(err => {
-          console.error('❌ Stream watcher failed to start:', err.message);
-        });
-      } catch (err) {
-        console.warn('⚠️ Stream watcher not available:', err.message);
-      }
+    // Start unified stream manager (detection + announcements + lifecycle)
+    try {
+      const { startStreamManager } = require('../systems/streamManager');
+      startStreamManager(client).catch(err => {
+        console.error('❌ Stream manager failed to start:', err.message);
+      });
+    } catch (err) {
+      console.warn('⚠️ Stream manager not available:', err.message);
     }
 
     // Start knowledge base maintenance (message log pruning + summaries)

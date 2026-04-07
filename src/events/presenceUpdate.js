@@ -1,10 +1,10 @@
 const { Events } = require('discord.js');
-const streamAnnouncer = require('../systems/streamAnnouncer');
+const streamManager = require('../systems/streamManager');
 
 module.exports = {
   name: Events.PresenceUpdate,
   async execute(oldPresence, newPresence) {
     // Stream announcements — detect guild owner going live / ending stream
-    await streamAnnouncer.handlePresenceUpdate(oldPresence, newPresence);
+    await streamManager.handlePresenceUpdate(oldPresence, newPresence);
   },
 };

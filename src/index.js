@@ -101,14 +101,12 @@ function gracefulShutdown(signal) {
     const { stopAfkTimer } = require('./systems/afkManager');
     const { stopVoiceXpTimer } = require('./systems/voiceXp');
     const { stopLogCleaner } = require('./systems/logCleaner');
-    const { cleanup: cleanupStreamAnnouncer } = require('./systems/streamAnnouncer');
-    const { stopStreamWatcher } = require('./systems/streamWatcher');
+    const { stopStreamManager } = require('./systems/streamManager');
 
     stopAfkTimer();
     stopVoiceXpTimer();
     stopLogCleaner();
-    stopStreamWatcher();
-    cleanupStreamAnnouncer();
+    stopStreamManager();
 
     // Destroy the Discord client connection
     client.destroy();

@@ -1438,7 +1438,7 @@ router.post('/:guildId/bot-messages/:id/publish', async (req, res) => {
       if (!guild) return res.status(404).json({ error: 'Guild not found' });
 
       const { checkAllPlatforms, PLATFORMS } = require('../../systems/streamingChecker');
-      const { activeAnnouncements } = require('../../systems/streamAnnouncer');
+      const { activeAnnouncements } = require('../../systems/streamManager');
 
       const ownerId = process.env.STREAM_OWNER_ID || guild.ownerId;
       const links = db.all('SELECT * FROM streaming_links WHERE guild_id = ? AND user_id = ?', [guild.id, ownerId]);

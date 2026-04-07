@@ -4,9 +4,7 @@
  * Flow:
  *  1. Only the stream owner (STREAM_OWNER_ID), guild owner, or debug owner can use this
  *  2. Fetches the stream owner's links from the database
- *  3. Checks platforms with live-detection APIs (Kick, Twitch, YouTube) in parallel
- *  4. Posts a rich @everyone announcement with ALL platform links as buttons
- *  5. The announcement always shows the stream owner's name/avatar, not whoever ran the command
+ *  3. Calls streamManager.announceStream() which handles everything
  */
 
 const { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
@@ -14,7 +12,7 @@ const { hasPermission } = require('../../utils/permissions');
 const { t } = require('../../utils/locale');
 const { all, run } = require('../../utils/database');
 const { checkAllPlatforms, invalidatePlatformCache } = require('../../systems/streamingChecker');
-const { findAnnouncementChannel, buildLiveMessage } = require('../../systems/streamAnnouncer');
+const { announceStream, getActiveAnnouncement, findAnnouncementChannel } = require('../../systems/streamManager');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -46,7 +44,7 @@ module.exports = {
       return interaction.editReply({ content: t('streaming.disabled', {}, g) });
     }
 
-    // Resolve the stream owner — the person whose links and identity we use
+    // Resolve the stream owner
     const ownerId = streamOwnerId || guild.ownerId;
     let ownerMember;
     try {
@@ -55,19 +53,18 @@ module.exports = {
       return interaction.editReply({ content: t('streaming.ownerNotFound', {}, g) });
     }
 
-    // Get the stream owner's links (fallback: also check the command user's links)
+    // Get the stream owner's links
     let links = all(
       'SELECT * FROM streaming_links WHERE guild_id = ? AND user_id = ?',
       [guild.id, ownerId]
     );
 
-    // If stream owner has no links, check if the person running the command has links
+    // If stream owner has no links, check if the command user has links and migrate
     if ((!links || links.length === 0) && member.id !== ownerId) {
       links = all(
         'SELECT * FROM streaming_links WHERE guild_id = ? AND user_id = ?',
         [guild.id, member.id]
       );
-      // Migrate these links to the stream owner so future lookups work
       if (links && links.length > 0) {
         for (const link of links) {
           run(
@@ -82,102 +79,37 @@ module.exports = {
       return interaction.editReply({ content: t('streaming.noLinks', {}, g) });
     }
 
-    // Check all platforms fresh (manual command — invalidate cache first)
-    invalidatePlatformCache(guild.id);
-    const results = await checkAllPlatforms(links);
-    const liveResults = results.filter(r => r.isLive);
-
-    // ── Build and send announcement ──────────────────────────────────────
-
+    // Check announcement channel exists
     const announcementChannel = findAnnouncementChannel(guild);
     if (!announcementChannel) {
       return interaction.editReply({ content: t('streaming.noChannel', {}, g) });
     }
 
-    // Lock the channel: bot + guild owner only
-    try {
-      await announcementChannel.permissionOverwrites.edit(guild.roles.everyone, {
-        SendMessages: false, ViewChannel: true, ReadMessageHistory: true,
-      }, { reason: 'Stream announcements — locked' });
+    // Check platforms fresh and announce via the unified manager
+    invalidatePlatformCache(guild.id);
+    const results = await checkAllPlatforms(links);
 
-      await announcementChannel.permissionOverwrites.edit(guild.ownerId, {
-        SendMessages: true,
-      }, { reason: 'Stream announcements — allow owner' });
+    const msg = await announceStream(guild, { platformResults: results });
 
-      await announcementChannel.permissionOverwrites.edit(guild.members.me, {
-        SendMessages: true, EmbedLinks: true,
-      }, { reason: 'Stream announcements — allow bot' });
-    } catch (err) {
-      console.warn('Could not enforce announcement channel permissions:', err.message);
-    }
+    if (msg) {
+      const existing = getActiveAnnouncement(guild.id);
+      const liveResults = results.filter(r => r.isLive);
+      const liveNames = liveResults.map(r => r.label).join(', ') || t('streaming.linkOnlyMode', {}, g);
 
-    const ownerName = ownerMember.displayName || ownerMember.user.username;
-
-    // ── Build the embed using shared builder (respects saved draft templates) ──
-
-    // Find the "main" live stream for the title (prefer YouTube > Twitch > Kick)
-    const mainLive = liveResults.find(r => r.platform === 'youtube')
-      || liveResults.find(r => r.platform === 'twitch')
-      || liveResults.find(r => r.platform === 'kick')
-      || liveResults[0];
-
-    // Build a streamActivity-like object for buildLiveMessage
-    const streamActivity = {
-      url: mainLive?.liveUrl || mainLive?.url || '',
-      details: mainLive?.title || '',
-      state: '',
-      name: mainLive?.label || 'Live Stream',
-      assets: null,
-    };
-
-    const messagePayload = await buildLiveMessage(ownerMember, streamActivity, guild.id, results);
-    const { embeds, components } = messagePayload;
-
-    // Check if there's already an active announcement to update (persisted across restarts)
-    const { activeAnnouncements, _persistAnnouncement } = require('../../systems/streamAnnouncer');
-    const existingAnnouncement = activeAnnouncements.get(guild.id);
-
-    if (existingAnnouncement) {
-      // Update existing announcement
-      try {
-        const existingChannel = guild.channels.cache.get(existingAnnouncement.channelId);
-        if (existingChannel) {
-          const existingMsg = await existingChannel.messages.fetch(existingAnnouncement.messageId).catch(() => null);
-          if (existingMsg) {
-            await existingMsg.edit({
-              content: `🔴 **${ownerName}** ${t('streaming.isLiveNow', {}, g)}`,
-              embeds,
-              components,
-            });
-            await interaction.editReply({
-              content: `✅ ${t('streaming.announcementUpdated', { channel: existingChannel.name }, g) || `Announcement updated in #${existingChannel.name}!`}`,
-            });
-            return;
-          }
-        }
-      } catch {
-        // Existing message not found — send new one below
+      // Check if we updated vs sent new
+      if (existing && existing.messageId === msg.id) {
+        await interaction.editReply({
+          content: `✅ ${t('streaming.announcementUpdated', { channel: announcementChannel.name }, g) || `Announcement updated in #${announcementChannel.name}!`}`,
+        });
+      } else {
+        await interaction.editReply({
+          content: t('streaming.announcementSent', { platforms: liveNames, channel: announcementChannel.name }, g),
+        });
       }
+    } else {
+      await interaction.editReply({
+        content: t('streaming.announcementFailed', {}, g) || 'Failed to post announcement. Check bot permissions and announcement channel.',
+      });
     }
-
-    // Send new announcement
-    const sentMsg = await announcementChannel.send({
-      content: `🔴 **${ownerName}** ${t('streaming.isLiveNow', {}, g)}`,
-      embeds,
-      components,
-    });
-
-    // Track it so future /go-live calls can update it (persisted to DB)
-    activeAnnouncements.set(guild.id, {
-      messageId: sentMsg.id,
-      channelId: announcementChannel.id,
-    });
-    _persistAnnouncement(guild.id, sentMsg.id, announcementChannel.id);
-
-    // Ephemeral reply to command user
-    const liveNames = liveResults.map(r => r.label).join(', ') || t('streaming.linkOnlyMode', {}, g);
-    await interaction.editReply({
-      content: t('streaming.announcementSent', { platforms: liveNames, channel: announcementChannel.name }, g),
-    });
   },
 };
