@@ -1335,6 +1335,99 @@ router.get('/:guildId/bot-messages/:id', (req, res) => {
   }
 });
 
+/**
+ * Build a stream-announcement Discord payload from a bot_messages template.
+ * Fetches live platform data, replaces placeholders, builds embed + buttons.
+ * Used by both the PUT (update) and POST (publish) handlers.
+ *
+ * @param {object} guild - Discord guild
+ * @param {object} msg - bot_messages DB record
+ * @returns {Promise<{ payload: object, platformResults: Array }>}
+ */
+async function _buildStreamAnnouncementPayload(guild, msg) {
+  const { checkAllPlatforms, PLATFORMS } = require('../../systems/streamingChecker');
+
+  const ownerId = process.env.STREAM_OWNER_ID || guild.ownerId;
+  const links = db.all('SELECT * FROM streaming_links WHERE guild_id = ? AND user_id = ?', [guild.id, ownerId]);
+
+  const ownerMember = await guild.members.fetch(ownerId);
+  const userName = ownerMember.displayName || ownerMember.user.username;
+  const ownerAvatar = ownerMember.user.displayAvatarURL({ dynamic: true, size: 256 });
+
+  let platformResults = [];
+  let platformsStatus = '';
+  let streamTitle = '';
+  if (links && links.length > 0) {
+    try {
+      platformResults = await checkAllPlatforms(links);
+      const statusLines = platformResults.map(r => {
+        if (r.isLive) {
+          const viewerStr = r.viewers > 0 ? ` • 👥 ${r.viewers}` : '';
+          return `${r.emoji} **${r.label}** — 🔴 LIVE${viewerStr}`;
+        } else if (PLATFORMS[r.platform]?.canDetectLive) {
+          return `${r.emoji} **${r.label}** — ⚫ Offline`;
+        }
+        return `${r.emoji} **${r.label}**`;
+      });
+      platformsStatus = statusLines.join('\n');
+      const mainLive = platformResults.find(r => r.isLive && r.title);
+      if (mainLive?.title) streamTitle = mainLive.title;
+    } catch {}
+  }
+
+  const content = typeof msg.content === 'string' ? JSON.parse(msg.content) : msg.content;
+  const replace = (text) => {
+    if (!text) return text;
+    return text
+      .replace(/\{user\}/gi, userName)
+      .replace(/\{stream_title\}/gi, streamTitle)
+      .replace(/\{platforms_status\}/gi, platformsStatus)
+      .replace(/\{platform\}/gi, platformResults.find(r => r.isLive)?.label || '')
+      .replace(/\{viewers\}/gi, platformResults.find(r => r.isLive)?.viewers?.toString() || '')
+      .replace(/\{game\}/gi, '')
+      .replace(/\{title\}/gi, streamTitle)
+      .replace(/\{url\}/gi, platformResults.find(r => r.isLive)?.liveUrl || '');
+  };
+
+  const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+  const embed = new EmbedBuilder()
+    .setColor(content.color?.startsWith('#') ? parseInt(content.color.replace('#', ''), 16) : 0xFF0000)
+    .setThumbnail(ownerAvatar)
+    .setTimestamp();
+
+  if (content.author) embed.setAuthor({ name: replace(content.author), iconURL: ownerAvatar });
+  if (content.title) embed.setTitle(replace(content.title));
+  if (content.description) embed.setDescription(replace(content.description));
+  if (content.footer) embed.setFooter({ text: replace(content.footer) });
+  if (Array.isArray(content.fields)) {
+    for (const f of content.fields) {
+      if (f.name && f.value) {
+        embed.addFields({ name: replace(f.name), value: replace(f.value) || '-', inline: !!f.inline });
+      }
+    }
+  }
+
+  const components = [];
+  const buttons = platformResults.map(r =>
+    new ButtonBuilder()
+      .setLabel(r.isLive ? `🔴 ${r.label}` : r.label)
+      .setStyle(ButtonStyle.Link)
+      .setURL(r.isLive ? r.liveUrl : r.url)
+      .setEmoji(r.emoji)
+  );
+  for (let i = 0; i < buttons.length; i += 5) {
+    components.push(new ActionRowBuilder().addComponents(...buttons.slice(i, i + 5)));
+  }
+
+  const payload = {
+    content: `🔴 **${userName}** ${require('../../utils/locale').t('streaming.isLiveNow', {}, guild.id) || 'şu anda YAYINDA!'}`,
+    embeds: [embed],
+    components,
+  };
+
+  return { payload, platformResults };
+}
+
 /** Create a new bot message (draft) */
 router.post('/:guildId/bot-messages', (req, res) => {
   try {
@@ -1382,9 +1475,27 @@ router.put('/:guildId/bot-messages/:id', async (req, res) => {
     if (msg.message_id) {
       const client = getClient(req);
       if (client) {
-        botMessages.updatePublishedMessage(client, id).catch(err => {
-          console.warn('Failed to update published bot message:', err.message);
-        });
+        // Stream-announcements need special handling (placeholder replacement + platform data)
+        const updatedMsg = botMessages.getMessage(id);
+        if (updatedMsg.message_type === 'stream-announcement') {
+          try {
+            const guild = getGuild(req);
+            if (guild) {
+              const { payload } = await _buildStreamAnnouncementPayload(guild, updatedMsg);
+              const channel = guild.channels.cache.get(msg.channel_id);
+              if (channel) {
+                const discordMsg = await channel.messages.fetch(msg.message_id).catch(() => null);
+                if (discordMsg) await discordMsg.edit(payload);
+              }
+            }
+          } catch (err) {
+            console.warn('Failed to update stream announcement:', err.message);
+          }
+        } else {
+          botMessages.updatePublishedMessage(client, id).catch(err => {
+            console.warn('Failed to update published bot message:', err.message);
+          });
+        }
       }
     }
 
@@ -1437,92 +1548,12 @@ router.post('/:guildId/bot-messages/:id/publish', async (req, res) => {
       const guild = getGuild(req);
       if (!guild) return res.status(404).json({ error: 'Guild not found' });
 
-      const { checkAllPlatforms, PLATFORMS } = require('../../systems/streamingChecker');
       const { activeAnnouncements } = require('../../systems/streamManager');
 
-      const ownerId = process.env.STREAM_OWNER_ID || guild.ownerId;
-      const links = db.all('SELECT * FROM streaming_links WHERE guild_id = ? AND user_id = ?', [guild.id, ownerId]);
-
-      let ownerMember;
-      try { ownerMember = await guild.members.fetch(ownerId); } catch {
-        return res.status(404).json({ error: 'Stream owner not found in guild' });
-      }
-
-      const userName = ownerMember.displayName || ownerMember.user.username;
-      const ownerAvatar = ownerMember.user.displayAvatarURL({ dynamic: true, size: 256 });
-
-      // Fetch live platform data
-      let platformResults = [];
-      let platformsStatus = '';
-      let streamTitle = '';
-      if (links && links.length > 0) {
-        try {
-          platformResults = await checkAllPlatforms(links);
-          const statusLines = platformResults.map(r => {
-            if (r.isLive) {
-              const viewerStr = r.viewers > 0 ? ` • 👥 ${r.viewers}` : '';
-              return `${r.emoji} **${r.label}** — 🔴 LIVE${viewerStr}`;
-            } else if (PLATFORMS[r.platform]?.canDetectLive) {
-              return `${r.emoji} **${r.label}** — ⚫ Offline`;
-            }
-            return `${r.emoji} **${r.label}**`;
-          });
-          platformsStatus = statusLines.join('\n');
-          const mainLive = platformResults.find(r => r.isLive && r.title);
-          if (mainLive?.title) streamTitle = mainLive.title;
-        } catch {}
-      }
-
-      // Parse template content and replace placeholders
-      const content = typeof msg.content === 'string' ? JSON.parse(msg.content) : msg.content;
-      const replace = (text) => {
-        if (!text) return text;
-        return text
-          .replace(/\{user\}/gi, userName)
-          .replace(/\{stream_title\}/gi, streamTitle)
-          .replace(/\{platforms_status\}/gi, platformsStatus)
-          .replace(/\{platform\}/gi, platformResults.find(r => r.isLive)?.label || '')
-          .replace(/\{viewers\}/gi, platformResults.find(r => r.isLive)?.viewers?.toString() || '')
-          .replace(/\{game\}/gi, '')
-          .replace(/\{title\}/gi, streamTitle)
-          .replace(/\{url\}/gi, platformResults.find(r => r.isLive)?.liveUrl || '');
-      };
-
-      // Build embed
-      const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-      const embed = new EmbedBuilder()
-        .setColor(content.color?.startsWith('#') ? parseInt(content.color.replace('#', ''), 16) : 0xFF0000)
-        .setThumbnail(ownerAvatar)
-        .setTimestamp();
-
-      if (content.author) embed.setAuthor({ name: replace(content.author), iconURL: ownerAvatar });
-      if (content.title) embed.setTitle(replace(content.title));
-      if (content.description) embed.setDescription(replace(content.description));
-      if (content.footer) embed.setFooter({ text: replace(content.footer) });
-      if (Array.isArray(content.fields)) {
-        for (const f of content.fields) {
-          if (f.name && f.value) {
-            embed.addFields({ name: replace(f.name), value: replace(f.value) || '-', inline: !!f.inline });
-          }
-        }
-      }
-
-      // Build buttons per platform
-      const components = [];
-      const buttons = platformResults.map(r =>
-        new ButtonBuilder()
-          .setLabel(r.isLive ? `🔴 ${r.label}` : r.label)
-          .setStyle(ButtonStyle.Link)
-          .setURL(r.isLive ? r.liveUrl : r.url)
-          .setEmoji(r.emoji)
-      );
-      for (let i = 0; i < buttons.length; i += 5) {
-        components.push(new ActionRowBuilder().addComponents(...buttons.slice(i, i + 5)));
-      }
+      const { payload } = await _buildStreamAnnouncementPayload(guild, msg);
 
       // Send or edit
       const channel = await guild.channels.fetch(channelId);
-      const payload = { content: `🔴 **${userName}** ${require('../../utils/locale').t('streaming.isLiveNow', {}, guild.id) || 'şu anda YAYINDA!'}`, embeds: [embed], components };
 
       // Check for existing announcement to edit
       const existing = activeAnnouncements.get(guild.id);
