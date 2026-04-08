@@ -546,47 +546,79 @@ async function _pollGuild(guild) {
   const ytDue = (now - _lastYouTubePoll) >= YT_POLL_INTERVAL_MS;
   if (ytDue) _lastYouTubePoll = now;
 
+  const isYt = (p) => p === 'youtube' || p === 'youtube-shorts';
+
+  // --- First pass: check Twitch/Kick (free / cheap APIs) ---
   for (const link of pollableLinks) {
-    if ((link.platform === 'youtube' || link.platform === 'youtube-shorts') && !ytDue) continue;
+    if (isYt(link.platform)) continue;
 
     try {
       const result = await _checkSinglePlatform(link);
       const key = `${guild.id}|${link.platform}`;
-      const wasLive = _previousPollState.get(key) || false;
-
-      if (_firstPoll) {
-        _previousPollState.set(key, result.isLive);
-        continue;
-      }
-
-      _previousPollState.set(key, result.isLive);
-
-      if (!wasLive && result.isLive) {
-        // Transition: offline -> online
-        console.log(`📡 Polling detected: ${link.platform} went LIVE for ${guild.name}`);
-
-        // Cancel any pending end-confirmation
-        const endTimer = _endConfirmationTimers.get(key);
-        if (endTimer) {
-          clearTimeout(endTimer);
-          _endConfirmationTimers.delete(key);
-        }
-
-        _startConfirmation(key, guild, link);
-      } else if (wasLive && !result.isLive) {
-        if (result.error) {
-          console.log(`⚠️ API error for ${link.platform} in ${guild.name} — ignoring offline transition`);
-          _previousPollState.set(key, true);
-          continue;
-        }
-
-        // Transition: online -> offline
-        console.log(`📡 Polling detected: ${link.platform} went OFFLINE for ${guild.name}`);
-        _startEndConfirmation(key, guild, link);
-      }
+      _processPollResult(guild, link, key, result);
     } catch (err) {
       console.warn(`⚠️ Poll check failed for ${link.platform} in ${guild.name}: ${err.message}`);
     }
+  }
+
+  // --- Second pass: check YouTube only if gated conditions are met ---
+  const ytLinks = pollableLinks.filter(l => isYt(l.platform));
+  if (ytDue && ytLinks.length > 0) {
+    // Gate: only call YouTube API if another platform is live OR YouTube was already live
+    const anyOtherLive = pollableLinks.some(l =>
+      !isYt(l.platform) && _previousPollState.get(`${guild.id}|${l.platform}`)
+    );
+    const anyYtAlreadyLive = ytLinks.some(l =>
+      _previousPollState.get(`${guild.id}|${l.platform}`)
+    );
+
+    if (anyOtherLive || anyYtAlreadyLive) {
+      for (const link of ytLinks) {
+        try {
+          const result = await _checkSinglePlatform(link);
+          const key = `${guild.id}|${link.platform}`;
+          _processPollResult(guild, link, key, result);
+        } catch (err) {
+          console.warn(`⚠️ Poll check failed for ${link.platform} in ${guild.name}: ${err.message}`);
+        }
+      }
+    }
+  }
+}
+
+/** Shared logic for processing a single platform poll result (transition detection). */
+function _processPollResult(guild, link, key, result) {
+  const wasLive = _previousPollState.get(key) || false;
+
+  if (_firstPoll) {
+    _previousPollState.set(key, result.isLive);
+    return;
+  }
+
+  _previousPollState.set(key, result.isLive);
+
+  if (!wasLive && result.isLive) {
+    // Transition: offline -> online
+    console.log(`📡 Polling detected: ${link.platform} went LIVE for ${guild.name}`);
+
+    // Cancel any pending end-confirmation
+    const endTimer = _endConfirmationTimers.get(key);
+    if (endTimer) {
+      clearTimeout(endTimer);
+      _endConfirmationTimers.delete(key);
+    }
+
+    _startConfirmation(key, guild, link);
+  } else if (wasLive && !result.isLive) {
+    if (result.error) {
+      console.log(`⚠️ API error for ${link.platform} in ${guild.name} — ignoring offline transition`);
+      _previousPollState.set(key, true);
+      return;
+    }
+
+    // Transition: online -> offline
+    console.log(`📡 Polling detected: ${link.platform} went OFFLINE for ${guild.name}`);
+    _startEndConfirmation(key, guild, link);
   }
 }
 

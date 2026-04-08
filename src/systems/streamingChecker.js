@@ -278,6 +278,30 @@ async function checkTwitch(handleOrUrl) {
 
 // ─── YouTube ─────────────────────────────────────────────────────────────────
 
+// Daily quota tracking for YouTube search.list (100 units per call)
+const YT_DAILY_QUOTA_LIMIT = parseInt(process.env.YOUTUBE_DAILY_QUOTA_LIMIT) || 100;
+let _ytDailySearchCount = 0;
+let _ytDailyResetDate = new Date().toDateString();
+
+function _checkAndIncrementYtQuota() {
+  const today = new Date().toDateString();
+  if (today !== _ytDailyResetDate) {
+    _ytDailySearchCount = 0;
+    _ytDailyResetDate = today;
+  }
+  if (_ytDailySearchCount >= YT_DAILY_QUOTA_LIMIT) {
+    return false; // over budget
+  }
+  _ytDailySearchCount++;
+  return true;
+}
+
+function getYtQuotaStatus() {
+  const today = new Date().toDateString();
+  if (today !== _ytDailyResetDate) return { used: 0, limit: YT_DAILY_QUOTA_LIMIT };
+  return { used: _ytDailySearchCount, limit: YT_DAILY_QUOTA_LIMIT };
+}
+
 // Cache resolved channel IDs permanently in memory (handle → channelId)
 const _ytChannelIdCache = new Map();
 
@@ -353,6 +377,11 @@ async function checkYouTube(handleOrUrl, platform = 'youtube') {
 
   if (!channelId) {
     return { isLive: false, title: '', viewers: 0, url: handleOrUrl, error: true };
+  }
+
+  if (!_checkAndIncrementYtQuota()) {
+    console.warn(`⚠️ YouTube daily quota reached (${YT_DAILY_QUOTA_LIMIT} search calls) — skipping API check`);
+    return { isLive: false, title: '', viewers: 0, url: `https://youtube.com/channel/${channelId}`, error: true };
   }
 
   const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&eventType=live&type=video&key=${apiKey}`;
@@ -477,6 +506,7 @@ module.exports = {
   checkAllPlatforms,
   checkAllPlatformsCached,
   invalidatePlatformCache,
+  getYtQuotaStatus,
   PLATFORMS,
   PLATFORM_CHECKERS,
   extractKickSlug,
