@@ -176,7 +176,7 @@ async function handleMessage(message) {
   if (!member) return false;
 
   const permLevel = getPermissionLevel(member);
-  if (permLevel < (settings.min_permission_level || 3)) {
+  if (permLevel < (settings.min_permission_level ?? 3)) {
     await message.reply({ content: t('agent.noPermission', {}, message.guild.id) });
     return true;
   }
