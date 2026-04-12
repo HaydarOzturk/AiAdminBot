@@ -229,6 +229,21 @@ async function handleMessage(message) {
     const parsed = parseAgentResponse(response);
     const actions = Array.isArray(parsed) ? parsed : [parsed];
 
+    // Pre-scan: if batch contains destructive actions, confirm entire batch first
+    if (actions.length > 1) {
+      const hasDestructive = actions.some(a => {
+        const t = getTool(a.tool);
+        return t?.destructive || a.type === 'confirm';
+      });
+      if (hasDestructive) {
+        const desc = actions.map(a => `• ${a.tool || a.type}: ${JSON.stringify(a.params || {})}`).join('\n');
+        await sendConfirmation(message, { tool: actions[0].tool, params: actions[0].params },
+          `Batch with ${actions.length} actions:\n${desc}`);
+        conversationStore.addMessage(g, userId, 'assistant', `Asking confirmation for batch of ${actions.length} actions`);
+        return true;
+      }
+    }
+
     const results = [];
     let stopped = false;
 
