@@ -62,7 +62,7 @@ async function handleVerifyButton(interaction) {
 
   // Search by config name, then locale name, then English fallback (case-insensitive)
   const unverifiedRole = findRole(guild, config.verification?.unverifiedRoleName, 'roles.unverified', 'Unverified');
-  const verifiedRole = findRole(guild, config.verification?.verifiedRoleName, 'roles.verified', 'New Member');
+  let verifiedRole = findRole(guild, config.verification?.verifiedRoleName, 'roles.verified', 'New Member');
 
   const unverifiedRoleName = unverifiedRole?.name || t('roles.unverified', {}, guild.id);
   const verifiedRoleName = verifiedRole?.name || t('roles.verified', {}, guild.id);
@@ -73,16 +73,15 @@ async function handleVerifyButton(interaction) {
       await member.roles.remove(unverifiedRole);
     }
 
-    // Add verified role
-    if (verifiedRole) {
-      await member.roles.add(verifiedRole);
-    } else {
-      console.warn(`⚠️ Verified role "${verifiedRoleName}" not found!`);
-      return interaction.reply({
-        content: t('verification.roleNotFound', {}, guild.id) || 'Verification role not found. Please contact a server admin.',
-        flags: MessageFlags.Ephemeral,
+    // Add verified role — create it if missing
+    if (!verifiedRole) {
+      console.log(`📝 Auto-creating verified role "${verifiedRoleName}"`);
+      verifiedRole = await guild.roles.create({
+        name: verifiedRoleName,
+        reason: 'Auto-created by verification system',
       });
     }
+    await member.roles.add(verifiedRole);
 
     // Save to database
     db.run(
