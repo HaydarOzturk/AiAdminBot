@@ -1,6 +1,6 @@
 const express = require('express');
 const path = require('path');
-const { requireAuth, login, logout } = require('./auth');
+const { requireAuth, requireGuildAccess, login, logout, oauthRedirect, oauthCallback, authStatus } = require('./auth');
 
 const app = express();
 
@@ -25,6 +25,9 @@ app.use(express.static(publicDir));
 app.post('/api/auth/login', login);
 app.get('/api/auth/logout', logout);
 app.post('/api/auth/logout', logout);
+app.get('/api/auth/status', authStatus);
+app.get('/api/auth/discord', oauthRedirect);
+app.get('/api/auth/callback', oauthCallback);
 
 // All other API routes require authentication
 app.use('/api/', requireAuth);
@@ -32,8 +35,15 @@ app.use('/api/', requireAuth);
 // API Routes — match frontend URL pattern: /api/guilds/:guildId/<section>/...
 app.use('/api/stats', require('./api/stats'));
 app.use('/api/logs', require('./api/logs'));
+
+// Guild-scoped routes require guild access check BEFORE the router handles them
+app.use('/api/guilds/:guildId', requireGuildAccess);
 app.use('/api/guilds', require('./api/guilds'));
+
+app.use('/api/settings/:guildId', requireGuildAccess);
 app.use('/api/settings', require('./api/settings'));
+app.use('/api/leveling/:guildId', requireGuildAccess);
+app.use('/api/logs/:guildId', requireGuildAccess);
 
 // Invite URL endpoint — generates OAuth2 invite link
 app.get('/api/invite', (req, res) => {

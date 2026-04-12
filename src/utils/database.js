@@ -464,6 +464,20 @@ async function initDatabase() {
     )
   `);
 
+  // ── Web Dashboard Sessions (OAuth2 + persistent auth) ─────────────────
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS web_sessions (
+      token TEXT PRIMARY KEY,
+      discord_user_id TEXT,
+      discord_username TEXT,
+      guild_ids TEXT DEFAULT '[]',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      expires_at DATETIME NOT NULL,
+      ip_address TEXT
+    )
+  `);
+
   // Migration: clean up levels table
   // Fixes two bugs:
   // 1. Old fallback code created duplicate entries for same user+guild
