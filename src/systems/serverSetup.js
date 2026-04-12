@@ -339,6 +339,30 @@ async function runSetup(guild) {
   // Refresh cache after creating roles so we can reference them in permissions
   await guild.roles.fetch();
 
+  // ── 1b. Position bot role near the top ──────────────────────────────────
+  // The bot can only manage roles below its own position. Move it up so
+  // it can assign/remove the roles it just created.
+  try {
+    const botMember = guild.members.me;
+    if (botMember) {
+      const botRole = botMember.roles.botRole; // the managed role Discord created for the bot
+      if (botRole) {
+        // Position just below the highest role (usually server owner's role)
+        const highestRole = guild.roles.cache
+          .filter(r => r.id !== guild.id) // exclude @everyone
+          .sort((a, b) => b.position - a.position)
+          .first();
+        if (highestRole && botRole.position < highestRole.position) {
+          await botRole.setPosition(highestRole.position - 1);
+          console.log(`  🔼 Moved bot role "${botRole.name}" to position ${highestRole.position - 1}`);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn(`  ⚠️ Could not reposition bot role: ${err.message}`);
+    result.errors.push(`Bot role positioning: ${err.message}`);
+  }
+
   // ── 2. Create categories and channels ───────────────────────────────────
   console.log('\n🔧 [Setup] Phase 2: Categories & Channels');
 
