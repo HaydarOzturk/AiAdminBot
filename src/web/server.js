@@ -4,12 +4,20 @@ const { requireAuth, requireGuildAccess, login, logout, oauthRedirect, oauthCall
 
 const app = express();
 
+// Trust reverse proxy (nginx/Cloudflare) — enables correct req.ip and req.secure
+if (process.env.WEB_TRUST_PROXY) app.set('trust proxy', parseInt(process.env.WEB_TRUST_PROXY) || 1);
+
 // Security headers
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  // CSP: report-only first — won't block anything, just logs violations in browser console
+  res.setHeader('Content-Security-Policy-Report-Only', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' https://cdn.discordapp.com data:; connect-src 'self'; frame-ancestors 'none'");
+  if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
   res.removeHeader('X-Powered-By');
   next();
 });
@@ -20,6 +28,39 @@ app.use(express.json({ limit: '100kb' }));
 // Static files: use extracted real directory for pkg exe, or bundled path for dev
 const publicDir = process.env.__WEB_PUBLIC_DIR || path.join(__dirname, 'public');
 app.use(express.static(publicDir));
+
+// Rate limiting: 100 requests per minute per IP for API endpoints
+const apiRateLimits = new Map();
+const API_RATE_LIMIT = 100;
+const API_RATE_WINDOW = 60000;
+const RESTART_RATE_WINDOW = 300000; // 5 minutes
+const restartTimestamps = new Map();
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, data] of apiRateLimits) {
+    if (now - data.windowStart > API_RATE_WINDOW) apiRateLimits.delete(ip);
+  }
+  for (const [ip, ts] of restartTimestamps) {
+    if (now - ts > RESTART_RATE_WINDOW) restartTimestamps.delete(ip);
+  }
+}, 60000);
+
+app.use('/api/', (req, res, next) => {
+  const ip = req.ip || req.socket?.remoteAddress || 'unknown';
+  const now = Date.now();
+  const entry = apiRateLimits.get(ip);
+
+  if (!entry || now - entry.windowStart > API_RATE_WINDOW) {
+    apiRateLimits.set(ip, { count: 1, windowStart: now });
+    return next();
+  }
+  if (entry.count >= API_RATE_LIMIT) {
+    return res.status(429).json({ error: 'Too many requests. Try again later.' });
+  }
+  entry.count++;
+  next();
+});
 
 // Auth routes (no auth required)
 app.post('/api/auth/login', login);
@@ -87,9 +128,17 @@ app.get('/api/invite', (req, res) => {
   });
 });
 
-// Restart endpoint — relies on PM2 to auto-restart the process
+// Restart endpoint — relies on PM2 to auto-restart the process (rate limited: 1 per 5 min)
 app.post('/api/restart', (req, res) => {
-  console.log('🔄 Restart requested via dashboard');
+  const ip = req.ip || req.socket?.remoteAddress || 'unknown';
+  const lastRestart = restartTimestamps.get(ip);
+  if (lastRestart && Date.now() - lastRestart < RESTART_RATE_WINDOW) {
+    const retryAfter = Math.ceil((RESTART_RATE_WINDOW - (Date.now() - lastRestart)) / 1000);
+    return res.status(429).json({ error: `Restart rate limited. Try again in ${retryAfter}s` });
+  }
+  restartTimestamps.set(ip, Date.now());
+
+  console.log(`🔄 Restart requested via dashboard by ${req.session?.discordUsername || ip}`);
   res.json({ success: true, message: 'Bot is restarting...' });
 
   // Give the response time to flush, then exit — PM2 restarts automatically
