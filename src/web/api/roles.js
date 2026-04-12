@@ -36,7 +36,7 @@ router.get('/:guildId', async (req, res) => {
     return res.json({ roles });
   } catch (error) {
     console.error('Error fetching roles:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -88,7 +88,7 @@ router.post('/:guildId/give', async (req, res) => {
     });
   } catch (error) {
     console.error('Error giving role:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -140,7 +140,7 @@ router.post('/:guildId/remove', async (req, res) => {
     });
   } catch (error) {
     console.error('Error removing role:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 

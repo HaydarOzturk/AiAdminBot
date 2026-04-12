@@ -14,7 +14,7 @@ router.get('/', (req, res) => {
     return res.json(config);
   } catch (error) {
     console.error('Error loading config:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -102,7 +102,7 @@ router.get('/env', (req, res) => {
     return res.json(safeEnv);
   } catch (error) {
     console.error('Error fetching env:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 

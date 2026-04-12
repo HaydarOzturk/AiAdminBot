@@ -58,7 +58,7 @@ router.get('/:guildId/actions', (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching moderation actions:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -78,7 +78,7 @@ router.get('/:guildId/warnings/:userId', (req, res) => {
     return res.json({ warnings });
   } catch (error) {
     console.error('Error fetching warnings:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -129,7 +129,7 @@ router.get('/:guildId/stats', (req, res) => {
     return res.json(stats);
   } catch (error) {
     console.error('Error fetching moderation stats:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -188,7 +188,7 @@ router.post('/:guildId/warn', async (req, res) => {
     });
   } catch (error) {
     console.error('Error issuing warning:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 

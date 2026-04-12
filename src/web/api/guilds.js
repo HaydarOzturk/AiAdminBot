@@ -83,7 +83,7 @@ router.get('/:guildId/members', async (req, res) => {
     });
   } catch (err) {
     console.error('API members error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -188,7 +188,7 @@ router.get('/:guildId/channels', (req, res) => {
 
     res.json(response);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -242,7 +242,7 @@ router.post('/:guildId/channels', async (req, res) => {
     });
   } catch (err) {
     console.error('API create channel error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -263,7 +263,7 @@ router.delete('/:guildId/channels/:channelId', async (req, res) => {
     res.json({ success: true, deleted: name });
   } catch (err) {
     console.error('API delete channel error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -295,7 +295,7 @@ router.get('/:guildId/channels/:channelId/permissions', (req, res) => {
       permissionLabels: PERM_LABELS,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -346,7 +346,7 @@ router.put('/:guildId/channels/:channelId/permissions', async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error('API update permissions error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -373,7 +373,7 @@ router.put('/:guildId/channels/:channelId', async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error('API edit channel error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -431,7 +431,7 @@ router.get('/:guildId/moderation/actions', (req, res) => {
     });
   } catch (err) {
     console.error('API moderation/actions error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -468,7 +468,7 @@ router.get('/:guildId/moderation/warnings', (req, res) => {
     res.json({ warnings: Object.values(grouped) });
   } catch (err) {
     console.error('API moderation/warnings error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -508,7 +508,7 @@ router.post('/:guildId/moderation/warnings', async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error('API warn error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -521,7 +521,7 @@ router.delete('/:guildId/moderation/warnings/:warningId', (req, res) => {
     db.run('DELETE FROM warnings WHERE id = ? AND guild_id = ?', [warningId, guildId]);
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -568,7 +568,7 @@ router.get('/:guildId/moderation/stats', (req, res) => {
       })),
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -605,7 +605,7 @@ router.post('/:guildId/moderation/ban', async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error('API ban error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -647,7 +647,7 @@ router.post('/:guildId/moderation/kick', async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error('API kick error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -679,7 +679,7 @@ router.post('/:guildId/moderation/timeout', async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error('API timeout error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -711,7 +711,7 @@ router.post('/:guildId/moderation/clear', async (req, res) => {
     res.json({ success: true, deleted: deleted.size });
   } catch (err) {
     console.error('API clear error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -724,7 +724,7 @@ router.get('/:guildId/moderation/blocklist', (req, res) => {
     const words = db.all('SELECT * FROM blocked_words WHERE guild_id = ? ORDER BY added_at DESC', [guildId]);
     res.json({ words });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -746,7 +746,7 @@ router.post('/:guildId/moderation/blocklist', (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -759,7 +759,7 @@ router.delete('/:guildId/moderation/blocklist/:wordId', (req, res) => {
     db.run('DELETE FROM blocked_words WHERE id = ? AND guild_id = ?', [wordId, guildId]);
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -792,7 +792,7 @@ router.get('/:guildId/roles', (req, res) => {
 
     res.json({ roles });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -819,7 +819,7 @@ router.post('/:guildId/roles', async (req, res) => {
     res.json({ success: true, role: { id: role.id, name: role.name, color: role.hexColor } });
   } catch (err) {
     console.error('API create role error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -862,7 +862,7 @@ router.put('/:guildId/roles/:roleId', async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error('API edit role error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -893,7 +893,7 @@ router.get('/:guildId/roles/:roleId/members', (req, res) => {
 
     res.json({ members, total: role.members.size });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -921,7 +921,7 @@ router.delete('/:guildId/roles/:roleId', async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error('API delete role error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -962,7 +962,7 @@ router.post('/:guildId/roles/bulk-delete', async (req, res) => {
     res.json({ success: true, ...results });
   } catch (err) {
     console.error('API bulk-delete roles error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -990,7 +990,7 @@ router.put('/:guildId/roles/:roleId/members/:userId', async (req, res) => {
     await member.roles.add(role);
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -1018,7 +1018,7 @@ router.delete('/:guildId/roles/:roleId/members/:userId', async (req, res) => {
     await member.roles.remove(role);
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -1034,7 +1034,7 @@ router.get('/:guildId/role-menus', (req, res) => {
     const menus = roleMenus.getMenusForGuild(req.params.guildId);
     res.json({ menus });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -1045,7 +1045,7 @@ router.post('/:guildId/role-menus/seed', (req, res) => {
     const menus = roleMenus.getMenusForGuild(req.params.guildId);
     res.json({ success: true, menus });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -1067,7 +1067,7 @@ router.post('/:guildId/role-menus', (req, res) => {
     const menu = roleMenus.getMenuWithItems(menuId);
     res.json({ menu });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -1082,7 +1082,7 @@ router.get('/:guildId/role-menus/:menuId', (req, res) => {
     menu.messages = roleMenus.getPublishedMessages(menu.id, req.params.guildId);
     res.json({ menu });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -1114,7 +1114,7 @@ router.put('/:guildId/role-menus/:menuId', async (req, res) => {
 
     res.json({ menu: roleMenus.getMenuWithItems(menuId) });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -1129,7 +1129,7 @@ router.delete('/:guildId/role-menus/:menuId', (req, res) => {
     roleMenus.deleteMenu(menuId);
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -1164,7 +1164,7 @@ router.post('/:guildId/role-menus/:menuId/items', async (req, res) => {
 
     res.json({ itemId, menu: roleMenus.getMenuWithItems(menuId) });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -1200,7 +1200,7 @@ router.put('/:guildId/role-menus/:menuId/items/:itemId', (req, res) => {
 
     res.json({ menu: roleMenus.getMenuWithItems(menuId) });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -1230,7 +1230,7 @@ router.delete('/:guildId/role-menus/:menuId/items/:itemId', (req, res) => {
 
     res.json({ success: true, menu: roleMenus.getMenuWithItems(menuId) });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -1255,7 +1255,7 @@ router.post('/:guildId/role-menus/:menuId/publish', async (req, res) => {
     const message = await roleMenus.sendRoleMenuById(channel, menuId);
     res.json({ success: true, messageId: message.id, channelId: channel.id });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -1266,7 +1266,7 @@ router.get('/:guildId/role-menus/:menuId/messages', (req, res) => {
     const messages = roleMenus.getPublishedMessages(menuId, req.params.guildId);
     res.json({ messages });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -1277,7 +1277,7 @@ router.delete('/:guildId/role-menus/:menuId/messages/:msgId', async (req, res) =
     await roleMenus.unpublishMessage(client, parseInt(req.params.msgId, 10));
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -1296,7 +1296,7 @@ router.get('/:guildId/bot-messages', (req, res) => {
     });
     res.json({ messages });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -1318,7 +1318,7 @@ router.post('/:guildId/bot-messages/scan', async (req, res) => {
     const messages = botMessages.getMessagesForGuild(req.params.guildId);
     res.json({ success: true, registered: count, messages });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -1331,7 +1331,7 @@ router.get('/:guildId/bot-messages/:id', (req, res) => {
     }
     res.json({ message: msg });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -1443,7 +1443,7 @@ router.post('/:guildId/bot-messages', (req, res) => {
     });
     res.json({ message: botMessages.getMessage(id) });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -1501,7 +1501,7 @@ router.put('/:guildId/bot-messages/:id', async (req, res) => {
 
     res.json({ message: botMessages.getMessage(id) });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -1524,7 +1524,7 @@ router.delete('/:guildId/bot-messages/:id', async (req, res) => {
     }
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -1585,7 +1585,7 @@ router.post('/:guildId/bot-messages/:id/publish', async (req, res) => {
     const discordMsg = await botMessages.publishMessage(client, id, channelId);
     res.json({ success: true, messageId: discordMsg.id });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -1602,7 +1602,7 @@ router.post('/:guildId/bot-messages/:id/unpublish', async (req, res) => {
     if (client) await botMessages.unpublishMessage(client, id);
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -1661,7 +1661,7 @@ router.get('/:guildId/leveling/leaderboard', async (req, res) => {
 
     res.json({ users: result });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -1708,7 +1708,7 @@ router.get('/:guildId/leveling/stats', (req, res) => {
       topTierMembers: 0,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -1753,7 +1753,7 @@ router.post('/:guildId/leveling/xp', async (req, res) => {
 
     res.json({ success: true, result, resolvedUserId: userId });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -1773,7 +1773,7 @@ router.post('/:guildId/leveling/reset', (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -1790,7 +1790,7 @@ router.post('/:guildId/leveling/reset-all', (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -1826,7 +1826,7 @@ router.get('/:guildId/config', (req, res) => {
 
     res.json({ config, env, locale: guildSetting?.locale || process.env.LOCALE || 'en' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -1847,7 +1847,7 @@ router.put('/:guildId/config', (req, res) => {
 
     res.json({ success: true, message: 'Config saved. Restart the bot to apply changes.' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -1877,7 +1877,7 @@ router.post('/:guildId/config/language', (req, res) => {
 
     res.json({ success: true, locale });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -1900,7 +1900,7 @@ router.post('/:guildId/setup/afk', async (req, res) => {
     res.json(result);
   } catch (err) {
     console.error('API AFK setup error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -1993,7 +1993,7 @@ router.get('/:guildId/setup/channel-status', (req, res) => {
     res.json({ groups });
   } catch (err) {
     console.error('API channel-status error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -2111,7 +2111,7 @@ router.post('/:guildId/setup/channel-group', async (req, res) => {
     res.json({ success: true, created, skipped, categoryName: catCfg.name });
   } catch (err) {
     console.error('API channel-group setup error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -2170,7 +2170,7 @@ router.delete('/:guildId/setup/channel-group', async (req, res) => {
     res.json({ success: true, deleted });
   } catch (err) {
     console.error('API channel-group delete error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -2194,7 +2194,7 @@ router.delete('/:guildId/setup/channel', async (req, res) => {
     await channel.delete('Removed via Dashboard');
     res.json({ success: true, name });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -2219,7 +2219,7 @@ router.get('/:guildId/setup/afk', (req, res) => {
       afkTimeoutMinutes: Math.floor((guild.afkTimeout || 0) / 60),
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -2269,7 +2269,7 @@ router.put('/:guildId/setup/afk', async (req, res) => {
     });
   } catch (err) {
     console.error('API AFK update error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -2283,7 +2283,7 @@ router.get('/:guildId/stream-links', (req, res) => {
     const links = db.all('SELECT * FROM streaming_links WHERE guild_id = ? ORDER BY platform', [req.params.guildId]);
     res.json({ links });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -2306,7 +2306,7 @@ router.put('/:guildId/stream-links/:platform', (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -2316,7 +2316,7 @@ router.delete('/:guildId/stream-links/:platform', (req, res) => {
     db.run('DELETE FROM streaming_links WHERE guild_id = ? AND platform = ?', [req.params.guildId, req.params.platform]);
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -2377,7 +2377,7 @@ router.get('/:guildId/channel-ai', (req, res) => {
       },
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -2402,7 +2402,7 @@ router.put('/:guildId/channel-ai/:channelId', (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -2432,7 +2432,7 @@ router.post('/:guildId/channel-ai/:channelId/suggest-intent', async (req, res) =
 
     res.json({ suggestedIntent: validIntent });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -2479,7 +2479,7 @@ router.get('/:guildId/starboard', (req, res) => {
     });
   } catch (err) {
     console.error('Starboard GET error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -2533,7 +2533,7 @@ router.put('/:guildId/starboard', (req, res) => {
     });
   } catch (err) {
     console.error('Starboard PUT error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 

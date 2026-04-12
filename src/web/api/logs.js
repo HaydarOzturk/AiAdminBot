@@ -51,7 +51,7 @@ router.get('/', (req, res) => {
     });
   } catch (error) {
     console.error('Error reading logs:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -109,7 +109,7 @@ router.get('/:guildId', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching guild logs:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 

@@ -36,7 +36,7 @@ router.get('/:guildId/export', async (req, res) => {
     return res.json(template);
   } catch (error) {
     console.error('Error exporting template:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -85,7 +85,7 @@ router.post('/:guildId/import', async (req, res) => {
     });
   } catch (error) {
     console.error('Error importing template:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 

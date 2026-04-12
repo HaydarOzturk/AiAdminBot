@@ -32,7 +32,7 @@ router.get('/:guildId/leaderboard', (req, res) => {
     return res.json({ leaderboard: limit ? leaderboard.slice(0, parseInt(limit)) : leaderboard });
   } catch (error) {
     console.error('Error fetching leaderboard:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -61,7 +61,7 @@ router.get('/:guildId/user/:userId', (req, res) => {
     return res.json(userLevel);
   } catch (error) {
     console.error('Error fetching user level:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -109,7 +109,7 @@ router.post('/:guildId/award', (req, res) => {
     });
   } catch (error) {
     console.error('Error awarding XP:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 

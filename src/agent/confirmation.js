@@ -104,7 +104,7 @@ async function handleConfirmation(interaction) {
     conversationStore.addMessage(guildId, userId, 'assistant', `Action completed: ${result.message}`);
   } catch (err) {
     console.error('Agent confirmation execution error:', err.message);
-    await interaction.followUp({ content: `Error: ${err.message}` });
+    await interaction.followUp({ content: 'An error occurred while executing this action.' });
   }
 }
 

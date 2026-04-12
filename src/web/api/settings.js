@@ -221,7 +221,7 @@ router.get('/', (req, res) => {
     res.json({ sections });
   } catch (err) {
     console.error('Settings GET error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -266,7 +266,7 @@ router.put('/', (req, res) => {
     });
   } catch (err) {
     console.error('Settings PUT error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -320,7 +320,7 @@ router.get('/status', (req, res) => {
 
     res.json(status);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -552,7 +552,7 @@ router.get('/:guildId/memory-config', (req, res) => {
 
     res.json(config);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -598,7 +598,7 @@ router.post('/:guildId/memory-config', (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -612,7 +612,7 @@ router.get('/:guildId/auto-memories', (req, res) => {
     );
     res.json(memories);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -623,7 +623,7 @@ router.delete('/:guildId/auto-memories/:id', (req, res) => {
     db.run("DELETE FROM ai_memories WHERE id = ? AND guild_id = ? AND source = 'auto'", [id, guildId]);
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -637,7 +637,7 @@ router.post('/:guildId/auto-memories/:id/promote', (req, res) => {
     );
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -656,7 +656,7 @@ router.get('/:guildId/memory-scores', (req, res) => {
     );
     res.json(scores);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 

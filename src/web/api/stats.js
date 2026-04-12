@@ -40,7 +40,7 @@ router.get('/', (req, res) => {
     return res.json(stats);
   } catch (error) {
     console.error('Error fetching stats:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -145,7 +145,7 @@ router.get('/system', async (req, res) => {
     });
   } catch (err) {
     console.error('System stats error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
@@ -221,7 +221,7 @@ router.get('/:guildId', (req, res) => {
     return res.json(stats);
   } catch (error) {
     console.error('Error fetching guild stats:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
