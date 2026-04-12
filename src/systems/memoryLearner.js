@@ -258,7 +258,7 @@ async function extractForGuild(guildId, client) {
 
   // Query messages whose scores were updated recently (not by message age)
   // This catches older messages that just got enough engagement to qualify
-  const hours = config.extraction_interval || 6;
+  const safeHours = Math.max(1, Math.min(168, parseInt(config.extraction_interval) || 6));
   const scoredMessages = db.all(
     `SELECT ml.id, ml.guild_id, ml.channel_id, ml.user_id, ml.user_name, ml.content, ml.created_at,
             ms.reaction_count, ms.reply_count, ms.bot_mentioned, ms.computed_score
@@ -266,7 +266,7 @@ async function extractForGuild(guildId, client) {
      JOIN message_scores ms ON ms.message_log_id = ml.id
      LEFT JOIN levels l ON l.user_id = ml.user_id AND l.guild_id = ml.guild_id
      WHERE ml.guild_id = ?
-       AND ms.scored_at > datetime('now', '-${hours} hours')
+       AND ms.scored_at > datetime('now', '-${safeHours} hours')
        AND (l.level >= ? OR l.level IS NULL)
      ORDER BY ms.computed_score DESC
      LIMIT 100`,

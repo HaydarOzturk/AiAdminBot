@@ -64,8 +64,9 @@ async function pruneAndSummarize(client) {
     }
 
     // Delete old messages
+    const safeDays = Math.max(1, parseInt(RETENTION_DAYS) || 30);
     db.run(
-      `DELETE FROM message_log WHERE created_at < datetime('now', '-${RETENTION_DAYS} days')`
+      `DELETE FROM message_log WHERE created_at < datetime('now', '-${safeDays} days')`
     );
   } catch (err) {
     console.error('Knowledge base prune error:', err.message);
@@ -78,10 +79,11 @@ async function pruneAndSummarize(client) {
  * Generate a summary for a specific channel over a time period.
  */
 async function generateChannelSummary(guildId, channelId, period = '8 hours') {
+  const safePeriod = ['1 hour', '4 hours', '8 hours', '12 hours', '1 day', '2 days', '7 days'].includes(period) ? period : '8 hours';
   const messages = db.all(
     `SELECT user_name, content, created_at FROM message_log
      WHERE guild_id = ? AND channel_id = ?
-     AND created_at > datetime('now', '-${period}')
+     AND created_at > datetime('now', '-${safePeriod}')
      ORDER BY created_at ASC`,
     [guildId, channelId]
   );
@@ -134,10 +136,11 @@ async function generateChannelSummary(guildId, channelId, period = '8 hours') {
 async function getChannelSummary(guildId, channelId, hours = 8) {
   if (!isConfigured()) return null;
 
+  const safeHours = Math.max(1, Math.min(168, parseInt(hours) || 8));
   const messages = db.all(
     `SELECT user_name, content, created_at FROM message_log
      WHERE guild_id = ? AND channel_id = ?
-     AND created_at > datetime('now', '-${hours} hours')
+     AND created_at > datetime('now', '-${safeHours} hours')
      ORDER BY created_at ASC`,
     [guildId, channelId]
   );
@@ -147,7 +150,7 @@ async function getChannelSummary(guildId, channelId, hours = 8) {
     const stored = db.all(
       `SELECT summary, message_count, period_start, period_end FROM channel_summaries
        WHERE guild_id = ? AND channel_id = ?
-       AND period_end > datetime('now', '-${hours} hours')
+       AND period_end > datetime('now', '-${safeHours} hours')
        ORDER BY period_end DESC LIMIT 3`,
       [guildId, channelId]
     );
