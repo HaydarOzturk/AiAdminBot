@@ -15,6 +15,7 @@ const db = require('../utils/database');
 const conversationStore = require('./conversationStore');
 const { serializeForPrompt, getTool } = require('./toolRegistry');
 const { sendConfirmation, handleConfirmation } = require('./confirmation');
+const { logModAction } = require('../utils/modLogger');
 
 // Rate limit: 3 agent requests per minute per user
 const rateLimits = new Map();
@@ -284,6 +285,9 @@ async function handleMessage(message) {
 
           const result = await tool.execute(message.guild, member, action.params || {});
           results.push(result);
+
+          // Audit log agent tool executions
+          try { logModAction(`agent:${action.tool}`, '', g, member.id, JSON.stringify(action.params || {}).slice(0, 200)); } catch {}
           break;
         }
 
