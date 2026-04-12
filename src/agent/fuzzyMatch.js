@@ -73,7 +73,7 @@ function fuzzyFind(collection, query, nameGetter = (item) => item.name) {
   // 4. No match — gather suggestions using string similarity
   const suggestions = items
     .map(item => ({ name: nameGetter(item), score: similarity(stripped, stripEmojis(nameGetter(item).toLowerCase())) }))
-    .filter(s => s.score > 0.25)
+    .filter(s => s.score > 0.4)
     .sort((a, b) => b.score - a.score)
     .slice(0, 3)
     .map(s => s.name);

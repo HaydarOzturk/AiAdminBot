@@ -128,7 +128,7 @@ async function getKickToken() {
 
   console.log('✅ Kick OAuth token obtained');
   _kickToken = data.access_token;
-  _kickTokenExpiry = Date.now() + (data.expires_in || 3600) * 1000 - 60000;
+  _kickTokenExpiry = Date.now() + (parseInt(data.expires_in) || 3600) * 1000 - 60000;
   return _kickToken;
 }
 

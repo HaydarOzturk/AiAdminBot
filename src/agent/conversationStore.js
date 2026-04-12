@@ -55,7 +55,7 @@ function getConversation(guildId, userId) {
 
 function addMessage(guildId, userId, role, content) {
   const conv = getConversation(guildId, userId);
-  conv.messages.push({ role, content });
+  conv.messages.push({ role, content: typeof content === 'string' ? content.slice(0, 2000) : content });
 
   // Trim to max
   while (conv.messages.length > MAX_MESSAGES) {

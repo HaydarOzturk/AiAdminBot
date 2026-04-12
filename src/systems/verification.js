@@ -78,6 +78,10 @@ async function handleVerifyButton(interaction) {
       await member.roles.add(verifiedRole);
     } else {
       console.warn(`⚠️ Verified role "${verifiedRoleName}" not found!`);
+      return interaction.reply({
+        content: t('verification.roleNotFound', {}, guild.id) || 'Verification role not found. Please contact a server admin.',
+        flags: MessageFlags.Ephemeral,
+      });
     }
 
     // Save to database
