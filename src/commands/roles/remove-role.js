@@ -30,7 +30,7 @@ module.exports = {
   async execute(interaction) {
     const g = interaction.guild?.id;
     // Permission check
-    if (!hasPermission(interaction.member, 'mute')) {
+    if (!hasPermission(interaction.member, 'remove-role')) {
       return interaction.reply({
         content: t('general.noPermissionDetailed', {}, g),
         flags: MessageFlags.Ephemeral,

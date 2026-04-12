@@ -58,6 +58,8 @@
       "mute": 2,
       "warn": 2,
       "clear": 2,
+      "give-role": 2,
+      "remove-role": 2,
       "setup-server": 4
     }
   }
