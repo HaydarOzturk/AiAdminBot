@@ -29,6 +29,28 @@ app.get('/api/auth/status', authStatus);
 app.get('/api/auth/discord', oauthRedirect);
 app.get('/api/auth/callback', oauthCallback);
 
+// CSRF protection: block cross-origin state-changing requests
+app.use('/api/', (req, res, next) => {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
+
+  const origin = req.headers.origin;
+  if (!origin) return next(); // Same-origin requests may omit Origin header
+
+  // Build list of allowed origins from redirect URI or localhost
+  const allowed = ['http://localhost', 'https://localhost'];
+  if (process.env.WEB_OAUTH_REDIRECT_URI) {
+    try {
+      const url = new URL(process.env.WEB_OAUTH_REDIRECT_URI);
+      allowed.push(url.origin);
+    } catch {}
+  }
+
+  if (!allowed.some(o => origin === o || origin.startsWith(o + ':'))) {
+    return res.status(403).json({ error: 'Origin not allowed' });
+  }
+  next();
+});
+
 // All other API routes require authentication
 app.use('/api/', requireAuth);
 
