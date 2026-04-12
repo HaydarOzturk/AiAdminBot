@@ -2,7 +2,6 @@ const crypto = require('crypto');
 
 // ── Configuration ──────────────────────────────────────────────────────────
 
-const WEB_PASSWORD = process.env.WEB_PASSWORD || null;
 const OAUTH_CLIENT_SECRET = process.env.WEB_OAUTH_CLIENT_SECRET || null;
 const OAUTH_REDIRECT_URI = process.env.WEB_OAUTH_REDIRECT_URI || null;
 const DEBUG_OWNER_ID = process.env.DEBUG_OWNER_ID || null;
@@ -111,57 +110,10 @@ function deleteSession(token) {
   db.run('DELETE FROM web_sessions WHERE token = ?', [token]);
 }
 
-// ── Password Login ─────────────────────────────────────────────────────────
+// ── Password Login (disabled — Discord OAuth only) ─────────────────────────
 
 function login(req, res) {
-  if (!WEB_PASSWORD) {
-    return res.status(503).json({ error: 'Dashboard password not configured. Set WEB_PASSWORD in .env' });
-  }
-
-  // Rate limiting by IP
-  const ip = req.ip || req.socket?.remoteAddress || 'unknown';
-  const now = Date.now();
-  const attempts = loginAttempts.get(ip);
-
-  if (attempts) {
-    if (now - attempts.firstAttempt > LOGIN_WINDOW_MS) {
-      loginAttempts.delete(ip);
-    } else if (attempts.count >= MAX_LOGIN_ATTEMPTS) {
-      const retryAfter = Math.ceil((LOGIN_WINDOW_MS - (now - attempts.firstAttempt)) / 1000);
-      return res.status(429).json({ error: `Too many login attempts. Try again in ${retryAfter}s` });
-    }
-  }
-
-  const { password } = req.body;
-  if (!password) {
-    return res.status(400).json({ error: 'Password required' });
-  }
-
-  // Timing-safe comparison
-  const pwBuf = Buffer.from(password);
-  const expectedBuf = Buffer.from(WEB_PASSWORD);
-  const valid = pwBuf.length === expectedBuf.length && crypto.timingSafeEqual(pwBuf, expectedBuf);
-
-  if (!valid) {
-    const existing = loginAttempts.get(ip);
-    if (existing) {
-      existing.count++;
-    } else {
-      loginAttempts.set(ip, { count: 1, firstAttempt: now });
-    }
-    return res.status(401).json({ error: 'Invalid password' });
-  }
-
-  // Successful password login — no Discord identity
-  loginAttempts.delete(ip);
-
-  const token = generateToken();
-  saveSession(token, { discordUserId: null, discordUsername: null, guildIds: [], ip });
-
-  const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
-  setCookie(res, token, isSecure);
-
-  return res.json({ success: true, message: 'Logged in', authMethod: 'password' });
+  return res.status(403).json({ error: 'Password login is disabled. Use Discord OAuth.' });
 }
 
 // ── Discord OAuth2 ─────────────────────────────────────────────────────────
@@ -345,8 +297,8 @@ function requireAuth(req, res, next) {
 
 /**
  * Checks if the authenticated user has access to the requested guild.
- * - OAuth users: must own the guild (guild ID in session.guildIds)
- * - Password users (no Discord identity): access all guilds (backward compatible)
+ * - Must be logged in via Discord OAuth
+ * - Must own the guild (guild ID in session.guildIds)
  * - DEBUG_OWNER_ID: access all guilds
  */
 function requireGuildAccess(req, res, next) {
@@ -360,9 +312,9 @@ function requireGuildAccess(req, res, next) {
 
   const session = req.session;
 
-  // Password login (no Discord identity) — allow all guilds (backward compatible)
+  // Must have a Discord identity
   if (!session?.discordUserId) {
-    return next();
+    return res.status(403).json({ error: 'Discord login required to access guild data' });
   }
 
   // Debug owner — allow all guilds
