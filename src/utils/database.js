@@ -481,7 +481,7 @@ async function initDatabase() {
 
   // Migration: add last_activity column to web_sessions if missing
   try {
-    db.run('ALTER TABLE web_sessions ADD COLUMN last_activity DATETIME DEFAULT CURRENT_TIMESTAMP');
+    db.run('ALTER TABLE web_sessions ADD COLUMN last_activity DATETIME');
   } catch { /* column already exists */ }
 
   // Migration: clean up levels table
