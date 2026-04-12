@@ -281,7 +281,7 @@
                 <div class="channel-name">#${escapeHtml(ch.channelName)}</div>
                 ${ch.channelTopic ? `<div class="channel-topic">${escapeHtml(ch.channelTopic)}</div>` : ''}
               </div>
-              ${ch.enabled ? `<span class="channel-intent-badge">${intentObj?.name || ch.intent}</span>` : ''}
+              ${ch.enabled ? `<span class="channel-intent-badge">${escapeHtml(intentObj?.name || ch.intent)}</span>` : ''}
               <label class="toggle" onclick="event.stopPropagation();">
                 <input type="checkbox" ${ch.enabled ? 'checked' : ''} onchange="toggleChannel('${ch.channelId}', this.checked)">
                 <span class="toggle-slider"></span>
@@ -293,7 +293,7 @@
                   <label>Intent</label>
                   <div style="display:flex;gap:6px;">
                     <select id="intent-${ch.channelId}" style="flex:1;">
-                      ${aiData.intents.map(i => `<option value="${i.id}" ${ch.intent === i.id ? 'selected' : ''}>${i.name}</option>`).join('')}
+                      ${aiData.intents.map(i => `<option value="${escapeHtml(i.id)}" ${ch.intent === i.id ? 'selected' : ''}>${escapeHtml(i.name)}</option>`).join('')}
                     </select>
                     <button class="btn btn-secondary btn-small" style="font-size:11px;flex-shrink:0;" onclick="suggestIntent('${ch.channelId}')">Auto-Suggest</button>
                   </div>
@@ -397,7 +397,7 @@
         card.className = 'intent-card';
         card.innerHTML = `
           <h3>${escapeHtml(intent.name)}</h3>
-          <span class="intent-style">${intent.responseStyle}</span>
+          <span class="intent-style">${escapeHtml(intent.responseStyle)}</span>
           <p>${escapeHtml(intent.description)}</p>
         `;
         grid.appendChild(card);
