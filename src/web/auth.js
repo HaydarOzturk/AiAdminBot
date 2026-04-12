@@ -6,6 +6,9 @@ const OAUTH_CLIENT_SECRET = process.env.WEB_OAUTH_CLIENT_SECRET || null;
 const OAUTH_REDIRECT_URI = process.env.WEB_OAUTH_REDIRECT_URI || null;
 const DEBUG_OWNER_ID = process.env.DEBUG_OWNER_ID || null;
 
+// Session inactivity timeout: 1 hour
+const INACTIVITY_TIMEOUT_MS = 60 * 60 * 1000;
+
 // Unique cookie name per port to prevent cross-instance logout
 const COOKIE_NAME = `admin_token_${process.env.WEB_PORT || '3000'}`;
 
@@ -83,8 +86,14 @@ function getSession(token) {
   const row = db.get('SELECT * FROM web_sessions WHERE token = ?', [token]);
   if (!row) return null;
 
-  // Check expiry
+  // Check absolute expiry (7 days)
   if (new Date(row.expires_at) < new Date()) {
+    db.run('DELETE FROM web_sessions WHERE token = ?', [token]);
+    return null;
+  }
+
+  // Check inactivity timeout (1 hour)
+  if (row.last_activity && Date.now() - new Date(row.last_activity).getTime() > INACTIVITY_TIMEOUT_MS) {
     db.run('DELETE FROM web_sessions WHERE token = ?', [token]);
     return null;
   }
@@ -100,8 +109,9 @@ function getSession(token) {
 
 function refreshSession(token) {
   const db = require('../utils/database');
+  const now = new Date().toISOString();
   const expiresAt = new Date(Date.now() + TOKEN_EXPIRY_MS).toISOString();
-  db.run('UPDATE web_sessions SET expires_at = ? WHERE token = ?', [expiresAt, token]);
+  db.run('UPDATE web_sessions SET expires_at = ?, last_activity = ? WHERE token = ?', [expiresAt, now, token]);
 }
 
 function deleteSession(token) {

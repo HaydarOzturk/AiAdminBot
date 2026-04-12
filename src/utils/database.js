@@ -474,9 +474,15 @@ async function initDatabase() {
       guild_ids TEXT DEFAULT '[]',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       expires_at DATETIME NOT NULL,
+      last_activity DATETIME DEFAULT CURRENT_TIMESTAMP,
       ip_address TEXT
     )
   `);
+
+  // Migration: add last_activity column to web_sessions if missing
+  try {
+    db.run('ALTER TABLE web_sessions ADD COLUMN last_activity DATETIME DEFAULT CURRENT_TIMESTAMP');
+  } catch { /* column already exists */ }
 
   // Migration: clean up levels table
   // Fixes two bugs:
