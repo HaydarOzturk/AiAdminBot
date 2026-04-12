@@ -182,6 +182,11 @@ function getGuildMemories(guildId) {
  * @param {import('discord.js').Guild} guild
  * @returns {string}
  */
+/** Strip control characters and truncate to prevent prompt injection via user-controlled names. */
+function sanitizeForPrompt(str) {
+  return str.replace(/[\n\r\t]/g, ' ').slice(0, 50);
+}
+
 function buildGuildContext(guild) {
   if (!guild) return '';
 
@@ -189,9 +194,9 @@ function buildGuildContext(guild) {
 
   // ── Server basics ──────────────────────────────────────────────────────
   const owner = guild.members.cache.get(guild.ownerId);
-  const ownerName = owner?.displayName || owner?.user?.username || 'Unknown';
-  lines.push(`Server: "${guild.name}" | Members: ${guild.memberCount} | Owner: ${ownerName}`);
-  if (guild.description) lines.push(`Description: ${guild.description}`);
+  const ownerName = sanitizeForPrompt(owner?.displayName || owner?.user?.username || 'Unknown');
+  lines.push(`Server: "${sanitizeForPrompt(guild.name)}" | Members: ${guild.memberCount} | Owner: ${ownerName}`);
+  if (guild.description) lines.push(`Description: ${sanitizeForPrompt(guild.description)}`);
 
   // ── Roles (skip @everyone and bot-managed roles) ───────────────────────
   const roles = guild.roles.cache
@@ -202,7 +207,7 @@ function buildGuildContext(guild) {
   if (roles.length > 0) {
     const roleList = roles.map(r => {
       const count = r.members.size;
-      return `${r.name} (${count} member${count !== 1 ? 's' : ''})`;
+      return `${sanitizeForPrompt(r.name)} (${count} member${count !== 1 ? 's' : ''})`;
     }).join(', ');
     lines.push(`Roles: ${roleList}`);
   }
@@ -214,8 +219,8 @@ function buildGuildContext(guild) {
   );
   if (staff.size > 0) {
     const staffList = staff.map(m => {
-      const topRole = m.roles.highest.name !== '@everyone' ? m.roles.highest.name : '';
-      return `${m.displayName}${topRole ? ` [${topRole}]` : ''}`;
+      const topRole = m.roles.highest.name !== '@everyone' ? sanitizeForPrompt(m.roles.highest.name) : '';
+      return `${sanitizeForPrompt(m.displayName)}${topRole ? ` [${topRole}]` : ''}`;
     }).join(', ');
     lines.push(`Staff: ${staffList}`);
   }
