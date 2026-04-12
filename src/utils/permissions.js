@@ -14,8 +14,8 @@ function getPermissionLevel(member) {
   // Server owner is always level 4
   if (member.id === member.guild.ownerId) return 4;
 
-  // DEBUG_OWNER_ID also gets level 4 (for testing/development)
-  if (process.env.DEBUG_OWNER_ID && member.id === process.env.DEBUG_OWNER_ID) return 4;
+  // DEBUG_OWNER_ID gets level 4 only in development mode
+  if (process.env.NODE_ENV === 'development' && process.env.DEBUG_OWNER_ID && member.id === process.env.DEBUG_OWNER_ID) return 4;
 
   // Check Discord permissions first (most reliable), then fall back to role names
   const perms = member.permissions;

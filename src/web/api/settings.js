@@ -12,7 +12,7 @@ const path = require('path');
 const { projectPath } = require('../../utils/paths');
 
 // Keys that should be masked when reading (show ••••••)
-const SENSITIVE_KEYS = ['DISCORD_TOKEN', 'GEMINI_API_KEY', 'OPENROUTER_API_KEY', 'WEB_PASSWORD', 'TWITCH_CLIENT_SECRET', 'KICK_CLIENT_SECRET'];
+const SENSITIVE_KEYS = ['DISCORD_TOKEN', 'GEMINI_API_KEY', 'OPENROUTER_API_KEY', 'WEB_PASSWORD', 'TWITCH_CLIENT_SECRET', 'KICK_CLIENT_SECRET', 'YOUTUBE_API_KEY', 'TWITCH_CLIENT_ID', 'KICK_CLIENT_ID', 'WEB_OAUTH_CLIENT_SECRET'];
 
 // All known .env keys grouped by feature
 const ENV_SCHEMA = {

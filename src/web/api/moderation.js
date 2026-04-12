@@ -12,7 +12,9 @@ router.get('/:guildId/actions', (req, res) => {
     const { guildId } = req.params;
     const { page = 1, limit = 20, type, userId } = req.query;
 
-    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const safePage = Math.max(1, parseInt(page) || 1);
+    const safeLimit = Math.max(1, Math.min(100, parseInt(limit) || 20));
+    const offset = (safePage - 1) * safeLimit;
     let query = 'SELECT * FROM mod_actions WHERE guild_id = ?';
     const params = [guildId];
 
@@ -27,7 +29,7 @@ router.get('/:guildId/actions', (req, res) => {
     }
 
     query += ' ORDER BY timestamp DESC LIMIT ? OFFSET ?';
-    params.push(parseInt(limit), offset);
+    params.push(safeLimit, offset);
 
     const actions = db.all(query, params);
 
@@ -50,10 +52,10 @@ router.get('/:guildId/actions', (req, res) => {
     return res.json({
       actions,
       pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
+        page: safePage,
+        limit: safeLimit,
         total: count,
-        pages: Math.ceil(count / parseInt(limit)),
+        pages: Math.ceil(count / safeLimit),
       },
     });
   } catch (error) {
@@ -145,6 +147,10 @@ router.post('/:guildId/warn', async (req, res) => {
 
     if (!userId || !reason) {
       return res.status(400).json({ error: 'userId and reason are required' });
+    }
+
+    if (reason.length > 1000) {
+      return res.status(400).json({ error: 'Reason must be 1000 characters or less' });
     }
 
     const client = req.app.locals.client;

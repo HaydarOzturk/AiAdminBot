@@ -28,6 +28,7 @@ describe('permissions', () => {
 
     it('returns 4 for DEBUG_OWNER_ID', () => {
       const debugId = '999999999999999999';
+      process.env.NODE_ENV = 'development';
       process.env.DEBUG_OWNER_ID = debugId;
       const guild = createMockGuild();
       const member = createMockMember({
@@ -38,6 +39,7 @@ describe('permissions', () => {
       });
       assert.equal(getPermissionLevel(member), 4);
       delete process.env.DEBUG_OWNER_ID;
+      delete process.env.NODE_ENV;
     });
 
     it('returns 3 for Administrator permission', () => {
