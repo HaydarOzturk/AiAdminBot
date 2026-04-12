@@ -1,6 +1,11 @@
 const db = require('../../utils/database');
 const { logModAction, sendModLog } = require('../../utils/modLogger');
 
+// Validate Discord snowflake ID format
+function isValidSnowflake(id) {
+  return /^\d{17,20}$/.test(id);
+}
+
 module.exports = [
   {
     name: 'warn_user',
@@ -13,14 +18,18 @@ module.exports = [
       reason: { type: 'string', description: 'Warning reason', required: false },
     },
     async execute(guild, invoker, params) {
-      const reason = params.reason || 'No reason given';
+      if (!isValidSnowflake(params.userId)) return { success: false, message: 'Invalid user ID format' };
+
+      const member = await guild.members.fetch(params.userId).catch(() => null);
+      if (!member) return { success: false, message: 'User not found in this server' };
+
+      const reason = (params.reason || 'No reason given').slice(0, 500);
       db.run(
         'INSERT INTO warnings (user_id, guild_id, moderator_id, reason) VALUES (?, ?, ?, ?)',
         [params.userId, guild.id, invoker.id, reason]
       );
       const caseId = logModAction('warn', params.userId, guild.id, invoker.id, reason);
-      const member = await guild.members.fetch(params.userId).catch(() => null);
-      return { success: true, message: `Warned ${member?.user?.tag || params.userId}: ${reason} (Case #${caseId})` };
+      return { success: true, message: `Warned ${member.user.tag}: ${reason} (Case #${caseId})` };
     },
   },
   {
@@ -35,16 +44,19 @@ module.exports = [
       reason: { type: 'string', description: 'Timeout reason', required: false },
     },
     async execute(guild, invoker, params) {
+      if (!isValidSnowflake(params.userId)) return { success: false, message: 'Invalid user ID format' };
+
       const member = await guild.members.fetch(params.userId).catch(() => null);
       if (!member) return { success: false, message: 'User not found' };
       if (!member.moderatable) return { success: false, message: 'Cannot moderate this user' };
 
-      const ms = (params.duration || 5) * 60 * 1000;
-      const reason = params.reason || 'No reason given';
+      const duration = Math.max(1, Math.min(40320, parseInt(params.duration) || 5));
+      const ms = duration * 60 * 1000;
+      const reason = (params.reason || 'No reason given').slice(0, 500);
       await member.timeout(ms, reason);
 
       const caseId = logModAction('timeout', params.userId, guild.id, invoker.id, reason);
-      return { success: true, message: `Timed out ${member.user.tag} for ${params.duration} minutes: ${reason} (Case #${caseId})` };
+      return { success: true, message: `Timed out ${member.user.tag} for ${duration} minutes: ${reason} (Case #${caseId})` };
     },
   },
   {
@@ -58,11 +70,13 @@ module.exports = [
       reason: { type: 'string', description: 'Kick reason', required: false },
     },
     async execute(guild, invoker, params) {
+      if (!isValidSnowflake(params.userId)) return { success: false, message: 'Invalid user ID format' };
+
       const member = await guild.members.fetch(params.userId).catch(() => null);
       if (!member) return { success: false, message: 'User not found' };
       if (!member.kickable) return { success: false, message: 'Cannot kick this user' };
 
-      const reason = params.reason || 'No reason given';
+      const reason = (params.reason || 'No reason given').slice(0, 500);
       await member.kick(reason);
       const caseId = logModAction('kick', params.userId, guild.id, invoker.id, reason);
       return { success: true, message: `Kicked ${member.user.tag}: ${reason} (Case #${caseId})` };
@@ -79,7 +93,9 @@ module.exports = [
       reason: { type: 'string', description: 'Ban reason', required: false },
     },
     async execute(guild, invoker, params) {
-      const reason = params.reason || 'No reason given';
+      if (!isValidSnowflake(params.userId)) return { success: false, message: 'Invalid user ID format' };
+
+      const reason = (params.reason || 'No reason given').slice(0, 500);
       await guild.members.ban(params.userId, { reason });
       const caseId = logModAction('ban', params.userId, guild.id, invoker.id, reason);
       return { success: true, message: `Banned user ${params.userId}: ${reason} (Case #${caseId})` };
@@ -95,6 +111,8 @@ module.exports = [
       userId: { type: 'string', description: 'User ID', required: true },
     },
     async execute(guild, invoker, params) {
+      if (!isValidSnowflake(params.userId)) return { success: false, message: 'Invalid user ID format' };
+
       const warnings = db.all(
         'SELECT * FROM warnings WHERE user_id = ? AND guild_id = ? ORDER BY created_at DESC LIMIT 10',
         [params.userId, guild.id]
