@@ -129,21 +129,35 @@ Available response types:
  * Parse Gemini's JSON response. Handles common formatting issues.
  */
 function parseAgentResponse(text) {
-  // Try direct JSON parse
-  try {
-    return JSON.parse(text);
-  } catch {}
+  const VALID_TYPES = ['execute', 'confirm', 'clarify', 'respond'];
 
-  // Extract JSON from markdown code blocks or surrounding text
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (jsonMatch) {
-    try {
-      return JSON.parse(jsonMatch[0]);
-    } catch {}
+  function validateAction(obj) {
+    if (!obj || typeof obj !== 'object') return { type: 'respond', message: text.slice(0, 2000) };
+    if (!VALID_TYPES.includes(obj.type)) return { type: 'respond', message: obj.message || text.slice(0, 2000) };
+    if (obj.type === 'execute' || obj.type === 'confirm') {
+      if (typeof obj.tool !== 'string') return { type: 'respond', message: 'I could not understand that request.' };
+      if (obj.params && typeof obj.params !== 'object') obj.params = {};
+    }
+    return obj;
   }
 
-  // Fallback: treat as a text response
-  return { type: 'respond', message: text.slice(0, 2000) };
+  // Try direct JSON parse
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    // Extract JSON from markdown code blocks or surrounding text
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try { parsed = JSON.parse(jsonMatch[0]); } catch {}
+    }
+  }
+
+  if (!parsed) return { type: 'respond', message: text.slice(0, 2000) };
+
+  // Validate — single action or array of actions
+  if (Array.isArray(parsed)) return parsed.map(validateAction);
+  return validateAction(parsed);
 }
 
 /**
