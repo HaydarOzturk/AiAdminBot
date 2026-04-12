@@ -151,10 +151,11 @@ function forgetMemory(guildId, memoryText) {
     run('DELETE FROM ai_memories WHERE id = ?', [existing.id]);
     return true;
   }
-  // Also try partial match on value
+  // Also try partial match on value (escape LIKE wildcards to prevent mass deletion)
+  const escaped = memoryText.toLowerCase().slice(0, 50).replace(/[%_\\]/g, '\\$&');
   const partial = get(
-    'SELECT id FROM ai_memories WHERE guild_id = ? AND LOWER(value) LIKE ?',
-    [guildId, `%${memoryText.toLowerCase().slice(0, 50)}%`]
+    "SELECT id FROM ai_memories WHERE guild_id = ? AND LOWER(value) LIKE ? ESCAPE '\\'",
+    [guildId, `%${escaped}%`]
   );
   if (partial) {
     run('DELETE FROM ai_memories WHERE id = ?', [partial.id]);
