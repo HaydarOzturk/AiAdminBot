@@ -51,6 +51,13 @@ function getAgentSettings(guildId) {
 /**
  * Build the system prompt for the agent
  */
+/**
+ * Strip control characters and truncate to prevent prompt injection via guild names.
+ */
+function sanitizeForPrompt(str) {
+  return str.replace(/[\n\r\t]/g, ' ').slice(0, 50);
+}
+
 function buildSystemPrompt(guild, member, permissionLevel) {
   const toolList = serializeForPrompt(permissionLevel);
   const permNames = { 0: 'User', 1: 'Verified', 2: 'Moderator', 3: 'Admin', 4: 'Owner' };
@@ -64,15 +71,15 @@ function buildSystemPrompt(guild, member, permissionLevel) {
       const children = guild.channels.cache
         .filter(ch => ch.parentId === c.id)
         .sort((a, b) => a.position - b.position)
-        .map(ch => ch.type === ChannelType.GuildVoice ? `🔊${ch.name}` : `#${ch.name}`)
+        .map(ch => ch.type === ChannelType.GuildVoice ? `🔊${sanitizeForPrompt(ch.name)}` : `#${sanitizeForPrompt(ch.name)}`)
         .join(', ');
-      return `${c.name}: ${children || '(empty)'}`;
+      return `${sanitizeForPrompt(c.name)}: ${children || '(empty)'}`;
     }).join('\n');
 
   const roles = guild.roles.cache
     .filter(r => r.name !== '@everyone')
     .sort((a, b) => b.position - a.position)
-    .map(r => r.name)
+    .map(r => sanitizeForPrompt(r.name))
     .join(', ');
 
   return `You are AiAdminBot Agent, an AI assistant that manages a Discord gaming server.
@@ -83,7 +90,7 @@ Respond in the SAME LANGUAGE the user writes in.
 ${toolList}
 
 == SERVER INFO ==
-Server: ${guild.name} (${guild.memberCount} members)
+Server: ${sanitizeForPrompt(guild.name)} (${guild.memberCount} members)
 User: ${member.user.tag} (Permission: ${permNames[permissionLevel]})
 
 Categories & Channels:
