@@ -38,6 +38,13 @@ router.get('/', (req, res) => {
     }
 
     const logFile = path.join(logsDir, logFiles[0]);
+
+    // Reject files larger than 10MB to prevent memory exhaustion
+    const fileStats = fs.statSync(logFile);
+    if (fileStats.size > 10 * 1024 * 1024) {
+      return res.status(413).json({ error: 'Log file too large' });
+    }
+
     const content = fs.readFileSync(logFile, 'utf8');
     const allLines = content.split('\n').filter((line) => line.trim() !== '');
 

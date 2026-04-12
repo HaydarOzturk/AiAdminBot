@@ -387,7 +387,7 @@ module.exports = [
     description: 'Lock a channel — deny Send Messages for @everyone (quick lock)',
     category: 'channels',
     requiredPermission: 2,
-    destructive: false,
+    destructive: true,
     parameters: {
       channel: { type: 'string', description: 'Channel name or ID to lock', required: true },
       reason: { type: 'string', description: 'Reason for locking', required: false },

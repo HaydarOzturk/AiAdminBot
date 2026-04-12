@@ -157,7 +157,13 @@ async function endGiveaway(messageId, guildId, client) {
 }
 
 function pickWinners(userIds, count) {
-  const shuffled = [...userIds].sort(() => Math.random() - 0.5);
+  // Fisher-Yates shuffle with crypto-safe random
+  const shuffled = [...userIds];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const randomBytes = require('crypto').randomBytes(4);
+    const j = randomBytes.readUInt32BE(0) % (i + 1);
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
   return shuffled.slice(0, count);
 }
 
