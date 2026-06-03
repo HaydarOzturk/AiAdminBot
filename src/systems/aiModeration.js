@@ -140,7 +140,7 @@ function buildModerationPrompt(rulesText) {
 
 Categories:
 - toxicity: Insults, slurs, harassment, hate speech, personal attacks, swearing AT someone
-- spam: Repetitive messages, excessive caps, gibberish, advertisement links
+- spam: Repetitive messages, excessive caps, gibberish, scam/phishing links
 - nsfw: Sexual or explicit content, sexual slurs
 - threat: Threats of violence or harm
 - rules: Message violates a specific server rule (only if server rules are provided below)
@@ -176,6 +176,8 @@ Rules:
 - Flag Turkish profanity with confidence >= 0.9
 - Normal gaming talk, slang, abbreviations (gg, wp, ez) = NOT flagged
 - Friendly casual language and banter = NOT flagged
+- Sharing links (YouTube, Twitch, news, screenshots, GitHub, Steam, clips, etc.) is NOT spam — do NOT flag, even if the message is mostly just a URL
+- Only flag links that are clear scams, phishing, or malicious bait (e.g. "free nitro", fake giveaways, suspicious shortened URLs with no context)
 - When in doubt about Turkish words, flag with lower confidence (0.6-0.7)
 - For server rule violations, use confidence 0.7-0.9 depending on how clear the violation is`;
 
