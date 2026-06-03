@@ -315,10 +315,9 @@ function requireGuildAccess(req, res, next) {
   const guildId = req.params.guildId;
   if (!guildId) return next(); // Non-guild routes pass through
 
-  // Validate guildId format (Discord snowflake)
-  if (!/^\d{17,20}$/.test(guildId)) {
-    return res.status(400).json({ error: 'Invalid guild ID format' });
-  }
+  // If the segment isn't a snowflake, it's a sibling route like /status or /channels —
+  // let the router match it instead of rejecting here.
+  if (!/^\d{17,20}$/.test(guildId)) return next();
 
   const session = req.session;
 

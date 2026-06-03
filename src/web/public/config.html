@@ -223,7 +223,7 @@
       margin-bottom: 16px;
       display: none;
     }
-    .restart-notice.show { display: block; }
+    .restart-notice.show { display: flex; justify-content: space-between; align-items: center; }
 
     /* Language flags grid */
     .lang-grid {
@@ -305,7 +305,7 @@
         </div>
 
         <!-- Restart notice + button -->
-        <div class="restart-notice" id="restartNotice" style="display:flex; justify-content:space-between; align-items:center;">
+        <div class="restart-notice" id="restartNotice">
           <span>⚠️ Some settings have been saved. Restart the bot for all changes to take effect.</span>
           <button class="btn btn-primary" id="restartBotBtn" style="margin-left:16px; white-space:nowrap;">🔄 Restart Bot</button>
         </div>
